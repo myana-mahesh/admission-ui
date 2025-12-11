@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="bg-light">
+
+<style>
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  .admission-form-sheet {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    border: 2px solid #000;
+    padding: 10px 14px;
+    background: #fff;
+    font-size: 13px;
+  }
+
+  .admission-form-header {
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+  }
+
+  .admission-form-header h3 {
+    margin: 0;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .admission-form-header small {
+    display: block;
+    margin-top: 2px;
+  }
+
+  .border-box {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    margin-bottom: 4px;
+  }
+
+  .label {
+    font-weight: 600;
+  }
+
+  .underline {
+    border-bottom: 1px solid #000;
+    min-width: 120px;
+    display: inline-block;
+  }
+
+  .underline.w-75 { min-width: 75%; }
+
+  .section-title {
+    background: #d00000;
+    color: #fff;
+    text-align: center;
+    font-weight: 700;
+    padding: 3px 0;
+    margin: 6px 0;
+    text-transform: uppercase;
+  }
+
+  .small-text { font-size: 11px; }
+
+  .checkbox-line span {
+    margin-right: 18px;
+  }
+
+  .table-fee {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .table-fee th,
+  .table-fee td {
+    border: 1px solid #000;
+    padding: 3px 4px;
+    text-align: left;
+  }
+
+  .sign-row td {
+    padding-top: 18px;
+  }
+
+  /* Hide buttons while printing */
+  @media print {
+    .print-toolbar { display: none !important; }
+    body { background: #fff; }
+  }
+</style>
+
+<!-- Top toolbar (only on screen) -->
+<div class="container-fluid py-2 print-toolbar">
+  <button class="btn btn-sm btn-primary" onclick="window.print()">Print</button>
+  <a th:href="@{'/admissions?id=' + ${admission.admissionId}}"
+     class="btn btn-sm btn-outline-secondary ms-2">
+    Back to Admission
+  </a>
+</div>
+
+<div class="admission-form-sheet" th:object="${admission}">
+
+  <!-- HEADER -->
+  <div class="admission-form-header">
+    <h3>ABS EDUCATIONAL SOLUTION</h3>
+    <small>Authorized Admission Centre &amp; Education Solution</small>
+  </div>
+
+  <!-- FormNo / Date / ABS ID -->
+  <div class="d-flex justify-content-between mb-1">
+    <div>
+      <span class="label">Form No.:</span>
+      <span class="underline" th:text="*{formNo}">...............</span>
+    </div>
+    <div>
+      <span class="label">Date:</span>
+      <span class="underline"
+            th:text="${admission.formDate != null ? #strings.substring(admission.formDate,0,10) : ''}">
+        __/__/__
+      </span>
+    </div>
+    <div>
+      <span class="label">ABS ID:</span>
+      <span class="underline" th:text="*{student.absId}">___________</span>
+    </div>
+  </div>
+
+  <!-- Title bar -->
+  <div class="section-title">ADMISSION APPLICATION FORM</div>
+
+  <!-- STUDENT DETAILS -->
+  <div class="border-box">
+    <div class="row g-1">
+      <div class="col-8">
+        <span class="label">Student’s Name (in capital letters):</span>
+        <span class="underline"
+              th:text="*{student.fullName}">PALAK GUPTA</span>
+      </div>
+      <div class="col-4 text-end">
+        <span class="label">Aadhaar No.:</span>
+        <span class="underline"
+              th:text="*{student.aadhaar}">XXXXXXXXXXXX</span>
+      </div>
+    </div>
+
+    <div class="row g-1 mt-1">
+      <div class="col-4">
+        <span class="label">Date of Birth:</span>
+        <span class="underline"
+              th:text="${admission.student.dob != null ? #strings.substring(admission.student.dob,0,10) : ''}">
+          00/00/0000
+        </span>
+      </div>
+      <div class="col-4">
+        <span class="label">Father’s Name:</span>
+        <span class="underline" th:text="${father != null ? father.fullName : ''}">Ravindra</span>
+      </div>
+      <div class="col-4">
+        <span class="label">Mother’s Name:</span>
+        <span class="underline" th:text="${mother != null ? mother.fullName : ''}">Seema</span>
+      </div>
+    </div>
+
+    <div class="row g-1 mt-1">
+      <div class="col-3">
+        <span class="label">Nationality:</span>
+        <span class="underline" th:text="*{student.nationality}">Indian</span>
+      </div>
+      <div class="col-3">
+        <span class="label">Religion:</span>
+        <span class="underline" th:text="*{student.religion}">Hindu</span>
+      </div>
+      <div class="col-3">
+        <span class="label">Gender:</span>
+        <span class="underline" th:text="*{student.gender}">Female</span>
+      </div>
+      <div class="col-3">
+        <span class="label">Caste:</span>
+        <span class="underline" th:text="*{student.caste}">B.J.P.C.</span>
+      </div>
+    </div>
+
+    <div class="row g-1 mt-1">
+      <div class="col-12">
+        <span class="label">Last college attended:</span>
+        <span class="underline w-75" th:text="*{lastCollege}">.....................</span>
+      </div>
+    </div>
+
+    <div class="row g-1 mt-1">
+      <div class="col-12">
+        <span class="label">Residential Address:</span>
+        <span class="underline w-75"
+              th:text="${#lists.isEmpty(admission.student.addresses) ? '' : admission.student.addresses.get(0).address.line1}">
+          Maharaja Building, Bora Bazar Street, Fort, Mumbai
+        </span>
+      </div>
+    </div>
+
+    <div class="row g-1 mt-1">
+      <div class="col-3">
+        <span class="label">PIN Code:</span>
+        <span class="underline"
+              th:text="${#lists.isEmpty(admission.student.addresses) ? '' : admission.student.addresses.get(0).address.pincode}">
+          400001
+        </span>
+      </div>
+      <div class="col-3">
+        <span class="label">Student Mob. No.:</span>
+        <span class="underline" th:text="*{student.mobile}">7715856662</span>
+      </div>
+      <div class="col-3">
+        <span class="label">Parent Mob. No.:</span>
+        <span class="underline" th:text="${father != null ? father.mobile : ''}">8451974679</span>
+      </div>
+      <div class="col-3">
+        <span class="label">E-mail:</span>
+        <span class="underline" th:text="*{student.email}">palak@example.com</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- OFFICE USE ONLY -->
+  <div class="mt-1 border-box">
+    <div class="label mb-1">For Office Use Only</div>
+
+    <div class="row g-1">
+      <div class="col-4">
+        <span class="label">Selected Course:</span>
+        <span class="underline"
+              th:text="*{course != null ? course.name : ''}">D. Pharm</span>
+      </div>
+      <div class="col-4">
+        <span class="label">Date of Admission:</span>
+        <span class="underline"
+              th:text="${admission.dateOfAdm != null ? #strings.substring(admission.dateOfAdm,0,10) : ''}">
+          06/10/25
+        </span>
+      </div>
+      <div class="col-4">
+        <span class="label">College Location:</span>
+        <span class="underline" th:text="*{collegeLocation}">Bangalore</span>
+      </div>
+    </div>
+
+    <div class="row g-1 mt-1">
+      <div class="col-12">
+        <span class="label">Remark:</span>
+        <span class="underline w-75" th:text="*{remarks}"></span>
+      </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="mt-2 checkbox-line small-text">
+      <span class="label">Documents Received:</span>
+      <span>[ ] 10th Marksheet</span>
+      <span>[ ] 12th Marksheet</span>
+      <span>[ ] LC/TC</span>
+      <span>[ ] Migration</span>
+      <span>[ ] Aadhaar</span>
+      <span>[ ] Photo</span>
+    </div>
+
+    <!-- FEES SUMMARY -->
+    <div class="mt-2">
+      <table class="table-fee">
+        <tr>
+          <th style="width: 25%;">Total Course Fee</th>
+          <td style="width: 25%;" th:text="*{totalFees}">125000</td>
+          <th style="width: 25%;">Amount Due</th>
+          <td style="width: 25%;"
+              th:text="${admission.totalFees != null && admission.discount != null ? (admission.totalFees - admission.discount) : ''}">
+            0
+          </td>
+        </tr>
+        <tr>
+          <th>Year wise Installments</th>
+          <td colspan="3">
+            <span class="small-text">
+              1st Year:
+              <span class="underline"
+                    th:text="${yearlyFees != null && yearlyFees[1] != null ? yearlyFees[1] : ''}">
+                60000
+              </span>
+              &nbsp;&nbsp;
+              2nd Year:
+              <span class="underline"
+                    th:text="${yearlyFees != null && yearlyFees[2] != null ? yearlyFees[2] : ''}">
+                40000
+              </span>
+              &nbsp;&nbsp;
+              3rd Year:
+              <span class="underline"
+                    th:text="${yearlyFees != null && yearlyFees[3] != null ? yearlyFees[3] : ''}">
+                25000
+              </span>
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <th>Due Date</th>
+          <td colspan="3">
+            <!-- if you have a common due date, bind here; else leave empty for manual writing -->
+            ______________________
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="mt-1 small-text">
+      * Board/University fee, Exam fee, Record Book/Uniform/Apron, Chemical charges, Hostel &amp; Food charges not included.
+    </div>
+  </div>
+
+  <!-- DECLARATION -->
+  <div class="mt-2 border-box small-text">
+    <div class="label mb-1">Declaration By The Parents / Guardian</div>
+    <p style="text-align: justify;">
+      I, <span class="underline" th:text="*{student.fullName}">Palak Gupta</span>
+      and my parent/guardian
+      <span class="underline" th:text="${father != null ? father.fullName : ''}">Ravindra Gupta</span>
+      hereby declare that I have taken admission in a government-approved college for the selected course. I understand
+      that ABS is not a college and does not offer any official academic curriculum or certification. I am voluntarily
+      availing ABS services for counselling, documentation, pre-academic orientation, and other permitted non-academic
+      assistance only. I confirm that college and hostel fees paid through ABS are via Cheque/DD/Cash in the name of
+      the respective institution only. I have not been promised any certificate, licence, or exam by ABS. I understand
+      all academic activities will take place at the allotted college only.
+    </p>
+
+    <table class="table-fee sign-row">
+      <tr>
+        <td style="width: 33%;">
+          Place:<br><br>
+          ______________________
+        </td>
+        <td style="width: 33%; text-align: center;">
+          Student Signature:<br><br>
+          ______________________
+        </td>
+        <td style="width: 34%; text-align: center;">
+          Signature of the Parent<br>(Father/Mother/Guardian):<br><br>
+          ______________________
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="mt-2 small-text d-flex justify-content-between">
+    <span>Date: ____________________</span>
+    <span>Sign. of Head: ____________________</span>
+    <span>Sign. of Clerk: ____________________</span>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,349 @@
+body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f3f4f6;
+            color: #111827;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: #111827;
+            color: #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(55, 65, 81, 0.9);
+        }
+
+        .sidebar-nav {
+            padding: 12px 0;
+            flex: 1;
+        }
+
+        .sidebar-link {
+            display: block;
+            padding: 10px 20px;
+            font-size: 14px;
+            color: #9ca3af;
+            text-decoration: none;
+        }
+
+        .sidebar-link:hover {
+            background: rgba(55, 65, 81, 0.9);
+            color: #f9fafb;
+        }
+
+        .sidebar-link.active {
+            background: #1f2937;
+            color: #f9fafb;
+            font-weight: 600;
+        }
+
+        /* Main area */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .header {
+            height: 56px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .header-subtitle {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .header-right {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .card {
+            max-width: 1040px;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+            margin: 0 auto;
+        }
+
+        h2 {
+            margin: 0 0 4px;
+            font-size: 18px;
+        }
+
+        .card-subtitle {
+            margin: 0 0 16px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        h3 {
+            margin: 18px 0 8px;
+            font-size: 15px;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .field {
+            flex: 1;
+            min-width: 220px;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 13px;
+            margin-bottom: 4px;
+            color: #374151;
+        }
+
+        input, select {
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+        }
+
+        .total-box input {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+           /* margin-top: 8px;*/
+           /* font-size: 13px;*/
+        }
+
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-add {
+            margin-top: 10px;
+            border: 1px dashed #2563eb;
+            background: #e0f2fe;
+            color: #1d4ed8;
+        }
+
+        .btn-remove {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .btn-save {
+            background: #2563eb;
+            color: #ffffff;
+            font-weight: 600;
+            padding: 8px 18px;
+        }
+
+        .actions {
+            margin-top: 16px;
+            text-align: right;
+        }
+
+        .form-select {
+            width: 100%;
+        }
+		
+		/* courses-list.css */
+		/* Uses the same Inter + layout classes you already have in your course-fee-form page */
+
+		/* Card tweaks for list view */
+		.course-list-card {
+		  max-width: 100%;
+		  margin: 0 auto;
+		}
+
+		/* Header row inside the card */
+		.course-card-header {
+		  display: flex;
+		  align-items: flex-start;
+		  justify-content: space-between;
+		  gap: 16px;
+		  margin-bottom: 12px;
+		}
+
+		.course-card-title {
+		  margin: 0;
+		  font-size: 18px;
+		  font-weight: 600;
+		}
+
+		.course-card-actions {
+		  display: flex;
+		  align-items: center;
+		}
+
+		/* Search row */
+		.course-list-search-row {
+		  display: flex;
+		  align-items: center;
+		  margin-top: 8px;
+		  margin-bottom: 10px;
+		}
+
+		.course-list-search-input {
+		  flex: 1;
+		  padding: 6px 8px;
+		  border-radius: 6px;
+		  border: 1px solid #d1d5db;
+		  font-size: 13px;
+		  font-family: inherit;
+		}
+
+		.course-list-search-input:focus {
+		  outline: none;
+		  border-color: #2563eb;
+		  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+		}
+
+		/* Table container */
+		.course-table-wrapper {
+		  border-radius: 8px;
+		  border: 1px solid #e5e7eb;
+		  overflow: hidden;
+		  background: #ffffff;
+		}
+
+		/* Table styles */
+		.course-table {
+		  width: 100%;
+		  border-collapse: collapse;
+		  font-size: 13px;
+		}
+
+		.course-table thead th {
+		  padding: 8px 10px;
+		  text-align: left;
+		  background: #f9fafb;
+		  border-bottom: 1px solid #e5e7eb;
+		  font-weight: 600;
+		  color: #374151;
+		}
+
+		.course-table tbody td {
+		  padding: 8px 10px;
+		  border-top: 1px solid #f3f4f6;
+		}
+
+		/* Make rows clickable */
+		.course-table tbody tr {
+		  cursor: pointer;
+		  transition: background-color 0.12s ease;
+		}
+
+		.course-table tbody tr:hover {
+		  background: #eff6ff;
+		}
+
+		/* Action column (Edit button) */
+		.course-table-action-col {
+		  width: 100px;
+		  text-align: right;
+		}
+
+		.course-table-action-cell {
+		  text-align: right;
+		}
+
+		/* Muted text */
+		.course-text-muted {
+		  color: #6b7280;
+		  font-size: 11px;
+		  margin-left: 4px;
+		}
+
+		/* Badge for installments */
+		.course-badge-pill {
+		  display: inline-flex;
+		  align-items: center;
+		  padding: 2px 8px;
+		  border-radius: 999px;
+		  font-size: 11px;
+		  font-weight: 500;
+		  background: #e0f2fe;
+		  color: #1d4ed8;
+		}
+
+		/* Empty row */
+		.course-empty-row {
+		  text-align: center;
+		  padding: 14px 8px !important;
+		  color: #6b7280;
+		  font-size: 13px;
+		}
+
+		/* Outline button for "Edit" – uses your existing .btn base */
+		.btn-outline-theme {
+		  background: #ffffff;
+		  color: #2563eb;
+		  border: 1px solid #bfdbfe;
+		  border-radius: 6px;
+		  padding: 4px 10px;
+		  font-size: 12px;
+		  cursor: pointer;
+		  font-weight: 500;
+		}
+
+		.btn-outline-theme:hover {
+		  background: #eff6ff;
+		}

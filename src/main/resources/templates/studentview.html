@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar">
+
+<!-- Sidebar -->
+<div th:replace="fragments/sidebar :: app_sidebar('students')"></div>
+
+<div class="app-main-wrap">
+  <div class="toolbar">
+    <div class="container-xl"></div>
+  </div>
+
+  <div class="container-xl my-4">
+    <!-- Bind to student DTO -->
+    <form id="studentForm" class="app-card" th:object="${student}">
+      <!-- ============ HEADER ============ -->
+      <div class="glass-header p-4">
+        <div class="ribbon"></div>
+        <div class="row g-3 align-items-center">
+          <div class="col-md-1 text-center">
+            <div class="px-2 fw-bold text-muted">
+              <img src="/img/abs logo.jpg" width="90" alt="ABS">
+            </div>
+          </div>
+          <div class="col-md-7">
+            <div class="brand-pill mb-2">
+              <i class="bi bi-person-badge"></i> Student Details
+            </div>
+            <h3 class="primary-heading mb-1 fw-bold" style="letter-spacing:.2px;">
+              ABS EDUCATIONAL SOLUTION
+            </h3>
+            <div class="help">Student Master · View & Edit</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ BASIC STUDENT DETAILS ============ -->
+      <div class="section px-2 mt-3">
+        <div class="title mb-2">
+          <span class="dot"></span><h5 class="mb-0">Student Details</h5>
+        </div>
+
+        <div class="row g-3">
+          <!-- ABS ID -->
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     th:field="*{absId}"
+                     id="absId"
+                     placeholder=" ">
+              <label for="absId">ABS ID</label>
+            </div>
+          </div>
+
+          <!-- Full Name -->
+          <div class="col-md-6">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     th:field="*{fullName}"
+                     id="fullName"
+                     placeholder=" "
+                     required>
+              <label for="fullName">Student’s Name (as per SSC)</label>
+            </div>
+          </div>
+
+          <!-- DOB -->
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="date"
+                     class="form-control student-details"
+                     id="dob"
+                     th:value="${student.dob != null ? #temporals.format(student.dob, 'yyyy-MM-dd') : ''}">
+              <label for="dob">Date of Birth</label>
+            </div>
+          </div>
+
+          <!-- Aadhaar -->
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     th:field="*{aadhaar}"
+                     id="aadhaar"
+                     placeholder="">
+              <label for="aadhaar">Aadhaar No.</label>
+            </div>
+          </div>
+
+          <!-- Nationality -->
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     th:field="*{nationality}"
+                     id="nationality"
+                     placeholder=" ">
+              <label for="nationality">Nationality</label>
+            </div>
+          </div>
+
+          <!-- Religion -->
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     th:field="*{religion}"
+                     id="religion"
+                     placeholder=" ">
+              <label for="religion">Religion</label>
+            </div>
+          </div>
+
+          <!-- Gender -->
+          <div class="col-md-3">
+            <div class="form-floating">
+              <select class="form-select student-details"
+                      th:field="*{gender}"
+                      id="gender"
+                      aria-label="Gender">
+                <option value=""></option>
+                <option value="Male"   th:selected="${student.gender == 'Male'}">Male</option>
+                <option value="Female" th:selected="${student.gender == 'Female'}">Female</option>
+                <option value="Other"  th:selected="${student.gender == 'Other'}">Other</option>
+              </select>
+              <label for="gender">Gender</label>
+            </div>
+          </div>
+
+          <!-- Caste -->
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     th:field="*{caste}"
+                     id="caste"
+                     placeholder=" ">
+              <label for="caste">Caste</label>
+            </div>
+          </div>
+
+          <!-- Mobile -->
+          <div class="col-md-4">
+            <div class="form-floating">
+              <input type="tel"
+                     class="form-control student-details"
+                     th:field="*{mobile}"
+                     id="mobile"
+                     placeholder=" ">
+              <label for="mobile">Student Mobile No.</label>
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="col-md-5">
+            <div class="form-floating">
+              <input type="email"
+                     class="form-control student-details"
+                     th:field="*{email}"
+                     id="email"
+                     placeholder="name@example.com">
+              <label for="email">Email</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ GUARDIANS (Father / Mother) ============ -->
+      <div class="section px-2 mt-4">
+        <div class="title mb-2">
+          <span class="dot"></span><h5 class="mb-0">Guardian Details</h5>
+        </div>
+
+        <!-- We use separate model attributes: father, mother -->
+        <div class="row g-3">
+          <!-- Father -->
+          <div class="col-md-6">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     id="fatherName"
+                     th:value="${father != null ? father.fullName : ''}"
+                     placeholder=" ">
+              <label for="fatherName">Father’s Name</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="tel"
+                     class="form-control student-details"
+                     id="fatherMobile"
+                     th:value="${father != null ? father.mobile : ''}"
+                     placeholder=" ">
+              <label for="fatherMobile">Father’s Mobile</label>
+            </div>
+          </div>
+
+          <!-- Mother -->
+          <div class="col-md-6">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     id="motherName"
+                     th:value="${mother != null ? mother.fullName : ''}"
+                     placeholder=" ">
+              <label for="motherName">Mother’s Name</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="tel"
+                     class="form-control student-details"
+                     id="motherMobile"
+                     th:value="${mother != null ? mother.mobile : ''}"
+                     placeholder=" ">
+              <label for="motherMobile">Mother’s Mobile</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ ADDRESS (we use first "current" address) ============ -->
+      <div class="section px-2 mt-4">
+        <div class="title mb-2">
+          <span class="dot"></span><h5 class="mb-0">Address</h5>
+        </div>
+
+        <div class="row g-3">
+          <!-- Address line -->
+          <div class="col-12">
+            <div class="form-floating">
+              <textarea class="form-control student-details"
+                        id="addressLine1"
+                        style="height:100px"
+                        placeholder=" "
+                        th:text="${#lists.isEmpty(student.addresses) ? '' : student.addresses.get(0).address.line1}">
+              </textarea>
+              <label for="addressLine1">Residential Address</label>
+            </div>
+          </div>
+
+          <!-- City -->
+          <div class="col-md-4">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     id="city"
+                     placeholder=" "
+                     th:value="${#lists.isEmpty(student.addresses) ? '' : student.addresses.get(0).address.city}">
+              <label for="city">City</label>
+            </div>
+          </div>
+
+          <!-- State -->
+          <div class="col-md-4">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     id="state"
+                     placeholder=" "
+                     th:value="${#lists.isEmpty(student.addresses) ? '' : student.addresses.get(0).address.state}">
+              <label for="state">State</label>
+            </div>
+          </div>
+
+          <!-- Pincode -->
+          <div class="col-md-4">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     id="pincode"
+                     placeholder=" "
+                     th:value="${#lists.isEmpty(student.addresses) ? '' : student.addresses.get(0).address.pincode}">
+              <label for="pincode">PIN Code</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ FOOTER / SAVE BUTTON ============ -->
+      <div class="submit-zone p-4 text-center">
+        <button class="btn btn-primary-theme" type="button" id="saveStudentBtn">
+          <i class="bi bi-check2-circle me-1"></i> Save Changes
+        </button>
+      </div>
+
+      <!-- You can keep studentId hidden if you want it in payload -->
+      <input type="hidden" id="studentId" th:value="*{studentId}">
+    </form>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- jQuery if not already included in your base -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script th:inline="javascript">
+  // Reuse same pattern as admission.js – collect all .student-details
+  $(function () {
+    $("#saveStudentBtn").on("click", function () {
+      const formData = {};
+
+      // Collect fields (ids must match CreateStudentRequest property names)
+      $(".student-details").each(function () {
+        if (this.id) {
+          formData[this.id] = $(this).val();
+        }
+      });
+
+      // Optional: send studentId as well (if your CreateStudentRequest supports it)
+      formData["studentId"] = /*[[${student.studentId}]]*/ null;
+
+      console.log("Saving student:", formData);
+
+      $.ajax({
+        // 🔁 Reuse your existing UI endpoint that forwards to /api/students
+        // This is the same one you already use in admission.js:
+        url: "/student/update",
+        type: "POST",
+        data: JSON.stringify(formData),
+        contentType: "application/json",
+        success: function (res) {
+          alert("Student details saved successfully.");
+          // Optionally reload to show latest data
+          window.location.reload();
+        },
+        error: function (xhr) {
+          console.error(xhr);
+          alert("Error: Unable to save student details.");
+        }
+      });
+    });
+  });
+</script>
+
+<style>
+  .app-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(2,6,23,.06);
+  }
+</style>
+</body>
+</html>

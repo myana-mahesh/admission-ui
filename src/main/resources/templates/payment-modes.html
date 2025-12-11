@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar">
+
+<!-- Sidebar -->
+<div th:replace="fragments/sidebar :: app_sidebar(active='paymentmodes')"></div>
+
+<!-- Main content -->
+<div class="app-main-wrap">
+    <div class="container-xl py-3">
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h3 class="mb-0">Payment Modes</h3>
+                <small class="text-muted">Create, edit and delete payment modes.</small>
+            </div>
+
+            <!-- 🔘 Add New button -> opens modal -->
+            <div>
+                <a class="btn btn-sm btn-primary-theme"
+                   href="javascript:void(0);"
+                   onclick="openCreatePaymentModeModal()">
+                    + Add New
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 📋 List of Payment Modes -->
+            <div class="col-lg-12 mb-3">
+                <div class="card">
+                   
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th class="table_header_theme" style="width: 80px;">ID</th>
+                                <th class="table_header_theme" >Code</th>
+                                <th class="table_header_theme" style="width: 100px;">Active</th>
+                                <th class="table_header_theme" style="width: 160px;">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${#lists.isEmpty(paymentModes)}">
+                                <td colspan="5" class="text-center text-muted py-3">
+                                    No payment modes found.
+                                </td>
+                            </tr>
+                            <tr th:each="pm : ${paymentModes}">
+                                <td th:text="${pm.paymentModeId}">1</td>
+                                <td th:text="${pm.code}">CASH</td>
+                                <td>
+                                    <span th:if="${pm.active}" class="badge bg-success">Yes</span>
+                                    <span th:if="${!pm.active}" class="badge bg-secondary">No</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <!-- 🟡 Edit: redirect to same page with id=... (will auto-open modal) -->
+										<button type="button"
+							                class="btn btn-sm btn-outline-primary-theme"
+							                th:attr="data-id=${pm.paymentModeId},
+							                         data-code=${pm.code},
+							                         data-active=${pm.active}"
+							                onclick="openEditPaymentModeModal(this)">
+							            Edit
+							        </button>
+
+                                        <!-- 🔴 Delete -->
+                                        <form th:action="@{'/payment-modes/delete/' + ${pm.paymentModeId}}"
+                                              method="post" class="d-inline">
+                                            <!-- If you use CSRF, add token here -->
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Delete this payment mode?');">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- row -->
+    </div>
+</div>
+
+<!-- 🌟 Modal: Add / Edit Payment Mode -->
+<div class="modal fade" id="paymentModeModal" tabindex="-1" aria-labelledby="paymentModeModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"
+                    id="paymentModeModalTitle">
+                    Add New Payment Mode
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="paymentModeForm"
+                      th:action="@{/payment-modes/save}"
+                      th:object="${paymentMode}"
+                      method="post">
+
+                    <!-- Hidden ID field for edit -->
+                    <input type="hidden" id="paymentModeId" th:field="*{paymentModeId}"/>
+
+                    <div class="mb-3">
+                        <label class="form-label">Code <span class="text-danger">*</span></label>
+                        <input type="text" id="code" th:field="*{code}" class="form-control"
+                               placeholder="e.g. CASH, UPI, CARD" required>
+                    </div>
+
+                   
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox"
+                               id="activeCheck" th:field="*{active}">
+                        <label class="form-check-label" for="activeCheck">
+                            Active
+                        </label>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary-theme">
+                            <span id="paymentModeSubmitLabel">Save</span>
+                        </button>
+
+                        <button type="button" class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- 🧠 JS: handle Add New + auto-open for Edit -->
+<script th:inline="javascript">
+/*<![CDATA[*/
+    function openCreatePaymentModeModal() {
+        const form = document.getElementById('paymentModeForm');
+        if (form) {
+            form.reset();
+        }
+
+        // Clear hidden ID + fields for fresh create
+        const idField = document.getElementById('paymentModeId');
+        const codeField = document.getElementById('code');
+        const descField = document.getElementById('description');
+        const activeCheck = document.getElementById('activeCheck');
+
+        if (idField) idField.value = '';
+        if (codeField) codeField.value = '';
+        if (descField) descField.value = '';
+        if (activeCheck) activeCheck.checked = true;
+
+        // Set modal title & button text
+        const titleEl = document.getElementById('paymentModeModalTitle');
+        const submitLabel = document.getElementById('paymentModeSubmitLabel');
+        if (titleEl) titleEl.textContent = 'Add New Payment Mode';
+        if (submitLabel) submitLabel.textContent = 'Save';
+
+        const modalEl = document.getElementById('paymentModeModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    // Auto-open modal when editing (when paymentModeId is present)
+    document.addEventListener('DOMContentLoaded', function () {
+        var isEdit = /*[[${paymentMode.paymentModeId} != null]]*/ false;
+        if (isEdit) {
+            const titleEl = document.getElementById('paymentModeModalTitle');
+            const submitLabel = document.getElementById('paymentModeSubmitLabel');
+            if (titleEl) titleEl.textContent = 'Edit Payment Mode';
+            if (submitLabel) submitLabel.textContent = 'Update';
+
+            const modalEl = document.getElementById('paymentModeModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+    });
+	
+	function getPaymentModeModalInstance() {
+	        const modalEl = document.getElementById('paymentModeModal');
+	        return bootstrap.Modal.getOrCreateInstance(modalEl);
+	    }
+
+	    function openCreatePaymentModeModal() {
+	        const form = document.getElementById('paymentModeForm');
+	        if (form) {
+	            form.reset();
+	        }
+
+	        const idField      = document.getElementById('paymentModeId');
+	        const codeField    = document.getElementById('code');
+	        const descField    = document.getElementById('description');
+	        const activeCheck  = document.getElementById('activeCheck');
+	        const titleEl      = document.getElementById('paymentModeModalTitle');
+	        const submitLabel  = document.getElementById('paymentModeSubmitLabel');
+
+	        if (idField)     idField.value = '';
+	        if (codeField)   codeField.value = '';
+	        if (descField)   descField.value = '';
+	        if (activeCheck) activeCheck.checked = true; // default active
+
+	        if (titleEl)     titleEl.textContent = 'Add New Payment Mode';
+	        if (submitLabel) submitLabel.textContent = 'Save';
+
+	        getPaymentModeModalInstance().show();
+	    }
+
+	    // 🟡 Edit: pre-fill modal with row data and show it
+	    function openEditPaymentModeModal(button) {
+	        const id          = button.getAttribute('data-id');
+	        const code        = button.getAttribute('data-code');
+	        const description = button.getAttribute('data-description');
+	        const activeStr   = button.getAttribute('data-active');
+
+	        const idField      = document.getElementById('paymentModeId');
+	        const codeField    = document.getElementById('code');
+	        const descField    = document.getElementById('description');
+	        const activeCheck  = document.getElementById('activeCheck');
+	        const titleEl      = document.getElementById('paymentModeModalTitle');
+	        const submitLabel  = document.getElementById('paymentModeSubmitLabel');
+
+	        if (idField)     idField.value = id || '';
+	        if (codeField)   codeField.value = code || '';
+	        if (descField)   descField.value = description || '';
+	        if (activeCheck) activeCheck.checked = (activeStr === 'true' || activeStr === 'TRUE');
+
+	        if (titleEl)     titleEl.textContent = 'Edit Payment Mode';
+	        if (submitLabel) submitLabel.textContent = 'Update';
+
+	        getPaymentModeModalInstance().show();
+	    }
+/*]]>*/
+</script>
+
+</body>
+</html>

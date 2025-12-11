@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: course_head">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Page specific CSS -->
+    <link rel="stylesheet" th:href="@{/css/courses-list.css}" />
+</head>
+<body>
+<div class="layout">
+
+    <!-- Existing sidebar fragment (same as your form page) -->
+    <div th:replace="fragments/sidebar :: app_sidebar('newadmission')"></div>
+
+    <!-- Extra sidebar block you are already using on the form page -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            ABS ERP
+        </div>
+        <nav class="sidebar-nav">
+            <a th:href="@{/dashboard}" class="sidebar-link">Dashboard</a>
+            <a th:href="@{/admissions}" class="sidebar-link">Admissions</a>
+            <a th:href="@{/courses}" class="sidebar-link active">Courses & Fees</a>
+        </nav>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+        <!-- Header (matching your form header) -->
+        <header class="header">
+            <div>
+                <div class="header-title">Courses & Default Fee Templates</div>
+                <div class="header-subtitle">View all courses and open details to edit fee structure</div>
+            </div>
+            <div class="header-right"
+                 th:text="${#dates.format(#dates.createNow(), 'dd MMM yyyy')}">
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="content ms-1">
+            <div class="card course-list-card">
+
+                <!-- Card header row -->
+                <div class="course-card-header">
+                    <div>
+                        <h2 class="course-card-title">Courses</h2>
+                        <p class="card-subtitle mb-0">
+                            Click on any course row to open the detailed course & fee edit page.
+                        </p>
+                    </div>
+                    <div class="course-card-actions">
+                        <!-- uses your existing /coursescreate mapping -->
+                        <a th:href="@{/coursescreate}">
+                            <button type="button" class="btn btn-primary-theme">
+                                + Add New Course
+                            </button>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Search -->
+                <div class="course-list-search-row">
+                    <input id="courseSearch"
+                           type="text"
+                           class="course-list-search-input"
+                           placeholder="Search by course code or course name..."
+                           oninput="filterCourses()" />
+                </div>
+
+                <!-- Table -->
+                <div class="course-table-wrapper">
+                    <table id="coursesTable" class="course-table">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Code</th>
+                            <th>Course Name</th>
+                            <th>Years</th>
+                            <th>Template Name</th>
+                            <th>Total Installments</th>
+                            <th>Total Amount</th>
+                            <th class="course-table-action-col">Action</th>
+                        </tr>
+                        </thead>
+						<tbody>
+						<!-- courses is List<CourseFeeRequestDto> -->
+						<tr th:each="c, stat : ${courses}"
+						    th:onclick="'window.location.href=\'' + @{/courseedit(courseId=${c.courseId})} + '\';'">
+						    <td th:text="${stat.index + 1}"></td>
+						    <td th:text="${c.code}"></td>
+						    <td th:text="${c.name}"></td>
+						    <td>
+						        <span th:text="${c.years}"></span>
+						        <span class="course-text-muted">years</span>
+						    </td>
+
+						    <!-- Template Name -->
+						    <td th:text="${c.feeTemplate != null ? c.feeTemplate.name : '—'}"></td>
+
+						    <!-- Total Installments (size of feeTemplate.installments) -->
+						    <td>
+						        <span class="course-badge-pill"
+						              th:text="${c.feeTemplate != null 
+						                        and c.feeTemplate.installments != null 
+						                        and !#lists.isEmpty(c.feeTemplate.installments)
+						                        ? #lists.size(c.feeTemplate.installments) + ' installments'
+						                        : '—'}">
+						        </span>
+						    </td>
+
+						    <!-- Total Amount (feeTemplate.totalAmount) -->
+						    <td th:text="${c.feeTemplate != null 
+						                  and c.feeTemplate.totalAmount != null
+						                  ? '₹' + c.feeTemplate.totalAmount
+						                  : '—'}">
+						    </td>
+
+						    <td class="course-table-action-cell"
+						        onclick="event.stopPropagation();">
+						        <a th:href="@{/courseedit(courseId=${c.courseId})}">
+						            <button type="button" class="btn btn-outline-theme">
+						                Edit
+						            </button>
+						        </a>
+						    </td>
+						</tr>
+
+						<!-- Empty state -->
+						<tr th:if="${#lists.isEmpty(courses)}">
+						    <td colspan="8" class="course-empty-row">
+						        No courses configured yet. Click “Add New Course” to create one.
+						    </td>
+						</tr>
+						</tbody>
+
+                    </table>
+                </div>
+
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    function filterCourses() {
+        const query = (document.getElementById('courseSearch').value || '').toLowerCase();
+        const rows = document.querySelectorAll('#coursesTable tbody tr');
+
+        rows.forEach(row => {
+            const cells = row.children;
+            if (!cells || cells.length < 3) return;
+
+            // skip “no courses” row
+            if (row.querySelector('.course-empty-row')) {
+                return;
+            }
+
+            const code = (cells[1].textContent || '').toLowerCase();
+            const name = (cells[2].textContent || '').toLowerCase();
+
+            if (!query || code.includes(query) || name.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+</script>
+</body>
+</html>

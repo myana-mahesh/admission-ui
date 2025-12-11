@@ -1,0 +1,105 @@
+<!-- templates/fragments/sidebar.html -->
+<div th:fragment="app_sidebar(active)">
+  <!-- Sidebar portal = fixed sidebar + spacer that reserves width in flow -->
+  <div class="sb-portal" data-active-th="${active}">
+    <aside id="appSidebar" class="sb-fixed" role="navigation" aria-label="Main">
+      <!-- Brand -->
+      <div class="sb-brand">
+        <div class="sb-logo">
+			<img src="img/abs logo.jpg" class="logo-img" width="45">
+		</div>
+        <div>
+          <div class="sb-title">ABS ERP</div>
+          <div class="sb-sub">Admissions • Finance • Ops</div>
+        </div>
+      </div>
+
+      <!-- Search (optional) -->
+      <label class="sb-search" aria-label="Search">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Search…" />
+      </label>
+
+      <!-- Nav -->
+      <nav class="sb-nav">
+        <div class="sb-label">Admissions</div>
+		<a class="sb-link" th:classappend="${active}=='admissions' ? ' is-active' : ''" th:href="@{/admissionlist}">
+          <i class="bi bi-mortarboard"></i><span>All Admissions</span>
+        </a>
+        <a class="sb-link" th:classappend="${active}=='newadmission' ? ' is-active' : ''" th:href="@{/newadmission}">
+          <i class="bi bi-mortarboard"></i><span>New Admission</span>
+        </a>
+        <a class="sb-link" th:classappend="${active}=='students' ? ' is-active' : ''" th:href="@{/studentlist}">
+          <i class="bi bi-people"></i><span>Students</span><span class="sb-badge">42</span>
+        </a>
+		
+		<a class="sb-link" th:classappend="${active}=='paymentmodes' ? ' is-active' : ''" th:href="@{/payment-modes}">
+          <i class="bi bi-people"></i><span>Payment Modes</span>
+        </a>
+		
+		<a class="sb-link" th:classappend="${active}=='coursemaster' ? ' is-active' : ''" th:href="@{/courses}">
+          <i class="bi bi-people"></i><span>Course</span>
+        </a>
+
+        <div class="sb-label">Finance</div>
+        <a class="sb-link" th:classappend="${active}=='payments' ? ' is-active' : ''" th:href="@{/payments}">
+          <i class="bi bi-cash-coin"></i><span>Payments</span>
+        </a>
+        <a class="sb-link" th:classappend="${active}=='invoices' ? ' is-active' : ''" th:href="@{/invoices}">
+          <i class="bi bi-receipt"></i><span>Invoices</span>
+        </a>
+
+        <div class="sb-label">Operations</div>
+        <a class="sb-link" th:classappend="${active}=='attendance' ? ' is-active' : ''" th:href="@{/attendance}">
+          <i class="bi bi-fingerprint"></i><span>Attendance</span>
+        </a>
+        <a class="sb-link" th:classappend="${active}=='reports' ? ' is-active' : ''" th:href="@{/reports}">
+          <i class="bi bi-graph-up"></i><span>Reports</span>
+        </a>
+
+        <div class="sb-sep"></div>
+        <a class="sb-link" th:classappend="${active}=='settings' ? ' is-active' : ''" th:href="@{/settings}">
+          <i class="bi bi-gear"></i><span>Settings</span>
+        </a>
+      </nav>
+
+      <!-- Footer -->
+      <div class="sb-foot">
+        <div class="sb-user">
+          <div class="sb-avatar">A</div>
+          <div>
+            <div class="sb-user-name" >Admin</div>
+            <div class="sb-user-role">Administrator</div>
+          </div>
+        </div>
+        <a href="/logout" class="sb-logout w-100"><i class="bi bi-box-arrow-right"></i> Logout</a>
+      </div>
+    </aside>
+
+    <!-- Spacer pushes page content to the right on desktop without changing your layout -->
+    <div class="sb-spacer" aria-hidden="true"></div>
+  </div>
+
+  <!-- Scoped styles (light, elegant) -->
+  <style>
+    /* ---- Size & breakpoints ---- */
+    
+  </style>
+
+  <!-- Optional: drawer overlay (mobile). Add once per page near <body>: <div id="sbOverlay" class="sb-overlay" hidden></div> -->
+  <script>
+    // If a burger button exists with id="sbToggle", wire drawer open/close for mobile
+    (function () {
+      const sb = document.getElementById('appSidebar');
+      const btn = document.getElementById('sbToggle');
+      const overlay = document.getElementById('sbOverlay');
+      if (!sb || !btn || !overlay) return;
+
+      const open = () => { sb.classList.add('is-open'); overlay.hidden = false; btn.setAttribute('aria-expanded','true'); };
+      const close = () => { sb.classList.remove('is-open'); overlay.hidden = true; btn.setAttribute('aria-expanded','false'); };
+      btn.addEventListener('click', () => sb.classList.contains('is-open') ? close() : open());
+      overlay.addEventListener('click', close);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    }());
+  </script>
+</div>
