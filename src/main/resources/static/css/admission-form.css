@@ -256,3 +256,8 @@ body.has-sidebar .app-main-wrap{ margin-left: var(--sbw); transition: margin-lef
 .table_header_theme{
   background-color:var(--secondary-color) !important;
 }
+
+.max-width-100{
+	max-width: 100% !important;
+}
+

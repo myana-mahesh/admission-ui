@@ -17,7 +17,7 @@
   <div class="app-main-wrap">
     <div class="toolbar"><div class="container-xl"></div></div>
 
-    <div class="container-xl my-4">
+    <div class="container-xl my-4 max-width-100">
       <form id="admissionForm" class="app-card" th:object="${admission}">
         <!-- =================== HEADER =================== -->
         <div class="glass-header p-4">
@@ -632,8 +632,6 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <!-- Your scripts -->
   <script src="js/admission.js"></script>
-
-
   <script th:inline="javascript">
     var courses = /*[[${courses}]]*/ '';
     var yearlyFees = /*[[${yearlyFees}]]*/ '';
@@ -643,8 +641,7 @@
 	    window.hasExistingInstallments = /*[[${hasExistingInstallments}]]*/ false;
 	    window.existingInstallments   = /*[[${existingInstallments}]]*/ [];
 	/*]]>*/
-    console.log(yearlyFees);
-
+	
     for (const [year, amount] of Object.entries(yearlyFees)) {
       console.log('Year:', year, 'Amount:', amount);
       yearBudgets.set(Number.parseInt(year), amount);
@@ -657,8 +654,6 @@
       const currentYearFees = yearlyFees[currentYear];
       $("#activeYearBudget").val(currentYearFees);
     });
-    $("#course").trigger("change");
-
     
   </script>
   <script src="js/feesmanagement.js"></script>

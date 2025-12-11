@@ -3,8 +3,13 @@ var yearBudgets = new Map();           // current effective budgets (what UI use
 var initialYearBudgets = new Map();    // snapshot from backend/template (for reference)
 let hasCustomBudgets = false;
 let budgetsSource = 'auto';
-
+$(document).ready(function() {
+  $('#course').trigger('change');
+  $('#activeYear').trigger('change');
+  
+});
 (function () {
+	
   const totalFeesEl   = document.getElementById('totalFees');
   const discountEl    = document.getElementById('discountAmount');
   const actualFeesEl  = document.getElementById('actualFees');
