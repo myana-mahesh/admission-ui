@@ -1,5 +1,6 @@
 package com.impactsure.sanctionui.web;
 
+import com.impactsure.sanctionui.dto.CancelAdmissionDTO;
 import lombok.RequiredArgsConstructor;
 
 import java.text.ParseException;
@@ -61,8 +62,8 @@ public class AdmissionFormController {
 	
 	@Autowired
 	private PaymentModeApiClientService paymentModeApiClientService;
-	
-	
+
+
 	public List<String> clientRoleNames(OidcUser user){
 		return user.getAuthorities().stream()
 			      .map(a -> a.getAuthority())
@@ -113,7 +114,7 @@ public class AdmissionFormController {
 	@GetMapping("/admissionlist")
 	public ModelAndView listAdmissions(
 	    @RequestParam(defaultValue = "") String q,
-	    @RequestParam(defaultValue = "PENDING,ADMITTED") String status,
+	    @RequestParam(defaultValue = "PENDING,ADMITTED,UNDER_CANCELLATION,CANCELLED") String status,
 	    @RequestParam(defaultValue = "0") int page,
 	    @RequestParam(defaultValue = "25") int size,
 	    @RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
@@ -186,7 +187,7 @@ public class AdmissionFormController {
         for(PaymentModeDto  mode:paymentModes) {
         	paymentModeStrings.add(mode.getCode());
         }
-        
+        CancelAdmissionDTO cancelAdmissionDTO = admissionApiClientService.fetchCancelAdmissionDetails(id,accessToken);
         List<String> roles = clientRoleNames(oidcUser);
 	    String role = getSingleRole(roles);
 	    model.addObject("role", role);
@@ -199,6 +200,7 @@ public class AdmissionFormController {
 	    model.addObject("docUploads", docUploads);
 	    model.addObject("yearlyFees", yearlyFeesMap); 
 		model.addObject("paymentModes", paymentModeStrings);
+		model.addObject("cancellation", cancelAdmissionDTO);
 	    model.setViewName("admissions/admission-view");
 	    
 	    model.addObject("hasExistingInstallments", !admission.getInstallments().isEmpty());

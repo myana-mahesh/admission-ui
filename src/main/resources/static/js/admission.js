@@ -418,3 +418,136 @@ $(document).ready(function () {
   }
 
 });
+
+$("body").on("click", "#confirmCancelBtn", function (e) {
+  submitCancelAdmission();
+});
+
+$("body").on("click", "#confirmCancelAdmissionBtn", function (e) {
+  submitCancelAdmission();
+});
+
+
+function submitCancelAdmission() {
+
+  const charges = $("#cancelCharges").val();
+  const remarks = $("#remarks_admission_cancel").val();
+
+  // ✅ simple mandatory validation
+  if (!charges || charges.trim() === "") {
+    alert("Cancel Charges is required");
+    $("#cancelCharges").focus();
+    return;
+  }
+
+  if (!remarks || remarks.trim() === "") {
+    alert("Remarks is required");
+    $("#remarks_admission_cancel").focus();
+    return;
+  }
+  const requestData = {
+    admissionId: $("#admissionId").val(),
+    cancelCharges: charges,
+    remark: remarks,
+    handlingPerson: "",
+    refundProofFileName: "",
+    role : $("#role").val()
+  };
+
+
+  $.ajax({
+    url: "/admission/cancel-admission",
+    type: "POST",
+    contentType: "application/json",
+    data: JSON.stringify(requestData),
+    success: function (response) {
+      showResponseModal(
+          "success",
+          response || "Admission cancelled successfully!",
+          "/admissionlist"
+      );
+    },
+    error: function (xhr, status, error) {
+      showResponseModal(
+          "error",
+          xhr.responseText || "Something went wrong!"
+      );
+      console.error("AJAX Error:", error);
+    }
+  });
+}
+function showResponseModal(type, message, redirectUrl) {
+  const modalEl = document.getElementById("responseModal");
+  const modal = new bootstrap.Modal(modalEl);
+
+  const title = document.getElementById("responseModalTitle");
+  const msg = document.getElementById("responseModalMessage");
+  const icon = document.getElementById("responseModalIcon");
+
+  msg.textContent = message;
+
+  if (type === "success") {
+    title.textContent = "Success";
+    icon.className = "bi bi-check-circle-fill text-success";
+  } else {
+    title.textContent = "Error";
+    icon.className = "bi bi-x-circle-fill text-danger";
+  }
+
+  modal.show();
+
+  // Redirect after modal close
+  if (redirectUrl) {
+    modalEl.addEventListener(
+        "hidden.bs.modal",
+        function () {
+          window.location.href = redirectUrl;
+        },
+        { once: true }
+    );
+  }
+}
+
+
+$("body").on("click", "#updateCancellationBtn", function () {
+  saveCancellationDetails();
+});
+
+function saveCancellationDetails() {
+  const formData = new FormData();
+
+  formData.append("admissionId", $("#admissionId").val());
+  formData.append("cancelCharges", $("input[name='cancelCharges']").val());
+  formData.append("handlingPerson", $("input[name='handlingPerson']").val());
+  formData.append("remark", $("textarea[name='remark']").val());
+
+  const refundFile = $("input[name='refundProof']")[0].files[0];
+  if (refundFile) {
+    formData.append("refundProof", refundFile);                 // ✅ FILE
+    formData.append("refundProofFileName", refundFile.name);    // ✅ NAME
+  }
+
+  $.ajax({
+    url: "/admission/save-cancellation-details",
+    type: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    success: function (response) {
+      showResponseModal(
+          "success",
+          response ,
+          "/admissions?id=" + $("#admissionId").val()
+      );
+    },
+    error: function (xhr) {
+     // alert("Error saving cancellation details");
+      showResponseModal(
+          "error",
+          "Error saving cancellation details" ,
+          "/admissions?id=" + $("#admissionId").val()
+      );
+      console.error(xhr);
+    }
+  });
+}

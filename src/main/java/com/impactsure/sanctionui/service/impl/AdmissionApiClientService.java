@@ -1,5 +1,6 @@
 package com.impactsure.sanctionui.service.impl;
 
+import com.impactsure.sanctionui.dto.CancelAdmissionDTO;
 import com.impactsure.sanctionui.dto.CreateAdmissionRequest;
 import com.impactsure.sanctionui.dto.OfficeUpdateRequest;
 import com.impactsure.sanctionui.entities.Admission2;
@@ -182,5 +183,99 @@ public class AdmissionApiClientService {
                 .collect(Collectors.toMap(f -> f.getDocType().getCode(), Function.identity(),
                                           (a,b) -> a)); // keep first if multiple
     }
-    
+
+
+    public String cancelAdmission(CancelAdmissionDTO dto, String accessToken) {
+
+        // Set headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+
+        // Attach DTO + headers
+        HttpEntity<CancelAdmissionDTO> requestEntity = new HttpEntity<>(dto, headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    admissionApiUrl + "/admissions/cancel-admission",
+                    requestEntity,
+                    String.class
+            );
+
+            return response.getBody();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+
+    public CancelAdmissionDTO fetchCancelAdmissionDetails(Long admissionId, String accessToken) {
+
+        try {
+            // Set headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(accessToken);
+
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<CancelAdmissionDTO> response =
+                    restTemplate.exchange(
+                            admissionApiUrl
+                                    + "/admissions/fetch-cancel-admission-details/"
+                                    + admissionId,
+                            HttpMethod.GET,
+                            requestEntity,
+                            CancelAdmissionDTO.class
+                    );
+
+
+            return response.getBody();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    public CancelAdmissionDTO cancelAdmissionDetailsUpdate(
+            Long admissionId,
+            Double cancelCharges,
+            String handlingPerson,
+            String remark,
+            String refundProofFileName,
+            String accessToken) {
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(accessToken);
+
+            CancelAdmissionDTO dto = new CancelAdmissionDTO();
+            dto.setAdmissionId(admissionId);
+            dto.setCancelCharges(cancelCharges);
+            dto.setHandlingPerson(handlingPerson);
+            dto.setRemark(remark);
+            dto.setRefundProofFileName(refundProofFileName);
+
+            HttpEntity<CancelAdmissionDTO> requestEntity =
+                    new HttpEntity<>(dto, headers);
+
+            ResponseEntity<CancelAdmissionDTO> response =
+                    restTemplate.exchange(
+                            admissionApiUrl + "/admissions/cancel-admission-details-update",
+                            HttpMethod.PUT,
+                            requestEntity,
+                            CancelAdmissionDTO.class
+                    );
+
+            return response.getBody();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+
 }
