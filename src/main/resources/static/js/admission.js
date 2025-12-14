@@ -547,6 +547,7 @@ function saveCancellationDetails() {
           "error",
           "Error saving cancellation details" ,
           "/admissions?id=" + $("#admissionId").val()
+
       );
       console.error(xhr);
     }
