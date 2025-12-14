@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar">
+
+<!-- Sidebar -->
+<div th:replace="fragments/sidebar :: app_sidebar('perks-master')"></div>
+
+<div class="app-main-wrap">
+  <div class="toolbar">
+    <div class="container-xl"></div>
+  </div>
+
+  <div class="container-xl my-4 max-width-100">
+    <div class="app-card p-4">
+      <!-- ============ HEADER ============ -->
+      <div class="glass-header mb-3">
+        <div class="ribbon"></div>
+        <div class="row g-3 align-items-center">
+          <div class="col-md-1 text-center">
+            <div class="px-2 fw-bold text-muted">
+              <img src="/img/abs logo.jpg" width="70" alt="ABS">
+            </div>
+          </div>
+          <div class="col-md-7">
+            <div class="brand-pill mb-2">
+              <i class="bi bi-gift"></i> Student Perks Master
+            </div>
+            <h3 class="primary-heading mb-1 fw-bold" style="letter-spacing:.2px;">
+              Manage Student Perks
+            </h3>
+            <div class="help">Create, edit and delete perks which can be assigned to students.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ FORM: ADD / EDIT PERK ============ -->
+      <div class="section px-2 mt-2">
+        <div class="title mb-2">
+          <span class="dot"></span><h5 class="mb-0">Perk Details</h5>
+        </div>
+
+        <div class="row g-3 align-items-end">
+          <div class="col-md-6">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control"
+                     id="perkName"
+                     placeholder=" ">
+              <label for="perkName">Perk Name</label>
+              <div class="invalid-feedback small">Perk name is required.</div>
+            </div>
+          </div>
+
+          <div class="col-md-6 d-flex gap-2">
+            <button class="btn btn-primary-theme" type="button" id="savePerkBtn">
+              <i class="bi bi-check2-circle me-1"></i>
+              <span id="savePerkBtnLabel">Add Perk</span>
+            </button>
+            <button class="btn btn-outline-secondary d-none" type="button" id="cancelEditBtn">
+              Cancel Edit
+            </button>
+          </div>
+        </div>
+
+        <!-- Hidden field to track which perk is being edited -->
+        <input type="hidden" id="editingPerkId" value="">
+      </div>
+
+      <!-- ============ PERKS TABLE ============ -->
+      <div class="section px-2 mt-4">
+        <div class="title mb-2">
+          <span class="dot"></span><h5 class="mb-0">All Perks</h5>
+        </div>
+
+        <div class="table-responsive mt-2">
+          <table class="table table-hover align-middle mb-0" id="perksTable">
+            <thead>
+              <tr>
+                <th style="width: 70px;">#</th>
+                <th>Perk Name</th>
+                <th style="width: 200px;">Created At</th>
+                <th style="width: 200px;">Updated At</th>
+                <th style="width: 140px;" class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="perksTableBody">
+              <!-- Filled dynamically via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script th:inline="javascript">
+  // Base URL for your UI service that proxies to admission-service.
+  // Adjust if needed.
+  const PERKS_API_BASE = /*[[${perksApiBaseUrl}]]*/ '/perks/master';
+
+  let editingPerkId = null;
+
+  $(function () {
+    // Initial load
+    loadPerks();
+
+    $("#savePerkBtn").on("click", function () {
+      const name = $("#perkName").val().trim();
+      if (!name) {
+        $("#perkName").addClass("is-invalid");
+        return;
+      }
+      $("#perkName").removeClass("is-invalid");
+
+      if (editingPerkId) {
+        updatePerk(editingPerkId, name);
+      } else {
+        createPerk(name);
+      }
+    });
+
+    $("#cancelEditBtn").on("click", function () {
+      resetForm();
+    });
+
+    // Delegate click events for dynamically generated buttons
+    $("#perksTableBody").on("click", ".btn-edit-perk", function () {
+      const id = $(this).data("id");
+      const name = $(this).data("name");
+      startEditPerk(id, name);
+    });
+
+    $("#perksTableBody").on("click", ".btn-delete-perk", function () {
+      const id = $(this).data("id");
+      const name = $(this).data("name");
+      if (confirm("Are you sure you want to delete perk: " + name + "?")) {
+        deletePerk(id);
+      }
+    });
+  });
+
+  function resetForm() {
+    editingPerkId = null;
+    $("#editingPerkId").val("");
+    $("#perkName").val("").removeClass("is-invalid");
+    $("#savePerkBtnLabel").text("Add Perk");
+    $("#cancelEditBtn").addClass("d-none");
+  }
+
+  function startEditPerk(id, name) {
+    editingPerkId = id;
+    $("#editingPerkId").val(id);
+    $("#perkName").val(name);
+    $("#savePerkBtnLabel").text("Update Perk");
+    $("#cancelEditBtn").removeClass("d-none");
+  }
+
+  function loadPerks() {
+    $.ajax({
+      url: PERKS_API_BASE,
+      type: "GET",
+      success: function (data) {
+        renderPerksTable(data || []);
+      },
+      error: function (xhr) {
+        console.error("Error loading perks:", xhr);
+        alert("Failed to load perks.");
+      }
+    });
+  }
+
+  function renderPerksTable(perks) {
+    const tbody = $("#perksTableBody");
+    tbody.empty();
+
+    if (!perks.length) {
+      tbody.append(`
+        <tr>
+          <td colspan="5" class="text-center text-muted py-3">
+            No perks added yet.
+          </td>
+        </tr>
+      `);
+      return;
+    }
+
+    perks.forEach((perk, index) => {
+      const createdAt = perk.createdAt ? perk.createdAt.replace('T', ' ').substring(0, 19) : '';
+      const updatedAt = perk.updatedAt ? perk.updatedAt.replace('T', ' ').substring(0, 19) : '';
+
+      const row = `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${perk.name || ''}</td>
+          <td>${createdAt}</td>
+          <td>${updatedAt}</td>
+          <td class="text-center">
+            <button type="button"
+                    class="btn btn-sm btn-outline-primary me-1 btn-edit-perk"
+                    data-id="${perk.id}"
+                    data-name="${perk.name}">
+              Edit
+            </button>
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger btn-delete-perk"
+                    data-id="${perk.id}"
+                    data-name="${perk.name}">
+              Delete
+            </button>
+          </td>
+        </tr>
+      `;
+      tbody.append(row);
+    });
+  }
+
+  function createPerk(name) {
+    $.ajax({
+      url: PERKS_API_BASE,
+      type: "POST",
+      data: JSON.stringify({ perkName: name }),
+      contentType: "application/json",
+      success: function () {
+        alert("Perk created successfully.");
+        resetForm();
+        loadPerks();
+      },
+      error: function (xhr) {
+        console.error("Error creating perk:", xhr);
+        alert("Error creating perk.");
+      }
+    });
+  }
+
+  function updatePerk(id, name) {
+    $.ajax({
+      url: PERKS_API_BASE + "/" + id,
+      type: "PUT",
+      data: JSON.stringify({ perkName: name }),
+      contentType: "application/json",
+      success: function () {
+        alert("Perk updated successfully.");
+        resetForm();
+        loadPerks();
+      },
+      error: function (xhr) {
+        console.error("Error updating perk:", xhr);
+        alert("Error updating perk.");
+      }
+    });
+  }
+
+  function deletePerk(id) {
+    $.ajax({
+      url: PERKS_API_BASE + "/" + id,
+      type: "DELETE",
+      success: function () {
+        alert("Perk deleted successfully.");
+        // If we were editing this one, reset the form
+        if (editingPerkId === id) {
+          resetForm();
+        }
+        loadPerks();
+      },
+      error: function (xhr) {
+        console.error("Error deleting perk:", xhr);
+        alert("Error deleting perk.");
+      }
+    });
+  }
+</script>
+
+<style>
+  .app-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(2,6,23,.06);
+  }
+</style>
+
+</body>
+</html>

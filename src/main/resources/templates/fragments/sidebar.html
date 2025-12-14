@@ -30,7 +30,7 @@
           <i class="bi bi-mortarboard"></i><span>New Admission</span>
         </a>
         <a class="sb-link" th:classappend="${active}=='students' ? ' is-active' : ''" th:href="@{/studentlist}">
-          <i class="bi bi-people"></i><span>Students</span><span class="sb-badge">42</span>
+          <i class="bi bi-people"></i><span>Students</span>
         </a>
 		
 		<a class="sb-link" th:classappend="${active}=='paymentmodes' ? ' is-active' : ''" th:href="@{/payment-modes}">
@@ -39,6 +39,9 @@
 		
 		<a class="sb-link" th:classappend="${active}=='coursemaster' ? ' is-active' : ''" th:href="@{/courses}">
           <i class="bi bi-people"></i><span>Course</span>
+        </a>
+		<a class="sb-link" th:classappend="${active}=='perks-master' ? ' is-active' : ''" th:href="@{/perks-master}">
+          <i class="bi bi-people"></i><span>Student Perks</span>
         </a>
 
         <div class="sb-label">Finance</div>

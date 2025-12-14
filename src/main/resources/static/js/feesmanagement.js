@@ -6,17 +6,21 @@ let budgetsSource = 'auto';
 $(document).ready(function() {
   $('#course').trigger('change');
   $('#activeYear').trigger('change');
+  $('#activeYearBudget').trigger('change');
   
 });
+
+
+
 (function () {
-	
+
   const totalFeesEl   = document.getElementById('totalFees');
   const discountEl    = document.getElementById('discountAmount');
   const actualFeesEl  = document.getElementById('actualFees');
 
-  const courseYearsEl       = document.getElementById('courseYears');        // number input
-  const activeYearSel       = document.getElementById('activeYear');        // year selector
-  const activeYearBudgetEl  = document.getElementById('activeYearBudget');  // per-year budget input
+  const courseYearsEl       = document.getElementById('courseYears');       // number input
+  const activeYearSel       = document.getElementById('activeYear');       // year selector
+  const activeYearBudgetEl  = document.getElementById('activeYearBudget'); // per-year budget input
 
   const countEl      = document.getElementById('installmentsCount');
   const tbody        = document.getElementById('installmentsBody');
@@ -36,9 +40,11 @@ $(document).ready(function() {
       !courseYearsEl || !activeYearSel || !activeYearBudgetEl ||
       !countEl || !tbody || !sumEl) return;
 
-  // If MODES is defined elsewhere, use that. Otherwise you can uncomment default.
-  // const MODES  = ['Cash', 'UPI', 'Card', 'BankTransfer', 'Cheque'];
-  const STATUS = ['Un Paid','Paid'];
+  // MODES should be defined globally elsewhere
+  const STATUS = ['Un Paid', 'Paid'];
+
+  // 🔹 NEW: backend can set window.canDeleteInstallment = false to disable delete
+  const canDeleteInstallment = window.canDeleteInstallment !== false;
 
   /* ---------- utils ---------- */
   function toNumber(v) {
@@ -101,211 +107,8 @@ $(document).ready(function() {
       return y >= 1 && y <= maxYear;
     });
   }
-  // 🔹 All UNPAID amount inputs across valid years (<= courseYears)
-  function getAllValidUnpaidAmountInputs() {
-    const maxYear = getCourseYears();
-    return getAllRows()
-      .filter(tr => {
-        const y = Number(tr.dataset.year || '1');
-        return y >= 1 && y <= maxYear && !isPaidRow(tr);
-      })
-      .map(tr => tr.querySelector('input[data-field="amount"]'))
-      .filter(Boolean);
-  }
 
-  // 🔥 Spread delta equally across all UNPAID installments (course years only)
-  function adjustAllInstallmentsByDelta(delta) {
-    const inputs = getAllValidUnpaidAmountInputs();
-    const n = inputs.length;
-    if (!n || !Number.isFinite(delta) || delta === 0) {
-      recalcInstallmentsSum();
-      return;
-    }
-
-    // We work in whole rupees
-    let d = Math.round(delta);
-
-    if (d > 0) {
-      // ➕ Increase installments
-      const base = Math.floor(d / n);
-      let rem = d - base * n;
-
-      inputs.forEach(inp => {
-        let cur = toNumber(inp.value);
-        let add = base;
-        if (rem > 0) { add += 1; rem -= 1; }
-        const nextVal = cur + add;
-        inp.value = String(nextVal);
-        inp.dataset.prev = String(nextVal);
-      });
-
-    } else if (d < 0) {
-      // ➖ Decrease installments
-      d = Math.abs(d);
-
-      // Max we can subtract (don’t go below 0 on any installment)
-      let totalCap = 0;
-      inputs.forEach(inp => {
-        totalCap += Math.max(0, toNumber(inp.value));
-      });
-      let need = Math.min(d, totalCap); // clamp
-
-      if (need <= 0) {
-        recalcInstallmentsSum();
-        return;
-      }
-
-      const base = Math.floor(need / n);
-      let rem = need - base * n;
-      let remaining = need;
-
-      inputs.forEach(inp => {
-        if (remaining <= 0) return;
-        let cur = toNumber(inp.value);
-
-        let take = base;
-        if (rem > 0) { take += 1; rem -= 1; }
-
-        take = Math.min(take, cur);   // don’t go negative
-        const nextVal = cur - take;
-        remaining -= take;
-
-        inp.value = String(nextVal);
-        inp.dataset.prev = String(nextVal);
-      });
-    }
-
-    recalcInstallmentsSum();
-  }
-
-
-  function clearAllInstallments() {
-    getAllRows().forEach(tr => tr.remove());
-    countEl.value = "0";
-
-    if (sumEl) sumEl.value = 0;
-    const yearSumEl = document.getElementById('yearInstallmentsSum');
-    if (yearSumEl) yearSumEl.value = 0;
-
-    recalcInstallmentsSum();
-  }
-
-  /* ---------- seed budgets from admission installments (backend) ---------- */
-  function seedBudgetsFromAdmission(list) {
-    yearBudgets.clear();
-    list.forEach(inst => {
-      const y = inst.yearNumber && inst.yearNumber > 0 ? inst.yearNumber : 1;
-      const prev = yearBudgets.get(y) || 0;
-      yearBudgets.set(y, prev + (inst.amount || 0));
-    });
-
-    initialYearBudgets = new Map(yearBudgets);
-    budgetsSource = 'admission';
-    hasCustomBudgets = false;
-  }
-
-  /* ---------- default fee structure load ---------- */
-  async function loadDefaultFeeStructureForCourse(courseId) {
-    if (!courseId) return;
-
-    try {
-      const resp = await fetch(`/course-fee?courseId=${courseId}`);
-      if (!resp.ok) {
-        console.error("Failed to fetch course fee template", await resp.text());
-        return;
-      }
-
-      const data = await resp.json();
-      const tmpl = data.feeTemplate;
-      if (!tmpl) {
-        console.log("No default fee template configured for course", courseId);
-        clearAllInstallments();
-        totalFeesEl.value = "";
-        discountEl.value  = "";
-        recalcActual({ reSplit: true });   // fallback to auto split
-        return;
-      }
-
-      const installments = tmpl.installments || [];
-
-      // 1) Set Total Fees & reset discount
-      totalFeesEl.value = tmpl.totalAmount || 0;
-      discountEl.value  = 0;
-      // Do NOT re-split budgets here, just recompute Actual
-      recalcActual({ reSplit: false });
-
-      // 2) Clear existing installments in UI
-      clearAllInstallments();
-
-      // 3) Seed budgets from template (sum amount per year)
-      yearBudgets.clear();
-      installments.forEach(inst => {
-        const y = inst.yearNumber && inst.yearNumber > 0 ? inst.yearNumber : 1;
-        const prev = yearBudgets.get(y) || 0;
-        yearBudgets.set(y, prev + (inst.amount || 0));
-      });
-      initialYearBudgets = new Map(yearBudgets);
-      budgetsSource = 'template';
-      hasCustomBudgets = false;
-
-      // 4) Build year dropdown (DO NOT recompute budgets)
-      ensureYearOptions({ skipBudgetRecalc: true });
-      activeYearSel.value = "1";
-      showYear(1);
-
-      // 5) Add UI rows for each installment with correct year
-      installments
-        .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
-        .forEach(function (inst) {
-          const amt = inst.amount || 0;
-          const y   = inst.yearNumber && inst.yearNumber > 0 ? inst.yearNumber : 1;
-          activeYearSel.value = String(y);
-          const year = getActiveYear();
-          window.addInstallment({ amount: amt, year: year });
-        });
-
-      // back to year 1
-      activeYearSel.value = "1";
-      showYear(1);
-
-      recalcInstallmentsSum();
-    } catch (e) {
-      console.error("Error loading default fee structure", e);
-    }
-  }
-
-  /* ---------- existing admission – don't override with template ---------- */
-  $("body").on("change", "#course", function () {
-    let selectedCourseId = $(this).val();
-    selectedCourseId = Number.parseInt(selectedCourseId);
-
-    const course = courses.find(c => c.courseId === selectedCourseId);
-    console.log("Selected course:", course);
-
-    if (course && course.years) {
-      $("#courseYears").val(course.years).trigger("change");
-    }
-
-    // Rebuild year options based on course years (no budget recalc here)
-    ensureYearOptions({ skipBudgetRecalc: true });
-
-    if (selectedCourseId) {
-      if (hasExistingInstallments) {
-        console.log("Admission has existing installments – skipping default fee template load.");
-        // DO NOT call loadDefaultFeeStructureForCourse
-      } else {
-        loadDefaultFeeStructureForCourse(selectedCourseId);
-      }
-    } else {
-      // No course selected – clear everything
-      clearAllInstallments();
-      totalFeesEl.value = "";
-      discountEl.value  = "";
-      recalcActual({ reSplit: true });
-    }
-  });
-
-  /* ---------- sums ---------- */
+  /* ---------- sums & status helpers ---------- */
   function getRows(year = getActiveYear()) {
     return [...tbody.querySelectorAll(`tr[data-year="${year}"]`)];
   }
@@ -320,7 +123,7 @@ $(document).ready(function() {
     const locked = isPaidRow(tr);
     tr.querySelectorAll('input, select').forEach(el => {
       const f = el.getAttribute('data-field');
-      if (['amount','date','mode','receipt'].includes(f)) el.disabled = locked;
+      if (['amount', 'date', 'mode', 'receipt'].includes(f)) el.disabled = locked;
     });
   }
 
@@ -372,7 +175,14 @@ $(document).ready(function() {
 
     if (sumEl)     sumEl.classList.toggle('is-invalid', mismatch);
     if (overallEl) overallEl.classList.toggle('is-invalid', mismatch);
+
+    // helpful return (optional, for debugging)
+    return { yearSum, overall, actual };
   }
+
+  // 🔓 Expose it so we can trigger from HTML after everything loads
+  window.recalcInstallmentsSum = recalcInstallmentsSum;
+
 
   /* ---------- Actual fees + budgets ---------- */
   function recalcActual(opts = {}) {
@@ -440,6 +250,29 @@ $(document).ready(function() {
   }
 
   /* ---------- build row (tagged with data-year) ---------- */
+
+  // 🔹 NEW: handler for delete
+  function handleDeleteInstallmentRow(tr) {
+    const year = Number(tr.dataset.year || getActiveYear());
+
+    if (isPaidRow(tr)) {
+      alert('Paid installment cannot be deleted.');
+      return;
+    }
+
+    tr.remove();
+    renumberSrNos(year);
+
+    // update count for active year
+    if (year === getActiveYear()) {
+      countEl.value = String(getRows(year).length);
+    }
+
+    // re-split remaining unpaid installments in that year
+    equalSplitUnpaidForYear(year);
+    recalcInstallmentsSum();
+  }
+
   function buildRow(rowIndexInYear, year, statusText = 'Un Paid') {
     const tr = document.createElement('tr');
     tr.dataset.year = String(year);
@@ -502,6 +335,18 @@ $(document).ready(function() {
     statusSel.value = statusText;
     tdStatus.appendChild(statusSel);
     tr.appendChild(tdStatus);
+
+    // 🔹 NEW: Actions (Delete button)
+    const tdActions = document.createElement('td');
+    if (canDeleteInstallment) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-sm btn-outline-danger';
+      btn.textContent = 'Delete';
+      btn.addEventListener('click', () => handleDeleteInstallmentRow(tr));
+      tdActions.appendChild(btn);
+    }
+    tr.appendChild(tdActions);
 
     lockRowIfPaid(tr);
     return tr;
@@ -635,9 +480,10 @@ $(document).ready(function() {
     });
   }
 
-  /* ---------- even split (UNPAID in active year; uses yearBudget) ---------- */
-  function equalSplitUnpaidAcrossCurrent() {
-    const year = getActiveYear();
+  /* ---------- equal split helpers ---------- */
+
+  // 🔹 NEW: split for a specific year (used also after delete)
+  function equalSplitUnpaidForYear(year) {
     const rowsUnpaid = unpaidRows(year);
     const n = rowsUnpaid.length;
     if (!n) { recalcInstallmentsSum(); return; }
@@ -649,16 +495,25 @@ $(document).ready(function() {
     const base = Math.floor(unpaidTotal / n);
     let remainder = unpaidTotal - base * n;
 
-    rowsUnpaid.forEach(tr => {
+    rowsUnpaid.forEach((tr, idx) => {
       const inp = tr.querySelector('input[data-field="amount"]');
       if (!inp) return;
       let val = base;
-      if (remainder > 0) { val += 1; remainder -= 1; }
+      if (idx === n - 1) { // leftover goes to LAST installment
+        val += remainder;
+        remainder = 0;
+      }
       inp.value = val;
       inp.dataset.prev = String(val);
     });
 
     recalcInstallmentsSum();
+  }
+
+  // existing API: uses active year
+  function equalSplitUnpaidAcrossCurrent() {
+    const year = getActiveYear();
+    equalSplitUnpaidForYear(year);
   }
 
   /* ---------- change number of rows ONLY in active year ---------- */
@@ -670,13 +525,13 @@ $(document).ready(function() {
 
     if (target > current) {
       addUnpaidRows(target - current, year);
-      equalSplitUnpaidAcrossCurrent();
+      equalSplitUnpaidForYear(year);
     } else if (target < current) {
       const leftover = removeUnpaidRowsFromBottom(current - target, year);
       if (leftover > 0) {
         countEl.value = String(getRows(year).length); // cannot go below paid
       }
-      equalSplitUnpaidAcrossCurrent();
+      equalSplitUnpaidForYear(year);
     }
 
     showYear(year);
@@ -699,7 +554,7 @@ $(document).ready(function() {
   };
 
   /* ---------- public add APIs (respect active year) ---------- */
-  window.addInstallment = function addInstallment(opts = {}) {
+  function addInstallment(opts = {}) {
     const year = opts.year || getActiveYear();
     const i = getRows(year).length;
     const tr = buildRow(i, year, (opts.status || 'Un Paid').trim());
@@ -725,16 +580,20 @@ $(document).ready(function() {
     countEl.value = String(getRows(year).length);
     showYear(year);
     return tr;
-  };
+  }
 
-  window.addInstallments = function addInstallments(count, opts = {}) {
+  function addInstallments(count, opts = {}) {
     const year = getActiveYear();
     const n = Math.max(0, Number(count) || 0);
     if (!n) return;
-    for (let k = 0; k < n; k++) window.addInstallment({ ...opts, resplit: false });
-    equalSplitUnpaidAcrossCurrent();
+    for (let k = 0; k < n; k++) addInstallment({ ...opts, resplit: false });
+    equalSplitUnpaidForYear(year);
     showYear(year);
-  };
+  }
+
+  // expose to window (for any external usage)
+  window.addInstallment = addInstallment;
+  window.addInstallments = addInstallments;
 
   /* ---------- YEAR BUDGET UI + CASCADE ---------- */
 
@@ -748,102 +607,239 @@ $(document).ready(function() {
     const paidY = paidAmountSum(y);
     return Math.max(0, currentBudget - paidY);
   }
-  // 🔥 Spread a delta in Actual Fees equally across all yearly budgets
+
+  // 🔥 Spread a delta in Actual Fees equally across *all* yearly budgets
+  // and return a Map<year, deltaForThatYear>
   function adjustAllYearBudgetsByDelta(delta) {
     const years = getCourseYears();
-    if (years <= 0) return;
+    if (!Number.isFinite(delta) || delta === 0 || years <= 0) {
+      return new Map();
+    }
 
-    // Make sure we have some budgets to work with
+    // Ensure some budgets exist
     if (!yearBudgets || yearBudgets.size === 0) {
       computeDefaultBudgets();
     }
 
-    // Increasing total budget → just add equally (no min constraint)
-    if (delta > 0) {
-      const abs = Math.abs(delta);
+    const yearDeltas = new Map();
+    const roundedDelta = Math.round(delta);
+
+    if (roundedDelta > 0) {
+      // ➕ Increase total actual fees: distribute increase equally across all years
+      const abs = Math.abs(roundedDelta);
       const base = Math.floor(abs / years);
       let rem = abs - base * years;
 
       for (let y = 1; y <= years; y++) {
         let add = base;
-        if (rem > 0) { add += 1; rem -= 1; }
-        setYearBudget(y, getYearBudget(y) + add);
+        // leftover into LAST year
+        if (y === years) {
+          add += rem;
+        }
+        const oldBudget = getYearBudget(y);
+        const newBudget = oldBudget + add;
+        setYearBudget(y, newBudget);
+        yearDeltas.set(y, add);
       }
-    }
+    } else {
+      // ➖ Decrease total actual fees (higher discount): subtract across all years
+      let need = Math.abs(roundedDelta);
 
-    // Decreasing total budget → subtract equally, but never go below already paid
-    if (delta < 0) {
-      let need = Math.abs(delta);
-
-      // Compute how much we *can* subtract in total (respecting paid amounts)
-      const caps = [];
+      // total capacity
       let totalCap = 0;
       for (let y = 1; y <= years; y++) {
-        const cap = maxSubtractableForYear(y); // currentBudget - paidY (>=0)
-        caps.push({ year: y, cap });
+        const currentBudget = getYearBudget(y);
+        const paidY = paidAmountSum(y);
+        const cap = Math.max(0, currentBudget - paidY);
         totalCap += cap;
       }
 
-      if (totalCap <= 0) {
-        // Nothing can be reduced without violating paid installments – abort
-        return;
+      if (totalCap === 0) {
+        return new Map();
       }
 
       if (need > totalCap) {
-        need = totalCap; // can't subtract more than possible
+        need = totalCap;
       }
 
-      // Subtract in a round-robin way to keep it as equal as possible
-      let guard = 10000; // safety guard
-      while (need > 0 && guard-- > 0) {
-        let progress = false;
-        for (let y = 1; y <= years && need > 0; y++) {
-          const cap = maxSubtractableForYear(y);
-          if (cap <= 0) continue;
+      const base = Math.floor(need / years);
+      let rem = need - base * years;
 
-          setYearBudget(y, getYearBudget(y) - 1);
-          need -= 1;
-          progress = true;
+      for (let y = 1; y <= years; y++) {
+        const currentBudget = getYearBudget(y);
+        const paidY = paidAmountSum(y);
+        const cap = Math.max(0, currentBudget - paidY);
+
+        let dec = base;
+        if (y === years) {
+          dec += rem; // leftover reduction into last year
         }
-        if (!progress) break;
+
+        dec = Math.min(dec, cap);
+        if (dec <= 0) {
+          yearDeltas.set(y, 0);
+          continue;
+        }
+
+        const newBudget = currentBudget - dec;
+        setYearBudget(y, newBudget);
+        yearDeltas.set(y, -dec);
+        need -= dec;
       }
     }
 
-    // After discount change, budgets are effectively "custom"
     hasCustomBudgets = true;
-    budgetsSource = 'custom';
+    budgetsSource    = 'custom';
+
+    return yearDeltas;
   }
 
   function cascadeDeltaFromYear(startYear, delta) {
-    let years = getCourseYears();
-    let remaining = delta;
+    const years   = getCourseYears();
+    const changed = new Set();
 
-    function subtractFromYear(y, need) {
-      const cap = maxSubtractableForYear(y);
-      const take = Math.min(cap, need);
-      if (take > 0) setYearBudget(y, getYearBudget(y) - take);
-      return need - take;
+    if (!Number.isFinite(delta) || delta === 0 || years <= 1) {
+      return [];
     }
 
-    if (remaining > 0) {
-      if (startYear < years) {
-        for (let y = startYear + 1; y <= years && remaining > 0; y++) {
-          remaining = subtractFromYear(y, remaining);
+    if (delta > 0) {
+      // We increased startYear's budget → subtract this delta only from FUTURE years
+      let need = delta;
+
+      for (let y = startYear + 1; y <= years && need > 0; y++) {
+        const cap  = maxSubtractableForYear(y);        // how much we can take without breaking paid
+        if (cap <= 0) continue;
+
+        const take = Math.min(cap, need);
+        if (take > 0) {
+          setYearBudget(y, getYearBudget(y) - take);
+          changed.add(y);
+          need -= take;
         }
       }
-      for (let y = startYear - 1; y >= 1 && remaining > 0; y--) {
-        remaining = subtractFromYear(y, remaining);
+
+      // If `need` > 0 here, future years couldn't absorb full delta.
+      // We leave it as is – total of budgets may be slightly > Actual, but past years are untouched.
+    } else {
+      // We decreased startYear's budget → we must ADD |delta| only to FUTURE years
+      const addTotal = -delta;
+
+      const futureYears = [];
+      for (let y = startYear + 1; y <= years; y++) {
+        futureYears.push(y);
       }
-    } else if (remaining < 0) {
-      const addVal = -remaining;
-      if (startYear < years) {
-        setYearBudget(startYear + 1, getYearBudget(startYear + 1) + addVal);
-        remaining = 0;
-      } else if (startYear > 1) {
-        setYearBudget(startYear - 1, getYearBudget(startYear - 1) + addVal);
-        remaining = 0;
+
+      if (futureYears.length === 0) {
+        // No future years to adjust (startYear is last year) → nothing to cascade
+        return [];
       }
+
+      const base = Math.floor(addTotal / futureYears.length);
+      let rem    = addTotal - base * futureYears.length;
+
+      futureYears.forEach((y, idx) => {
+        let add = base;
+        if (idx === futureYears.length - 1) {
+          add += rem; // leftover goes to last future year
+        }
+        if (add !== 0) {
+          setYearBudget(y, getYearBudget(y) + add);
+          changed.add(y);
+        }
+      });
     }
+
+    hasCustomBudgets = true;
+    budgetsSource    = 'custom';
+
+    // Return list of future years whose budgets changed
+    return Array.from(changed);
+  }
+
+
+  // 🔥 Spread a delta for a *single year* across that year's installments
+  function adjustAllInstallmentsByDelta(delta, yearArg) {
+    const year = yearArg || getActiveYear();
+    const rowsUnpaid = unpaidRows(year); // only this year's UNPAID rows
+    const n = rowsUnpaid.length;
+
+    if (!n || !Number.isFinite(delta) || delta === 0) {
+      recalcInstallmentsSum();
+      return;
+    }
+
+    let d = Math.round(delta);
+
+    // helper
+    const getAmt = (tr) => tr.querySelector('input[data-field="amount"]');
+
+    if (d > 0) {
+      // ➕ Increase installments
+      const base = Math.floor(d / n);
+      let rem = d - base * n;
+      let idx = 0;
+
+      rowsUnpaid.forEach(tr => {
+        const inp = getAmt(tr);
+        if (!inp) return;
+        let cur = toNumber(inp.value);
+
+        let add = base;
+        if (idx === n - 1) { // leftover to LAST
+          add += rem;
+        }
+
+        const nextVal = cur + add;
+        inp.value = String(nextVal);
+        inp.dataset.prev = String(nextVal);
+        idx++;
+      });
+    } else {
+      // ➖ Decrease installments
+      d = Math.abs(d);
+
+      // Max we can subtract (don’t go below 0 on any installment)
+      let totalCap = 0;
+      rowsUnpaid.forEach(tr => {
+        const inp = getAmt(tr);
+        if (!inp) return;
+        totalCap += Math.max(0, toNumber(inp.value));
+      });
+
+      let need = Math.min(d, totalCap);
+      if (need <= 0) {
+        recalcInstallmentsSum();
+        return;
+      }
+
+      const base = Math.floor(need / n);
+      let rem = need - base * n;
+      let remaining = need;
+      let idx = 0;
+
+      rowsUnpaid.forEach(tr => {
+        if (remaining <= 0) return;
+        const inp = getAmt(tr);
+        if (!inp) return;
+
+        let cur = toNumber(inp.value);
+
+        let take = base;
+        if (idx === n - 1) { // leftover reduction into LAST
+          take += rem;
+        }
+
+        take = Math.min(take, cur);   // don’t go negative
+        const nextVal = cur - take;
+        remaining -= take;
+
+        inp.value = String(nextVal);
+        inp.dataset.prev = String(nextVal);
+        idx++;
+      });
+    }
+
+    recalcInstallmentsSum();
   }
 
   function handleActiveYearBudgetEdit() {
@@ -851,6 +847,7 @@ $(document).ready(function() {
     const oldBudget = getYearBudget(y);
     let newBudget   = toNumber(activeYearBudgetEl.value);
 
+    // Never allow budget < already paid amount for that year
     const minAllowed = paidAmountSum(y);
     if (newBudget < minAllowed) {
       newBudget = minAllowed;
@@ -858,20 +855,143 @@ $(document).ready(function() {
     }
 
     const delta = newBudget - oldBudget;
-    if (delta === 0) return;
+    if (!Number.isFinite(delta) || delta === 0) {
+      return;
+    }
 
-    // from here onwards, don’t auto override
     hasCustomBudgets = true;
     budgetsSource    = 'custom';
 
+    // 1) Update active year's budget
     setYearBudget(y, newBudget);
-    cascadeDeltaFromYear(y, delta);
 
-    equalSplitUnpaidAcrossCurrent();
+    // 2) Cascade delta into other years and capture which years changed
+    const impactedYears = cascadeDeltaFromYear(y, delta); // e.g. [2, 3]
+
+    // 3) Re-split installments for the active year
+    equalSplitUnpaidForYear(y);
+
+    // 4) Re-split installments for all impacted years
+    impactedYears.forEach(yr => {
+      equalSplitUnpaidForYear(yr);
+    });
+
+    // 5) Refresh UI
+    refreshActiveYearBudgetInput();
     recalcInstallmentsSum();
   }
 
-  /* ---------- year UI helpers ---------- */
+
+  /* ---------- default fee structure load ---------- */
+  async function loadDefaultFeeStructureForCourse(courseId) {
+    if (!courseId) return;
+
+    try {
+      const resp = await fetch(`/course-fee?courseId=${courseId}`);
+      if (!resp.ok) {
+        console.error("Failed to fetch course fee template", await resp.text());
+        return;
+      }
+
+      const data = await resp.json();
+      const tmpl = data.feeTemplate;
+      if (!tmpl) {
+        console.log("No default fee template configured for course", courseId);
+        clearAllInstallments();
+        totalFeesEl.value = "";
+        discountEl.value  = "";
+        recalcActual({ reSplit: true });   // fallback to auto split
+        return;
+      }
+
+      const installments = tmpl.installments || [];
+
+      // 1) Set Total Fees & reset discount
+      totalFeesEl.value = tmpl.totalAmount || 0;
+      discountEl.value  = 0;
+      // Do NOT re-split budgets here, just recompute Actual
+      recalcActual({ reSplit: false });
+
+      // 2) Clear existing installments in UI
+      clearAllInstallments();
+
+      // 3) Seed budgets from template (sum amount per year)
+      yearBudgets.clear();
+      installments.forEach(inst => {
+        const y = inst.yearNumber && inst.yearNumber > 0 ? inst.yearNumber : 1;
+        const prev = yearBudgets.get(y) || 0;
+        yearBudgets.set(y, prev + (inst.amount || 0));
+      });
+      initialYearBudgets = new Map(yearBudgets);
+      budgetsSource = 'template';
+      hasCustomBudgets = false;
+
+      // 4) Build year dropdown (DO NOT recompute budgets)
+      ensureYearOptions({ skipBudgetRecalc: true });
+      activeYearSel.value = "1";
+      showYear(1);
+
+      // 5) Add UI rows for each installment with correct year
+      installments
+        .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
+        .forEach(function (inst) {
+          const amt = inst.amount || 0;
+          const y   = inst.yearNumber && inst.yearNumber > 0 ? inst.yearNumber : 1;
+          activeYearSel.value = String(y);
+          const year = getActiveYear();
+          addInstallment({ amount: amt, year: year });
+        });
+
+      // back to year 1
+      activeYearSel.value = "1";
+      showYear(1);
+
+      recalcInstallmentsSum();
+    } catch (e) {
+      console.error("Error loading default fee structure", e);
+    }
+  }
+
+  /* ---------- seed budgets from admission installments (backend) ---------- */
+  /* ---------- seed budgets from admission installments (backend) ---------- */
+  function seedBudgetsFromAdmission(list) {
+    yearBudgets.clear();
+    list.forEach(inst => {
+      // Support both shapes: {yearNumber, amount} and {studyYear, amountDue}
+      const y = (inst.yearNumber && inst.yearNumber > 0)
+        ? inst.yearNumber
+        : (inst.studyYear && inst.studyYear > 0)
+          ? inst.studyYear
+          : 1;
+
+      const amt = (typeof inst.amount === 'number')
+        ? inst.amount
+        : (typeof inst.amountDue === 'number')
+          ? inst.amountDue
+          : 0;
+
+      const prev = yearBudgets.get(y) || 0;
+      yearBudgets.set(y, prev + amt);
+    });
+
+    initialYearBudgets = new Map(yearBudgets);
+    budgetsSource = 'admission';
+    hasCustomBudgets = false;
+  }
+
+
+  function clearAllInstallments() {
+    getAllRows().forEach(tr => tr.remove());
+    countEl.value = "0";
+
+    if (sumEl) sumEl.value = 0;
+    const yearSumEl = document.getElementById('yearInstallmentsSum');
+    if (yearSumEl) yearSumEl.value = 0;
+
+    recalcInstallmentsSum();
+  }
+
+  /* ---------- YEAR UI helpers ---------- */
   function ensureYearOptions(options = {}) {
     const { skipBudgetRecalc = false } = options;
 
@@ -898,44 +1018,49 @@ $(document).ready(function() {
     }
   }
 
-  /* ---------- wire events ---------- */
-  totalFeesEl.addEventListener('input', () =>
-    recalcActual({ reSplit: budgetsSource === 'auto' })
-  );
-  discountEl.addEventListener('input', handleDiscountChange);
-
-  discountEl.addEventListener('input', handleDiscountChange);
-
+  /* ---------- discount handler (GLOBAL, all years) ---------- */
   function handleDiscountChange() {
     // 1️⃣ Old Actual before discount change
     const oldActual = toNumber(actualFeesEl.value);
 
+    const years = getCourseYears();
+
     // 2️⃣ Recalculate Actual (NO resplit of budgets here)
     recalcActual({ reSplit: false });
 
-    // 3️⃣ Delta between new Actual and old Actual
+    // 3️⃣ Delta between new Actual and old Actual (across entire course)
     const newActual = toNumber(actualFeesEl.value);
-    const deltaRaw = newActual - oldActual;  // may be + or -
-    const delta = Math.round(deltaRaw);      // work in whole rupees
+    let deltaRaw = newActual - oldActual;   // may be + or -
+    let delta    = Math.round(deltaRaw);    // integer rupees
 
-    if (delta === 0) {
+    if (!Number.isFinite(delta) || delta === 0) {
       refreshActiveYearBudgetInput();
       recalcInstallmentsSum();
       return;
     }
 
-    // 4️⃣ Adjust yearly budgets by this delta
-    adjustAllYearBudgetsByDelta(delta);
+    // 4️⃣ Adjust yearly budgets by this delta, *equally across all years*
+    //    and get per-year deltas actually applied (Map<year, deltaY>)
+    const yearDeltas = adjustAllYearBudgetsByDelta(delta);
 
-    // 5️⃣ Adjust all installments by this delta
-    adjustAllInstallmentsByDelta(delta);
+    // 5️⃣ For each year, apply that year's delta equally to its installments.
+    //    If it does not divide exactly, leftover rupees go to the LAST installment.
+    for (let y = 1; y <= years; y++) {
+      const dYear = yearDeltas.get(y) || 0;
+      if (!dYear) continue;
+      adjustAllInstallmentsByDelta(dYear, y);
+    }
 
     // 6️⃣ Refresh UI
     refreshActiveYearBudgetInput();
     recalcInstallmentsSum();
   }
 
-
+  /* ---------- wire events ---------- */
+  totalFeesEl.addEventListener('input', () =>
+    recalcActual({ reSplit: budgetsSource === 'auto' })
+  );
+  discountEl.addEventListener('input', handleDiscountChange);
 
   countEl.addEventListener('change', e => adjustRowsToCount(e.target.value));
   evenSplitBtn?.addEventListener('click', equalSplitUnpaidAcrossCurrent);
@@ -943,31 +1068,88 @@ $(document).ready(function() {
   courseYearsEl.addEventListener('change', () => ensureYearOptions());
   activeYearSel.addEventListener('change', () => showYear(getActiveYear()));
 
-  ['change','blur','input'].forEach(evt => {
+  ['change', 'blur', 'input'].forEach(evt => {
     activeYearBudgetEl.addEventListener(evt, handleActiveYearBudgetEdit);
   });
 
+  /* ---------- existing admission – don't override with template ---------- */
+  $("body").on("change", "#course", function () {
+    let selectedCourseId = $(this).val();
+    selectedCourseId = Number.parseInt(selectedCourseId);
+
+    const course = courses.find(c => c.courseId === selectedCourseId);
+    console.log("Selected course:", course);
+
+    if (course && course.years) {
+      $("#courseYears").val(course.years).trigger("change");
+    }
+
+    // Rebuild year options based on course years (no budget recalc here)
+    ensureYearOptions({ skipBudgetRecalc: true });
+
+    if (selectedCourseId) {
+      if (hasExistingInstallments) {
+        console.log("Admission has existing installments – skipping default fee template load.");
+        // DO NOT call loadDefaultFeeStructureForCourse
+      } else {
+        loadDefaultFeeStructureForCourse(selectedCourseId);
+      }
+    } else {
+      // No course selected – clear everything
+      clearAllInstallments();
+      totalFeesEl.value = "";
+      discountEl.value  = "";
+      recalcActual({ reSplit: true });
+    }
+  });
+
+  /* ---------- initial pass ---------- */
   /* ---------- initial pass ---------- */
   getAllRows().forEach(tr => {
+    // Make sure each row has a year tag
     if (!tr.dataset.year) tr.dataset.year = '1';
+
     lockRowIfPaid(tr);
+
     const amt = tr.querySelector('input[data-field="amount"]');
     if (amt && amt.dataset.prev == null) {
       amt.dataset.prev = String(toNumber(amt.value));
     }
   });
 
-  if (hasExistingInstallments && existingInstallments.length > 0) {
-    // Seed budgets from backend installments (admission case)
+  // Detect if this is an existing admission with installments from DB
+  const isExistingAdmission =
+    hasExistingInstallments &&
+    Array.isArray(existingInstallments) &&
+    existingInstallments.length > 0;
+
+  if (isExistingAdmission) {
+    // 1️⃣ Seed year budgets from DB installments
     seedBudgetsFromAdmission(existingInstallments);
-    ensureYearOptions({ skipBudgetRecalc: true }); // don’t touch budgets
-    recalcInstallmentsSum();
+
+    // 2️⃣ Build year dropdown WITHOUT touching budgets
+    ensureYearOptions({ skipBudgetRecalc: true });
   } else {
     // New admission – auto budgets from total + years
     recalcActual({ reSplit: true });
     ensureYearOptions();
   }
 
-  showYear(getActiveYear());
+  // 3️⃣ Ensure an active year is selected (default = 1)
+  if (!activeYearSel.value) {
+    activeYearSel.value = '1';
+  }
+
+  // 4️⃣ Normalize any rows that still don't have year
+  getAllRows().forEach(tr => {
+    if (!tr.dataset.year) {
+      tr.dataset.year = activeYearSel.value || '1';
+    }
+  });
+
+  // 5️⃣ Show active year & FORCE initial totals calculation
+  showYear(getActiveYear());   // this internally calls recalcInstallmentsSum()
+  recalcInstallmentsSum();     // extra safety to ensure Overall Total is set
   refreshActiveYearBudgetInput();
+
 })();

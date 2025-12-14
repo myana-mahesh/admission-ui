@@ -1,5 +1,8 @@
 package com.impactsure.sanctionui.web;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,9 +31,13 @@ import com.impactsure.sanctionui.dto.GuardianDto;
 import com.impactsure.sanctionui.dto.OfficeUpdateRequest;
 import com.impactsure.sanctionui.dto.PagedResponse;
 import com.impactsure.sanctionui.dto.StudentDto;
+import com.impactsure.sanctionui.dto.StudentPerkDto;
+import com.impactsure.sanctionui.dto.StudentPerksMasterDto;
 import com.impactsure.sanctionui.entities.Admission2;
 import com.impactsure.sanctionui.entities.Student;
 import com.impactsure.sanctionui.service.impl.StudentApiClientService;
+import com.impactsure.sanctionui.service.impl.StudentPerkClientService;
+import com.impactsure.sanctionui.service.impl.StudentPerksMasterService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,6 +48,12 @@ public class StudentController {
 	
 	@Autowired
 	private StudentApiClientService studentApiClientService;
+	
+	@Autowired
+	private StudentPerksMasterService studentPerksMasterService;
+	
+	@Autowired
+	private StudentPerkClientService studentPerkClientService;
 	
 	@GetMapping("/studentpage")
 	  public ResponseEntity<PagedResponse<StudentDto> > list(
@@ -110,9 +123,22 @@ public class StudentController {
         model.addAttribute("student", student);
         model.addAttribute("father", father);
         model.addAttribute("mother", mother);
+        
+        List<StudentPerksMasterDto> perks = this.studentPerksMasterService.getAllPerks(accessToken);
+        model.addAttribute("perksList", perks);
+        
+       List<StudentPerkDto> studentPerks  =  this.studentPerkClientService.getPerksForStudent(student.getStudentId(),accessToken);
+       List<Long> studentPerkIds = extractPerkIds(studentPerks);
+       model.addAttribute("studentPerkIds", studentPerkIds);
         return "studentview"; // -> src/main/resources/templates/studentview.html
     }
 	
+	public List<Long> extractPerkIds(List<StudentPerkDto> perks) {
+	    if (perks == null) return List.of(); // avoid NPE
+	    return perks.stream()
+	            .map(StudentPerkDto::getPerkId)
+	            .collect(Collectors.toList());
+	}
 	
 	@PostMapping("/student/update")
 	@ResponseBody

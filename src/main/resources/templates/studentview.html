@@ -279,6 +279,36 @@
           </div>
         </div>
       </div>
+	  <!-- ============ STUDENT PERKS ============ -->
+	  <div class="section px-2 mt-4">
+	    <div class="title mb-2">
+	      <span class="dot"></span><h5 class="mb-0">Student Perks</h5>
+	    </div>
+
+	    <p class="help mb-2">
+	      Tick the perks applicable to this student
+	    </p>
+
+	    <div class="row g-2" th:if="${perksList != null}">
+	      <div class="col-md-3 col-sm-4 col-6"
+	           th:each="perk : ${perksList}">
+	        <div class="form-check">
+	          <input class="form-check-input student-perk-checkbox"
+	                 type="checkbox"
+	                 th:id="${'perk_' + perk.id}"
+	                 th:value="${perk.id}"
+	                 th:checked="${studentPerkIds != null and studentPerkIds.contains(perk.id)}">
+	          <label class="form-check-label"
+	                 th:for="${'perk_' + perk.id}"
+	                 th:text="${perk.name}">Perk Name</label>
+	        </div>
+	      </div>
+	    </div>
+
+	    <div class="text-muted small" th:if="${perksList == null or #lists.isEmpty(perksList)}">
+	      No perks configured yet. Please add perks in Student Perks Master.
+	    </div>
+	  </div>
 
       <!-- ============ FOOTER / SAVE BUTTON ============ -->
       <div class="submit-zone p-4 text-center">
@@ -300,6 +330,7 @@
 
 <script th:inline="javascript">
   // Reuse same pattern as admission.js – collect all .student-details
+  var studentId = /*[[${student.studentId}]]*/ null;
   $(function () {
     $("#saveStudentBtn").on("click", function () {
       const formData = {};
@@ -312,7 +343,7 @@
       });
 
       // Optional: send studentId as well (if your CreateStudentRequest supports it)
-      formData["studentId"] = /*[[${student.studentId}]]*/ null;
+      formData["studentId"] = studentId
 
       console.log("Saving student:", formData);
 
@@ -326,7 +357,8 @@
         success: function (res) {
           alert("Student details saved successfully.");
           // Optionally reload to show latest data
-          window.location.reload();
+		  saveStudentAndPerks(studentId)
+          //window.location.reload();
         },
         error: function (xhr) {
           console.error(xhr);
@@ -335,6 +367,32 @@
       });
     });
   });
+  
+  function getSelectedPerkIds() {
+    return $(".student-perk-checkbox:checked")
+      .map(function () { return parseInt($(this).val(), 10); })
+      .get();
+  }
+
+  function saveStudentAndPerks(studentId) {
+    const perkIds = getSelectedPerkIds();
+debugger
+    $.ajax({
+      url: "/student/" + studentId + "/perks",   // this UI service calls PUT → replacePerksForStudent()
+      type: "PUT",
+      data: JSON.stringify(perkIds),
+      contentType: "application/json",
+      success: function (res) {
+        alert("Student details & perks saved successfully.");
+        window.location.reload();
+      },
+      error: function (xhr) {
+        console.error(xhr);
+        alert("Error saving perks.");
+      }
+    });
+  }
+
 </script>
 
 <style>

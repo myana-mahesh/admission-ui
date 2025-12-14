@@ -486,6 +486,7 @@
                   <th style="width: 260px;">Receipt (file)</th>
                   <th style="width: 160px;">Received By</th>
                   <th style="width: 160px;">Status</th>
+				  <th style="width: 160px;">Invoice</th>
                 </tr>
               </thead>
 
@@ -563,6 +564,15 @@
                       <option value="Paid">Paid</option>
                     </select>
                   </td>
+				  <td class="invoice-cell">
+				        <a th:if="${invoices != null and invoices[inst.installmentId] != null}"
+				           th:href="${invoices[inst.installmentId].downloadUrl}"
+				           target="_blank"
+				           class="text-decoration-none">
+				          <i class="bi bi-file-earmark-pdf me-1"></i>
+				          Invoice
+				        </a>
+				      </td>
                 </tr>
 
                 <tr th:if="${#lists.isEmpty(admission.installments)}">
@@ -633,29 +643,92 @@
   <!-- Your scripts -->
   <script src="js/admission.js"></script>
   <script th:inline="javascript">
-    var courses = /*[[${courses}]]*/ '';
-    var yearlyFees = /*[[${yearlyFees}]]*/ '';
-	var MODES   = /*[[${paymentModes}]]*/'';
-	
-	/*<![CDATA[*/
-	    window.hasExistingInstallments = /*[[${hasExistingInstallments}]]*/ false;
-	    window.existingInstallments   = /*[[${existingInstallments}]]*/ [];
-	/*]]>*/
-	
-    for (const [year, amount] of Object.entries(yearlyFees)) {
-      console.log('Year:', year, 'Amount:', amount);
-      yearBudgets.set(Number.parseInt(year), amount);
-    }
-    $("#yearInstallmentsSum").val(yearBudgets.get(1));
-    $("#installmentsSum").val($("#actualFees").val());
-
-    $("body").on("change", "#activeYear", function () {
-      const currentYear = Number.parseInt($(this).val());
-      const currentYearFees = yearlyFees[currentYear];
-      $("#activeYearBudget").val(currentYearFees);
-    });
-    
+      var courses = /*[[${courses}]]*/ '';
+      var yearlyFees = /*[[${yearlyFees}]]*/ '';
+      var MODES   = /*[[${paymentModes}]]*/'';
+      
+      /*<![CDATA[*/
+          window.hasExistingInstallments = /*[[${hasExistingInstallments}]]*/ false;
+          window.existingInstallments   = /*[[${existingInstallments}]]*/ [];
+      /*]]>*/
+      
+      $("body").on("change", "#activeYear", function () {
+        const currentYear = Number.parseInt($(this).val());
+        const currentYearFees = yearlyFees[currentYear];
+        $("#activeYearBudget").val(currentYearFees);
+      });
   </script>
   <script src="js/feesmanagement.js"></script>
+  <script>
+	
+    window.addEventListener('load', function () {
+      if (window.recalcInstallmentsSum) {
+        window.recalcInstallmentsSum();
+      }
+    });
+	$('#activeYearBudget').trigger('change');
+		$('#activeYear').trigger('change');
+  </script>>
+  
+  <script>
+    $(function () {
+      // When status changes
+      $("#installmentsBody").on("change", "select[data-field='status']", function () {
+        const status = $(this).val();
+        const $row = $(this).closest("tr");
+
+        // Find installmentId from hidden input in the same row
+        const installmentId = $row.find("input[name$='.installmentId']").val();
+
+        if (!installmentId) {
+          console.warn("No installmentId found on row, probably a new unsaved installment.");
+          return; // you can show alert "Please save admission first"
+        }
+
+        if (status !== "Paid") {
+          // If user changed back to Un Paid, you could optionally do nothing
+          return;
+        }
+
+        // Call backend to mark paid and generate invoice
+        $.ajax({
+          url: "/api/installments/" + installmentId + "/status?status="+status,
+          type: "POST",
+          contentType: "application/json",
+          data: JSON.stringify({ status: "Paid" }),
+          success: function (res) {
+            if (res && res.downloadUrl) {
+              // Add or update an Invoice link cell (or reuse existing receipts cell)
+              let $invoiceCell = $row.find(".invoice-cell");
+              if ($invoiceCell.length === 0) {
+                // If you added a dedicated Invoice column, give it class "invoice-cell"
+                // e.g. <td class="invoice-cell"></td> in HTML
+                // For now, we can just append link inside Receipt cell:
+                $invoiceCell = $row.find("td").eq(4); // 0-based index of receipt column
+              }
+              $invoiceCell.append(
+                `<div class="mt-1">
+                   <a href="${res.downloadUrl}"
+                      target="_blank"
+                      class="text-decoration-none">
+                     <i class="bi bi-file-earmark-pdf me-1"></i>
+                     Invoice
+                   </a>
+                 </div>`
+              );
+              alert("Invoice generated and emailed to student.");
+            } else {
+              alert("Installment marked as Paid, but invoice information is missing.");
+            }
+          },
+          error: function (xhr) {
+            console.error("Error marking installment paid:", xhr);
+            alert("Failed to generate invoice. Please try again.");
+          }
+        });
+      });
+    });
+  </script>
+
 </body>
 </html>
