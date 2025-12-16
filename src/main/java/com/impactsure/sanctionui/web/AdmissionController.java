@@ -21,6 +21,7 @@ import com.impactsure.sanctionui.service.impl.StudentApiClientService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,6 +47,9 @@ public class AdmissionController {
 
 	@Value("${upload.base-dir}")
 	private String uploadBaseDir;
+	
+	@Value("${cancel.base-dir}")
+	private String cancelBaseDir;
 
 	@PostMapping("/student/create")
 	@ResponseBody
@@ -186,7 +190,7 @@ public class AdmissionController {
 
 
 			// create directory if not exists
-			Path admissionDir = Paths.get(uploadBaseDir +"//cancellation_details_docs", String.valueOf(admissionId));
+			Path admissionDir = Paths.get(cancelBaseDir, String.valueOf(admissionId));
 			try {
 				Files.createDirectories(admissionDir);
 
@@ -216,7 +220,7 @@ public class AdmissionController {
 			@PathVariable String fileName
 	) throws IOException {
 
-		Path filePath = Paths.get(uploadBaseDir+"//cancellation_details_docs",
+		Path filePath = Paths.get(cancelBaseDir,
 				String.valueOf(admissionId),
 				fileName);
 

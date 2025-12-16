@@ -12,6 +12,7 @@ import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.impactsure.sanctionui.enums.AdmissionStatus;
@@ -116,4 +117,8 @@ public class Admission2 extends Auditable {
 	
 	@UpdateTimestamp
 	private LocalDateTime modifiedOn;
+
+    @OneToOne(mappedBy = "admission", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonManagedReference("admission-cancellation")
+    private AdmissionCancellation cancellation;
 }

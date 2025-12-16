@@ -37,7 +37,8 @@ public class FeeInstallment extends Auditable {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long installmentId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
+   
     @JoinColumn(name = "admission_id", nullable = false)
     @JsonBackReference("admission-installments")
     private Admission2 admission;
@@ -63,8 +64,9 @@ public class FeeInstallment extends Auditable {
 //    @Column(length = 20)
 //    private PaymentMode paymentMode;
     
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "payment_mode_id")
+    @JsonBackReference
     private PaymentModeMaster paymentMode;
 
     @Column(length = 100)

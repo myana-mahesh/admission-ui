@@ -565,14 +565,28 @@
                     </select>
                   </td>
 				  <td class="invoice-cell">
-				        <a th:if="${invoices != null and invoices[inst.installmentId] != null}"
-				           th:href="${invoices[inst.installmentId].downloadUrl}"
-				           target="_blank"
-				           class="text-decoration-none">
-				          <i class="bi bi-file-earmark-pdf me-1"></i>
-				          Invoice
-				        </a>
-				      </td>
+				    <div class="d-flex flex-column gap-1">
+				      <!-- Invoice link -->
+				      <a th:if="${invoices != null and invoices[inst.installmentId] != null}"
+				         th:href="${invoices[inst.installmentId].downloadUrl}"
+				         target="_blank"
+				         class="text-decoration-none invoice-link">
+				        <i class="bi bi-receipt-cutoff me-1"></i>
+				        <span th:text="${invoices[inst.installmentId].invoiceNumber}">Invoice</span>
+				      </a>
+
+				      <!-- Existing uploaded receipt link -->
+				      <a th:if="${receipts != null and receipts[inst.installmentId] != null}"
+				         th:href="${receipts[inst.installmentId].storageUrl}"
+				         target="_blank" class="text-decoration-none invoice-link">
+				        <i class="bi bi-paperclip me-1"></i>
+				        <span th:text="${receipts[inst.installmentId].filename}">receipt.pdf</span>
+				      </a>
+
+				   
+				    </div>
+				  </td>
+
                 </tr>
 
                 <tr th:if="${#lists.isEmpty(admission.installments)}">
@@ -593,7 +607,7 @@
                 <tr>
                   <td><strong>Overall Total</strong></td>
                   <td>
-                    <input class="form-control student-details" id="installmentsSum" type="number" readonly>
+                    <input class="form-control student-details" id="installmentsSum" type="number" readonly autocomplete="off">
                   </td>
                   <td colspan="5">
                     <div class="help">Sum of <strong>all years</strong>. Must equal <strong>Actual Fees</strong>.</div>
@@ -612,7 +626,7 @@
         <input type="hidden" id="role"
                th:value="${role}"/>
 
-        <th:block th:if="*{status.name() == 'UNDER_CANCELLATION'}">
+        <th:block th:if="*{status.name() == 'UNDER_CANCELLATION' || status.name() == 'CANCELLED'}">
 
           <div class="section px-2 mt-4">
 
@@ -647,18 +661,26 @@
 
               <!-- Refund Proof Upload + Download -->
               <div class="col-md-4">
-                <label class="form-label fw-semibold">Refund Proof</label>
+				<div class="d-flex">
+					<label class="form-label fw-semibold mb-0">Refund Proof</label>
+					<a th:if="${cancellation.refundProofFileName!=null && cancellation.refundProofFileName!=''}" class="ms-1 btn-sm"
+	                     th:href="@{/admission/download-cancellation-proof/{admissionId}/{fileName}(
+	                  admissionId=${admission.admissionId},
+	                  fileName=${cancellation.refundProofFileName})}">
+	                    <i class="bi bi-paperclip ms-1"></i>
+	                    <span th:text="${cancellation.refundProofFileName}"></span>
+	                  </a>
+				</div>
+                
 
                 <!-- 🔹 Download existing file -->
                 <div class="mb-2"
                      th:if="${cancellation != null and cancellation.refundProofFileName != null}">
-                  <a class="btn btn-outline-danger btn-sm"
-                     th:href="@{/admission/download-cancellation-proof/{admissionId}/{fileName}(
-                  admissionId=${admission.admissionId},
-                  fileName=${cancellation.refundProofFileName})}">
-                    <i class="bi bi-paperclip me-1"></i>
-                    <span th:text="${cancellation.refundProofFileName}"></span>
-                  </a>
+					 <input type="file"
+                        class="form-control form-control-sm mb-2"
+                        name="refundProof"
+                        accept=".pdf,.jpg,.jpeg,.png">
+					  
                 </div>
 
                 <!-- 🔹 No file uploaded -->
@@ -668,10 +690,7 @@
                 </div>
 
                 <!-- 🔹 Upload / Replace -->
-                <input type="file"
-                       class="form-control form-control-sm"
-                       name="refundProof"
-                       accept=".pdf,.jpg,.jpeg,.png">
+                
               </div>
 
               <!-- Remarks -->
@@ -720,18 +739,18 @@
             <i class="bi bi-check2-circle me-1"></i> Save Changes
           </button>
           <!-- Cancel Button -->
-          <button class="btn btn-danger"  data-bs-toggle="modal" data-bs-target="#cancelModal"
-                  th:if="*{status.name() != 'UNDER_CANCELLATION' and status.name() != 'CANCELLED'}">
+          <button class="btn btn-danger" type="button"  data-bs-toggle="modal" data-bs-target="#cancelModal"
+                  th:if="*{status.name() != 'UNDER_CANCELLATION' and status.name() != 'CANCELLED'}" style="font-size: 0.9rem;">
             <i class="bi bi-x-circle me-1"></i> Cancel Admission
           </button>
           <!-- cancel approval Button for HO -->
-          <button class="btn btn-danger"  data-bs-toggle="modal" data-bs-target="#confirmCancelAdmissionModal" id="approveCancellation" th:data-id="${id}"
-                  th:if="${role == 'HO'and admission.status.name() == 'UNDER_CANCELLATION'}">
+          <button class="btn btn-danger" type="button"  data-bs-toggle="modal" data-bs-target="#confirmCancelAdmissionModal" id="approveCancellation" th:data-id="${id}"
+                  th:if="${role == 'HO'and admission.status.name() == 'UNDER_CANCELLATION'}" style="font-size: 0.9rem;">
             <i class="bi bi-x-circle me-1"></i> Approve Cancellation
           </button>
           <!-- Send Acknowledgement Button -->
           <button class="btn btn-primary-theme" type="button" id="submitBtn" th:data-id="${id}"
-                  th:if="${role == 'HO'and admission.status.name() != 'ADMITTED'}">
+                  th:if="${role == 'HO'and admission.status.name() != 'ADMITTED' && admission.status.name() != 'UNDER_CANCELLATION' && admission.status.name() != 'CANCELLED'}">
             <i class="bi bi-check2-circle me-1"></i> Send Acknowledgement
           </button>
           <!-- Print Admission Form Button -->
@@ -879,68 +898,12 @@
         window.recalcInstallmentsSum();
       }
     });
-	$('#activeYearBudget').trigger('change');
-		$('#activeYear').trigger('change');
+	
+	
   </script>>
   
   <script>
-    $(function () {
-      // When status changes
-      $("#installmentsBody").on("change", "select[data-field='status']", function () {
-        const status = $(this).val();
-        const $row = $(this).closest("tr");
-
-        // Find installmentId from hidden input in the same row
-        const installmentId = $row.find("input[name$='.installmentId']").val();
-
-        if (!installmentId) {
-          console.warn("No installmentId found on row, probably a new unsaved installment.");
-          return; // you can show alert "Please save admission first"
-        }
-
-        if (status !== "Paid") {
-          // If user changed back to Un Paid, you could optionally do nothing
-          return;
-        }
-
-        // Call backend to mark paid and generate invoice
-        $.ajax({
-          url: "/api/installments/" + installmentId + "/status?status="+status,
-          type: "POST",
-          contentType: "application/json",
-          data: JSON.stringify({ status: "Paid" }),
-          success: function (res) {
-            if (res && res.downloadUrl) {
-              // Add or update an Invoice link cell (or reuse existing receipts cell)
-              let $invoiceCell = $row.find(".invoice-cell");
-              if ($invoiceCell.length === 0) {
-                // If you added a dedicated Invoice column, give it class "invoice-cell"
-                // e.g. <td class="invoice-cell"></td> in HTML
-                // For now, we can just append link inside Receipt cell:
-                $invoiceCell = $row.find("td").eq(4); // 0-based index of receipt column
-              }
-              $invoiceCell.append(
-                `<div class="mt-1">
-                   <a href="${res.downloadUrl}"
-                      target="_blank"
-                      class="text-decoration-none">
-                     <i class="bi bi-file-earmark-pdf me-1"></i>
-                     Invoice
-                   </a>
-                 </div>`
-              );
-              alert("Invoice generated and emailed to student.");
-            } else {
-              alert("Installment marked as Paid, but invoice information is missing.");
-            }
-          },
-          error: function (xhr) {
-            console.error("Error marking installment paid:", xhr);
-            alert("Failed to generate invoice. Please try again.");
-          }
-        });
-      });
-    });
+   
   </script>
 
 </body>

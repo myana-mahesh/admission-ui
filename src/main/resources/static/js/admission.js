@@ -1,4 +1,56 @@
 $(document).ready(function () {
+	function generateInvoiceForRow($row) {
+		    const status = $row.find("select[data-field='status']").val();
+		    const installmentId = $row.find("input[name$='.installmentId']").val();
+
+		    if (!installmentId) {
+		      console.warn("No installmentId found on row, probably a new unsaved installment.");
+		      return;
+		    }
+
+		    if (status !== "Paid") {
+		      return;
+		    }
+
+		    // if invoice already present, don't generate again
+		    if ($row.find("a.invoice-link").length > 0) {
+		      return;
+		    }
+
+		    $.ajax({
+		      url: "/api/installments/" + installmentId + "/status?status=" + status,
+		      type: "POST",
+		      contentType: "application/json",
+		      data: JSON.stringify({ status: "Paid" }),
+		      success: function (res) {
+		        if (res && res.downloadUrl) {
+		          let $invoiceCell = $row.find(".invoice-cell");
+		          if ($invoiceCell.length === 0) {
+		            // fallback: use receipt column (index adjust if needed)
+		            $invoiceCell = $row.find("td").eq(4);
+		          }
+		          $invoiceCell.append(
+		            `<div class="mt-1">
+		               <a href="${res.downloadUrl}"
+		                  target="_blank"
+		                  class="text-decoration-none invoice-link">
+		                 <i class="bi bi-file-earmark-pdf me-1"></i>
+		                 Invoice
+		               </a>
+		             </div>`
+		          );
+		        } else {
+		          console.warn("Installment marked as Paid, but invoice info missing.");
+		        }
+		      },
+		      error: function (xhr) {
+		        console.error("Error marking installment paid:", xhr);
+		        alert("Failed to generate invoice. Please try again.");
+		      }
+		    });
+		  }
+	
+	
   // ================== OTHER DOCUMENTS DYNAMIC ADD ==================
   let otherDocCounter = document.querySelectorAll('#otherDocsContainer .other-doc').length || 0;
 
@@ -305,6 +357,7 @@ $(document).ready(function () {
       const text = await res.text().catch(() => "");
       throw new Error(`Upload failed (${res.status}): ${text}`);
     }
+	
     return res.json();
   }
 
@@ -351,7 +404,17 @@ $(document).ready(function () {
           try {
             const result = await postUploads(response.admissionId);
             console.log("✅ Uploaded metadata:", result);
-            alert("Data successfully saved!");
+			$("#installmentsBody tr").each(function () {
+				
+		        const $row = $(this);
+		        const status = $row.find("select[data-field='status']").val();
+		        const installmentId = $row.find("input[name$='.installmentId']").val();
+
+		        if (status === "Paid" && installmentId) {
+		          generateInvoiceForRow($row);
+		        }
+		      });
+			location.reload();
           } catch (e) {
             console.error(e);
             alert(`Erorr saving data`);
@@ -398,6 +461,7 @@ $(document).ready(function () {
       .done(function (admission) {
         console.log('Acknowledged:', admission);
         alert('Acknowledgement sent successfully.');
+		location.reload();
       })
       .fail(function (xhr) {
         console.error('Error:', xhr.responseText || xhr.statusText);
@@ -424,32 +488,42 @@ $("body").on("click", "#confirmCancelBtn", function (e) {
 });
 
 $("body").on("click", "#confirmCancelAdmissionBtn", function (e) {
-  submitCancelAdmission();
+  submitCancelAdmission("confirmCancelAdmissionBtn");
 });
 
 
-function submitCancelAdmission() {
+function submitCancelAdmission(buttonId) {
 
-  const charges = $("#cancelCharges").val();
-  const remarks = $("#remarks_admission_cancel").val();
+	
+  let charges = $("#cancelCharges").val();
+  let remarks = $("#remarks_admission_cancel").val();
+  let handlingPerson = ""
+	debugger
+  if(buttonId!="confirmCancelAdmissionBtn"){
+	// ✅ simple mandatory validation
+	  if (!charges || charges.trim() === "") {
+	    alert("Cancel Charges is required");
+	    $("#cancelCharges").focus();
+	    return;
+	  }
 
-  // ✅ simple mandatory validation
-  if (!charges || charges.trim() === "") {
-    alert("Cancel Charges is required");
-    $("#cancelCharges").focus();
-    return;
+	  if (!remarks || remarks.trim() === "") {
+	    alert("Remarks is required");
+	    $("#remarks_admission_cancel").focus();
+	    return;
+	  }
+  }else{
+	charges = $("input[name='cancelCharges']").val()
+	remarks =  $("textarea[name='remark']").val()
+	handlingPerson = $("input[name='handlingPerson']").val();
+	
   }
-
-  if (!remarks || remarks.trim() === "") {
-    alert("Remarks is required");
-    $("#remarks_admission_cancel").focus();
-    return;
-  }
+  
   const requestData = {
     admissionId: $("#admissionId").val(),
     cancelCharges: charges,
     remark: remarks,
-    handlingPerson: "",
+    handlingPerson: handlingPerson,
     refundProofFileName: "",
     role : $("#role").val()
   };
@@ -553,63 +627,7 @@ function saveCancellationDetails() {
   });
 }
 
-$("body").on("click", "#confirmCancelBtn", function (e) {
-  submitCancelAdmission();
-});
 
-$("body").on("click", "#confirmCancelAdmissionBtn", function (e) {
-  submitCancelAdmission();
-});
-
-
-function submitCancelAdmission() {
-
-  const charges = $("#cancelCharges").val();
-  const remarks = $("#remarks_admission_cancel").val();
-
-  // ✅ simple mandatory validation
-  if (!charges || charges.trim() === "") {
-    alert("Cancel Charges is required");
-    $("#cancelCharges").focus();
-    return;
-  }
-
-  if (!remarks || remarks.trim() === "") {
-    alert("Remarks is required");
-    $("#remarks_admission_cancel").focus();
-    return;
-  }
-  const requestData = {
-    admissionId: $("#admissionId").val(),
-    cancelCharges: charges,
-    remark: remarks,
-    handlingPerson: "",
-    refundProofFileName: "",
-    role : $("#role").val()
-  };
-
-
-  $.ajax({
-    url: "/admission/cancel-admission",
-    type: "POST",
-    contentType: "application/json",
-    data: JSON.stringify(requestData),
-    success: function (response) {
-      showResponseModal(
-          "success",
-          response || "Admission cancelled successfully!",
-          "/admissionlist"
-      );
-    },
-    error: function (xhr, status, error) {
-      showResponseModal(
-          "error",
-          xhr.responseText || "Something went wrong!"
-      );
-      console.error("AJAX Error:", error);
-    }
-  });
-}
 function showResponseModal(type, message, redirectUrl) {
   const modalEl = document.getElementById("responseModal");
   const modal = new bootstrap.Modal(modalEl);

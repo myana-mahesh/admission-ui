@@ -1,6 +1,8 @@
 package com.impactsure.sanctionui.web;
 
 import com.impactsure.sanctionui.dto.CancelAdmissionDTO;
+import com.impactsure.sanctionui.dto.FeeInvoiceDto;
+
 import lombok.RequiredArgsConstructor;
 
 import java.text.ParseException;
@@ -11,6 +13,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -40,6 +44,7 @@ import com.impactsure.sanctionui.enums.GuardianRelation;
 import com.impactsure.sanctionui.repository.CourseRepository;
 import com.impactsure.sanctionui.repository.YearlyFeesRepository;
 import com.impactsure.sanctionui.service.impl.AdmissionApiClientService;
+import com.impactsure.sanctionui.service.impl.InvoiceClient;
 import com.impactsure.sanctionui.service.impl.PaymentModeApiClientService;
 import com.nimbusds.jwt.SignedJWT;
 
@@ -62,6 +67,10 @@ public class AdmissionFormController {
 	
 	@Autowired
 	private PaymentModeApiClientService paymentModeApiClientService;
+	
+	@Autowired
+	private InvoiceClient invoiceClient;
+	
 
 
 	public List<String> clientRoleNames(OidcUser user){
@@ -205,6 +214,20 @@ public class AdmissionFormController {
 	    
 	    model.addObject("hasExistingInstallments", !admission.getInstallments().isEmpty());
 	    model.addObject("existingInstallments", admission.getInstallments());
+	    
+	    List<FeeInvoiceDto> invoices =
+                invoiceClient.getInvoicesForAdmission(admission.getAdmissionId(), accessToken);
+
+        // 3) Convert to Map<installmentId, FeeInvoiceDto> for easy lookup in Thymeleaf
+        Map<Long, FeeInvoiceDto> invoiceMap = invoices.stream()
+                .filter(inv -> inv.getInstallmentId() != null)
+                .collect(Collectors.toMap(
+                        FeeInvoiceDto::getInstallmentId,
+                        Function.identity(),
+                        (a, b) -> a      // in case of duplicates, keep first
+                ));
+
+        model.addObject("invoices", invoiceMap);
 
 	    return model; // -> templates/admissions/view.html
 	}

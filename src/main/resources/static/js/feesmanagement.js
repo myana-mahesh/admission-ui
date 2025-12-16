@@ -5,12 +5,16 @@ let hasCustomBudgets = false;
 let budgetsSource = 'auto';
 $(document).ready(function() {
   $('#course').trigger('change');
-  $('#activeYear').trigger('change');
-  $('#activeYearBudget').trigger('change');
   
 });
 
+jQuery(window).on("load", function () {
+		$('#activeYear').trigger('change');
 
+		setTimeout(function () {
+		       $('#activeYear').trigger('change');
+		    }, 5000);
+	});
 
 (function () {
 
@@ -1076,7 +1080,7 @@ $(document).ready(function() {
   $("body").on("change", "#course", function () {
     let selectedCourseId = $(this).val();
     selectedCourseId = Number.parseInt(selectedCourseId);
-
+	debugger
     const course = courses.find(c => c.courseId === selectedCourseId);
     console.log("Selected course:", course);
 
@@ -1091,6 +1095,10 @@ $(document).ready(function() {
       if (hasExistingInstallments) {
         console.log("Admission has existing installments – skipping default fee template load.");
         // DO NOT call loadDefaultFeeStructureForCourse
+		//activeYearSel
+		const event = new Event('change', { bubbles: true });
+		activeYearSel.dispatchEvent(event);
+		//showYear()
       } else {
         loadDefaultFeeStructureForCourse(selectedCourseId);
       }
@@ -1101,6 +1109,7 @@ $(document).ready(function() {
       discountEl.value  = "";
       recalcActual({ reSplit: true });
     }
+	
   });
 
   /* ---------- initial pass ---------- */
