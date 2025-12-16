@@ -625,6 +625,133 @@
         <!-- Hidden Admission Id -->
         <input type="hidden" id="role"
                th:value="${role}"/>
+			   
+			   
+			   <!-- =================== UPLOADS / DECLARATION / SUBMIT =================== -->
+			   		<div class="section px-2 mt-4 uploadsection">
+			   		  <div class="title mb-2"><span class="dot"></span><h5 class="mb-0">Upload Documents</h5></div>
+
+			   		  <div class="row g-3">
+
+			   		    <!-- 10th -->
+			   		    <div class="col-md-6">
+			   		      <label class="form-label">10th Marksheet</label>
+
+			   		      <div class="mb-1"
+			   		           th:if="${docUploads != null and docUploads['SSC10'] != null}">
+			   		        <a class="text-decoration-none" target="_blank"
+			   		           th:href="${docUploads['SSC10'].storageUrl}">
+			   		          <i class="bi bi-paperclip me-1"></i>
+			   		          <span th:text="${docUploads['SSC10'].filename}">10th.pdf</span>
+			   		        </a>
+			   		      </div>
+
+			   		      <input type="file" class="form-control student-details"
+			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png">
+			   		      <input type="hidden" name="docNames" value="10th Marksheet">
+			   		    </div>
+
+			   		    <!-- 12th -->
+			   		    <div class="col-md-6">
+			   		      <label class="form-label">12th Marksheet</label>
+
+			   		      <div class="mb-1"
+			   		           th:if="${docUploads != null and docUploads['HSC12'] != null}">
+			   		        <a class="text-decoration-none" target="_blank"
+			   		           th:href="${docUploads['HSC12'].storageUrl}">
+			   		          <i class="bi bi-paperclip me-1"></i>
+			   		          <span th:text="${docUploads['HSC12'].filename}">12th.pdf</span>
+			   		        </a>
+			   		      </div>
+
+			   		      <input type="file" class="form-control student-details"
+			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png">
+			   		      <input type="hidden" name="docNames" value="12th Marksheet">
+			   		    </div>
+
+			   		    <!-- LC/TC -->
+			   		    <div class="col-md-6">
+			   		      <label class="form-label">Leaving Certificate / Transfer Certificate</label>
+
+			   		      <div class="mb-1"
+			   		           th:if="${docUploads != null and docUploads['LC'] != null}">
+			   		        <a class="text-decoration-none" target="_blank"
+			   		           th:href="${docUploads['LC'].storageUrl}">
+			   		          <i class="bi bi-paperclip me-1"></i>
+			   		          <span th:text="${docUploads['LC'].filename}">lc-tc.pdf</span>
+			   		        </a>
+			   		      </div>
+
+			   		      <input type="file" class="form-control student-details"
+			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png">
+			   		      <input type="hidden" name="docNames" value="Leaving Certificate / Transfer Certificate">
+			   		    </div>
+
+			   		    <!-- Migration -->
+			   		    <div class="col-md-6">
+			   		      <label class="form-label">Migration Certificate</label>
+
+			   		      <div class="mb-1"
+			   		           th:if="${docUploads != null and docUploads['MIG'] != null}">
+			   		        <a class="text-decoration-none" target="_blank"
+			   		           th:href="${docUploads['MIG'].storageUrl}">
+			   		          <i class="bi bi-paperclip me-1"></i>
+			   		          <span th:text="${docUploads['MIG'].filename}">migration.pdf</span>
+			   		        </a>
+			   		      </div>
+
+			   		      <input type="file" class="form-control student-details"
+			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png">
+			   		      <input type="hidden" name="docNames" value="Migration Certificate">
+			   		    </div>
+
+			   		    <!-- Aadhaar -->
+			   		    <div class="col-md-6">
+			   		      <label class="form-label">Aadhaar Card</label>
+
+			   		      <div class="mb-1"
+			   		           th:if="${docUploads != null and docUploads['AADHAAR'] != null}">
+			   		        <a class="text-decoration-none" target="_blank"
+			   		           th:href="${docUploads['AADHAAR'].storageUrl}">
+			   		          <i class="bi bi-paperclip me-1"></i>
+			   		          <span th:text="${docUploads['AADHAAR'].filename}">aadhaar.pdf</span>
+			   		        </a>
+			   		      </div>
+
+			   		      <input type="file" class="form-control student-details"
+			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png">
+			   		      <input type="hidden" name="docNames" value="Aadhaar Card">
+			   		    </div>
+
+			   		    <!-- Photo -->
+			   		    <div class="col-md-6">
+			   		      <label class="form-label">Passport Size Photo</label>
+
+			   		      <div class="mb-1"
+			   		           th:if="${docUploads != null and docUploads['PHOTO'] != null}">
+			   		        <a class="text-decoration-none" target="_blank"
+			   		           th:href="${docUploads['PHOTO'].storageUrl}">
+			   		          <i class="bi bi-paperclip me-1"></i>
+			   		          <span th:text="${docUploads['PHOTO'].filename}">photo.jpg</span>
+			   		        </a>
+			   		      </div>
+
+			   		      <input type="file" class="form-control student-details"
+			   		             name="docFiles" accept=".jpg,.jpeg,.png">
+			   		      <input type="hidden" name="docNames" value="Passport Size Photo">
+			   		    </div>
+
+			   		    <!-- Other docs -->
+			   		    <div class="row g-3" id="otherDocsContainer"></div>
+
+			   		    <div class="mt-3">
+			   		      <button type="button" class="btn btn-outline-secondary btn-sm" id="addOtherDocBtn">
+			   		        <i class="bi bi-plus-circle"></i> Add Other Document
+			   		      </button>
+			   		    </div>
+
+			   		  </div>
+			   		</div>
 
         <th:block th:if="*{status.name() == 'UNDER_CANCELLATION' || status.name() == 'CANCELLED'}">
 
@@ -720,12 +847,8 @@
 
 
 
-        <!-- =================== UPLOADS / DECLARATION / SUBMIT =================== -->
-        <div class="section px-2 mt-4 uploadsection">
-          <!-- (unchanged uploads content) -->
-          <!-- ... keep your existing uploads HTML here ... -->
-          <!-- I left this part as-is from your version -->
-        </div>
+        
+
 
         <div class="section px-2 mt-4 d-none">
           <div class="title mb-2"><span class="dot"></span><h5 class="mb-0">Declaration by Parent / Guardian</h5></div>
