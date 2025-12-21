@@ -2,6 +2,7 @@ package com.impactsure.sanctionui.service.impl;
 
 import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -18,6 +19,9 @@ import com.impactsure.sanctionui.dto.CourseFeeRequestDto;
 public class CourseFeeClient {
 
     private final RestTemplate restTemplate;
+    
+    private final CourseFeeDueDateService courseFeeDueDateService;
+    
 
     @Value("${admission.service.url}")
     private String admissionServiceBaseUrl; // e.g. http://localhost:8081 or http://admission-service
@@ -32,8 +36,10 @@ public class CourseFeeClient {
 
         ResponseEntity<CourseFeeRequestDto> response =
                 restTemplate.exchange(url, HttpMethod.GET, entity, CourseFeeRequestDto.class);
+        
+        CourseFeeRequestDto a = courseFeeDueDateService.applyDueDates(response.getBody(),LocalDate.now());
 
-        return response.getBody();
+        return a;
     }
 
     public CourseFeeRequestDto createCourseWithFee(CourseFeeRequestDto dto, String accessToken) {

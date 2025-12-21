@@ -40,7 +40,7 @@
               <div class="form-floating">
                 <input type="text"
                        class="form-control student-details"
-                       th:field="*{formNo}"
+                       th:field="*{admissionId}"
                        id="formNo"
                        placeholder=" "
                        required>
@@ -293,6 +293,23 @@
             <div class="col-md-6">
               <div class="form-floating">
                 <select class="form-select student-details"
+                        th:field="*{college.collegeId}"
+                        aria-label="Selected College"
+                        id="collegeId"
+                        required>
+                  <option value=""></option>
+                  <option th:each="college: ${colleges}"
+                          th:value="${college.collegeId}"
+                          th:text="${college.name}"></option>
+                </select>
+                <label for="collegeId">Selected College</label>
+                <div class="invalid-feedback small">Please select a college.</div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-floating">
+                <select class="form-select student-details"
                         th:field="*{course.courseId}"
                         aria-label="Selected Course"
                         id="course"
@@ -398,11 +415,37 @@
                        class="form-control student-details"
                        th:field="*{discount}"
                        id="discountAmount"
-                       placeholder=" ">
+                       placeholder=" "
+					   th:disabled="${role == 'BRANCH_USER'}">
                 <label for="discountAmount">Discount (₹)</label>
                 <div class="invalid-feedback small"></div>
               </div>
             </div>
+			<div class="col-md-4">
+              <div class="form-floating">
+				<select
+				   class="form-control student-details"
+	               th:field="*{discountRemark}"
+	               id="discountRemark"
+	               placeholder=" "
+				   th:disabled="${role == 'BRANCH_USER'}"
+				   >
+				<option  th:each="discountRemark:${discountRemarks}" th:value="${discountRemark}" th:text="${discountRemark}">
+					TESTs
+				</option>
+				</select>
+				<label for="discountRemark">Discount Remark</label>
+                <div class="invalid-feedback small"></div>
+              </div>
+            </div>
+			<div class="col-md-4 d-none" id="discountRemarkOtherDiv">
+	              <div class="form-floating">
+					<input type="text" th:field="*{discountRemarkOther}" class="form-control student-details " id="discountRemarkOther" th:disabled="${role == 'BRANCH_USER'}">
+					
+					<label for="discountRemarkOther">Remark</label>
+	                <div class="invalid-feedback small"></div>
+	              </div>
+	            </div>
             <div class="col-md-4">
               <div class="form-floating">
                 <input type="number"
@@ -480,13 +523,15 @@
               <thead class="sticky-top">
                 <tr>
                   <th style="width: 80px;">Sr. No.</th>
-                  <th style="width: 200px;">Fees (₹)</th>
+                  <th style="width: 450px;">Fees (₹)</th>
                   <th style="width: 220px;">Date</th>
                   <th style="width: 220px;">Mode of Payment</th>
+				  <th style="width: 160px;">Transaction Id</th>
                   <th style="width: 260px;">Receipt (file)</th>
                   <th style="width: 160px;">Received By</th>
                   <th style="width: 160px;">Status</th>
 				  <th style="width: 160px;">Invoice</th>
+				  <th style="width: 160px;">Action</th>
                 </tr>
               </thead>
 
@@ -528,42 +573,62 @@
                       </option>
                     </select>
                   </td>
-
-                  <td>
-                    <div class="d-flex flex-column gap-1">
-                      <a th:if="${receipts != null and receipts[inst.installmentId] != null}"
-                         th:href="${receipts[inst.installmentId].storageUrl}"
-                         target="_blank" class="text-decoration-none">
-                        <i class="bi bi-paperclip me-1"></i>
-                        <span th:text="${receipts[inst.installmentId].filename}">receipt.pdf</span>
-                      </a>
+				  <td>
                       <input class="form-control student-details"
-                             type="file"
-                             name="receiptFiles"
-                             accept=".pdf,.jpg,.jpeg,.png"
-                             data-field="receipt"/>
-                      <input type="hidden"
-                             name="receiptTargets"
-                             th:value="${inst.installmentId}"/>
-                    </div>
-                  </td>
+                             data-field="txnRef"
+                             type="text"
+                             th:field="*{installments[__${iStat.index}__].txnRef}" />
+                    </td>
+				  <td>
+				    <div class="d-flex flex-column gap-1">
+
+				      <a th:if="${receipts != null and receipts[inst.installmentId] != null}"
+				         th:href="${receipts[inst.installmentId].storageUrl}"
+				         target="_blank" class="text-decoration-none">
+				        <i class="bi bi-paperclip me-1"></i>
+				        <span th:text="${receipts[inst.installmentId].filename}">receipt.pdf</span>
+				      </a>
+
+				      <!-- ✅ Wrap input + preview -->
+				      <div class="file-wrap">
+				        <input class="form-control student-details"
+				               type="file"
+				               name="receiptFiles"
+				               accept=".pdf,.jpg,.jpeg,.png"
+				               data-field="receipt"/>
+
+				        <div class="file-preview"></div>
+				      </div>
+
+				      <input type="hidden"
+				             name="receiptTargets"
+				             th:value="${inst.installmentId}"/>
+				    </div>
+				  </td>
+
 
                   <td>
                     <input class="form-control student-details"
                            type="text"
                            data-field="receivedBy"
+						   disabled
                            th:field="*{installments[__${iStat.index}__].receivedBy}" />
                   </td>
 
-                  <td>
+                  <td th:if="*{installments[__${iStat.index}__].status!='Under Verification'}">
                     <select class="form-select"
                             data-field="status"
-                            th:field="*{installments[__${iStat.index}__].status}">
+                            th:field="*{installments[__${iStat.index}__].status}"
+							th:disabled="*{installments[__${iStat.index}__].status == 'Paid'}">
                       <option value="">Select</option>
                       <option value="Un Paid">Un Paid</option>
                       <option value="Paid">Paid</option>
                     </select>
                   </td>
+				  <td th:if="*{installments[__${iStat.index}__].status == 'Under Verification'}">
+					<input 	class="form-select d-none" data-field="status" th:field="*{installments[__${iStat.index}__].status}">
+					Under Verification  
+				</td>
 				  <td class="invoice-cell">
 				    <div class="d-flex flex-column gap-1">
 				      <!-- Invoice link -->
@@ -586,7 +651,13 @@
 				   
 				    </div>
 				  </td>
-
+				  <td>
+					<button th:if="*{installments[__${iStat.index}__].status!='Paid'}" type="button" th:id="|delete_*{installments[__${iStat.index}__].installmentId}|" class="btn btn-sm btn-outline-danger installment_delete_btn">Delete</button>
+					<span th:if="${role == 'HO'}">
+						<button th:id="|installment_approve_*{installments[__${iStat.index}__].installmentId}|"  th:if="*{installments[__${iStat.index}__].status == 'Under Verification'}" class="mt-1 btn btn-sm btn-primary-theme installment_apporval_btn" type="button">Approve</button>
+					</span>
+					
+				</td>
                 </tr>
 
                 <tr th:if="${#lists.isEmpty(admission.installments)}">
@@ -1001,7 +1072,7 @@
       var courses = /*[[${courses}]]*/ '';
       var yearlyFees = /*[[${yearlyFees}]]*/ '';
       var MODES   = /*[[${paymentModes}]]*/'';
-      
+	  var userName   = /*[[${userName}]]*/'';
       /*<![CDATA[*/
           window.hasExistingInstallments = /*[[${hasExistingInstallments}]]*/ false;
           window.existingInstallments   = /*[[${existingInstallments}]]*/ [];
@@ -1014,6 +1085,7 @@
       });
   </script>
   <script src="js/feesmanagement.js"></script>
+  <script src="js/ho-verification.js"></script>
   <script>
 	
     window.addEventListener('load', function () {

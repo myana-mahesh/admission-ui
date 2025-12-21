@@ -44,14 +44,14 @@
           </div>
 
           <div class="row g-3 mt-2">
-            <div class="col-md-4">
+            <div class="col-md-4 d-none">
               <div class="form-floating">
                 <input type="text" class="form-control student-details" id="formNo" placeholder=" ">
                 <label for="formNo">Form No.</label>
                 <div class="invalid-feedback small"></div>
               </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 d-none">
               <div class="form-floating">
                 <input type="date" class="form-control student-details" id="formDate" placeholder=" ">
                 <label for="formDate">Date</label>
@@ -204,6 +204,17 @@
           <div class="row g-3">
             <div class="col-md-6">
               <div class="form-floating">
+                <select class="form-select student-details" id="collegeId" aria-label="Selected College" required>
+                  <option value="" selected></option>
+                  <option th:each="college: ${colleges}" th:value="${college.collegeId}" th:text="${college.name}"></option>
+                </select>
+                <label for="collegeId">Selected College</label>
+                <div class="invalid-feedback small"></div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-floating">
                 <select class="form-select student-details" id="course" aria-label="Selected Course">
                   <option value="" selected></option>
                   <option th:each="course: ${courses}" th:value="${course.courseId}" th:text="${course.name}"></option>
@@ -269,11 +280,35 @@
             </div>
             <div class="col-md-4">
               <div class="form-floating">
-                <input type="number" min="0" class="form-control student-details" id="discountAmount" placeholder=" ">
+                <input type="number" min="0" class="form-control student-details" id="discountAmount" placeholder=" " th:disabled="${role == 'BRANCH_USER'}">
                 <label for="discountAmount">Discount (₹)</label>
                 <div class="invalid-feedback small"></div>
               </div>
             </div>
+			<div class="col-md-4">
+	              <div class="form-floating">
+					<select
+					   class="form-control student-details"
+		               id="discountRemark"
+		               placeholder=" "
+					   th:disabled="${role == 'BRANCH_USER'}"
+					   >
+					<option  th:each="discountRemark:${discountRemarks}" th:value="${discountRemark}" th:text="${discountRemark}">
+						TESTs
+					</option>
+					</select>
+					<label for="discountRemark">Discount Remark</label>
+	                <div class="invalid-feedback small"></div>
+	              </div>
+	            </div>
+				<div class="col-md-4 d-none" id="discountRemarkOtherDiv">
+	              <div class="form-floating">
+					<input type="text" class="form-control student-details " id="discountRemarkOther" th:disabled="${role == 'BRANCH_USER'}">
+					
+					<label for="discountRemarkOther">Remark</label>
+	                <div class="invalid-feedback small"></div>
+	              </div>
+	            </div>
             <div class="col-md-4">
               <div class="form-floating">
                 <input type="number" min="0" class="form-control student-details" id="actualFees" placeholder=" " readonly>
@@ -329,12 +364,14 @@
               <thead class="sticky-top">
                 <tr>
                   <th style="width: 80px;">Sr. No.</th>
-                  <th style="width: 200px;">Fees (₹)</th>
+                  <th style="width: 450px;">Fees (₹)</th>
                   <th style="width: 220px;">Date</th>
                   <th style="width: 220px;">Mode of Payment</th>
+				  <th style="width: 160px;">Transaction Id</th>
                   <th style="width: 260px;">Receipt (file)</th>
                   <th style="width: 160px;">Received By</th>
                   <th style="width: 160px;">Status</th>
+				  <th style="width: 160px;">Invoice</th>
 				  <th style="width: 160px;">Action</th>
                 </tr>
               </thead>
@@ -467,6 +504,7 @@
   <script th:inline="javascript">
     var courses = /*[[${courses}]]*/'';
     var MODES   = /*[[${paymentModes}]]*/'';
+	var userName   = /*[[${userName}]]*/'';
   </script>
 
   <!-- Keep Actual = Total - Discount -->

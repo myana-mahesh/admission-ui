@@ -6,7 +6,7 @@
       <!-- Brand -->
       <div class="sb-brand">
         <div class="sb-logo">
-			<img src="img/abs logo.jpg" class="logo-img" width="45">
+			<img th:src="@{/img/abs%20logo.jpg}" class="logo-img" width="45">
 		</div>
         <div>
           <div class="sb-title">ABS ERP</div>
@@ -39,6 +39,9 @@
 		
 		<a class="sb-link" th:classappend="${active}=='coursemaster' ? ' is-active' : ''" th:href="@{/courses}">
           <i class="bi bi-people"></i><span>Course</span>
+        </a>
+		<a class="sb-link" th:classappend="${active}=='colleges' ? ' is-active' : ''" th:href="@{/colleges}">
+          <i class="bi bi-building"></i><span>Colleges</span>
         </a>
 		<a class="sb-link" th:classappend="${active}=='perks-master' ? ' is-active' : ''" th:href="@{/perks-master}">
           <i class="bi bi-people"></i><span>Student Perks</span>

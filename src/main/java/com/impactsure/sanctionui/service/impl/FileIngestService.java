@@ -36,7 +36,7 @@ private String admissionApiUrlTemplate;
 
 public List<FileUpload> ingestAndForward(Long id, MultipleUploadRequest metadata,
 		List<MultipartFile> files, 
-		String bearerToken) {
+		String bearerToken,String role) {
  try {
    if (metadata!=null && files!=null && metadata.getFiles()!=null && metadata.getFiles().size() != files.size()) {
      throw new IllegalArgumentException("metadata.files count must match files count");
@@ -84,7 +84,7 @@ public List<FileUpload> ingestAndForward(Long id, MultipleUploadRequest metadata
    headers.setBearerAuth(bearerToken);
    
    	
-   String installmentUrl = admissionApiUrlTemplate +"/api/admissions/"+id+"/installments/bulk";
+   String installmentUrl = admissionApiUrlTemplate +"/api/admissions/"+id+"/installments/bulk?role="+role;
    
    ParameterizedTypeReference<List<FeeInstallment>> type =
 		      new ParameterizedTypeReference<>() {};

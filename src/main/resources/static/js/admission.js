@@ -1,54 +1,63 @@
+(function initReceiptHoverPreview() {
+  const selector = 'input[type="file"][data-field="receipt"]';
+
+  function bind(input) {
+    if (input.dataset.previewBound === "1") return;
+    input.dataset.previewBound = "1";
+
+    const wrap = input.closest('.file-wrap');
+    if (!wrap) return;
+
+    const preview = wrap.querySelector('.file-preview');
+    if (!preview) return;
+
+    let objUrl = null;
+
+    input.addEventListener('change', () => {
+      const f = input.files && input.files[0];
+
+      wrap.classList.remove('has-file');
+      preview.innerHTML = '';
+      if (objUrl) URL.revokeObjectURL(objUrl);
+      objUrl = null;
+
+      if (!f) return;
+
+      wrap.classList.add('has-file');
+      objUrl = URL.createObjectURL(f);
+
+      const isImage = (f.type || '').startsWith('image/');
+      const isPdf = (f.type || '') === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
+
+      preview.innerHTML = `
+        <div class="fp-name">${f.name}</div>
+        ${isImage ? `<img class="fp-img" src="${objUrl}" alt="preview" />` : ''}
+        <div class="fp-meta">${(f.size/1024).toFixed(1)} KB • ${f.type || 'file'}</div>
+        ${isPdf ? `<a class="btn btn-sm btn-dark mt-2 w-100" href="${objUrl}" target="_blank" rel="noopener">View PDF</a>` : ''}
+      `;
+    });
+  }
+
+  // bind existing
+  document.querySelectorAll(selector).forEach(bind);
+
+  // bind future (if rows added dynamically)
+  const mo = new MutationObserver(() => {
+    document.querySelectorAll(selector).forEach(bind);
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+})();
+
 $(document).ready(function () {
-	function generateInvoiceForRow($row) {
-		    const status = $row.find("select[data-field='status']").val();
-		    const installmentId = $row.find("input[name$='.installmentId']").val();
-
-		    if (!installmentId) {
-		      console.warn("No installmentId found on row, probably a new unsaved installment.");
-		      return;
-		    }
-
-		    if (status !== "Paid") {
-		      return;
-		    }
-
-		    // if invoice already present, don't generate again
-		    if ($row.find("a.invoice-link").length > 0) {
-		      return;
-		    }
-
-		    $.ajax({
-		      url: "/api/installments/" + installmentId + "/status?status=" + status,
-		      type: "POST",
-		      contentType: "application/json",
-		      data: JSON.stringify({ status: "Paid" }),
-		      success: function (res) {
-		        if (res && res.downloadUrl) {
-		          let $invoiceCell = $row.find(".invoice-cell");
-		          if ($invoiceCell.length === 0) {
-		            // fallback: use receipt column (index adjust if needed)
-		            $invoiceCell = $row.find("td").eq(4);
-		          }
-		          $invoiceCell.append(
-		            `<div class="mt-1">
-		               <a href="${res.downloadUrl}"
-		                  target="_blank"
-		                  class="text-decoration-none invoice-link">
-		                 <i class="bi bi-file-earmark-pdf me-1"></i>
-		                 Invoice
-		               </a>
-		             </div>`
-		          );
-		        } else {
-		          console.warn("Installment marked as Paid, but invoice info missing.");
-		        }
-		      },
-		      error: function (xhr) {
-		        console.error("Error marking installment paid:", xhr);
-		        alert("Failed to generate invoice. Please try again.");
-		      }
-		    });
-		  }
+	
+	$("body").on("change","#discountRemark",function(){
+		if($(this).val()=="Other"){
+			$("#discountRemarkOtherDiv").removeClass("d-none")
+		}else{
+			$("#discountRemarkOtherDiv").addClass("d-none")
+		}
+	})
+	$("#discountRemark").trigger("change")
 	
 	
   // ================== OTHER DOCUMENTS DYNAMIC ADD ==================
@@ -95,8 +104,7 @@ $(document).ready(function () {
   // ===================================================
 
   const fieldConfigs = [
-    { id: 'formNo',         required: true, message: 'Form number is required.' },
-    { id: 'formDate',       required: true, message: 'Date is required.' },
+    
     { id: 'absId',          required: true, message: 'ABS ID is required.' },
     { id: 'fullName',       required: true, message: 'Student name is required.' },
     { id: 'dob',            required: true, message: 'Date of birth is required.' },
@@ -107,6 +115,7 @@ $(document).ready(function () {
     { id: 'pincode',        required: true, pattern: '^[0-9]{6}$', patternMessage: 'Enter a valid 6 digit PIN code.' },
     { id: 'mobile',         required: true, pattern: '^[6-9][0-9]{9}$', patternMessage: 'Enter a valid 10 digit mobile number.' },
     { id: 'email',          required: true, message: 'Enter a valid email address.' },
+    { id: 'collegeId',      required: true, message: 'Please select a college.' },
     { id: 'course',         required: true, message: 'Please select a course.' },
     { id: 'dateOfAdmission',required: true, message: 'Date of admission is required.' },
     { id: 'totalFees',      required: true, message: 'Total fees is required.' }
@@ -202,15 +211,21 @@ $(document).ready(function () {
       const modeEl        = tr.querySelector('select[data-field="mode"]');
       const receivedByEl  = tr.querySelector('input[data-field="receivedBy"]');
       const statusEl      = tr.querySelector('select[data-field="status"]');
+	  const txnRefEl      = tr.querySelector('input[data-field="txnRef"]');
 
       const amount     = Number(amountEl?.value ?? '');
       const dueDate    = dateEl?.value || null;
       const mode       = modeEl?.value || null;
       const status     = statusEl?.value || null;
-      const receivedBy = receivedByEl?.value || null;
+	  const txnRef     = txnRefEl?.value || null;
+      let receivedBy = receivedByEl?.value || null;
 
       const hasAny = (isFinite(amount) && amount > 0) || !!dueDate || !!mode;
       if (!hasAny) return;
+	  debugger
+	  if((status && status=='Paid') && (!receivedBy || receivedBy=="")){
+		receivedBy = userName
+	  }
 
       upserts.push({
         id: null,
@@ -222,6 +237,7 @@ $(document).ready(function () {
         mode,
         receivedBy,
         status,
+		txnRef,
         yearlyFees: yearBudgets.get(Number.parseInt(tr.dataset.year))
       });
     });
@@ -394,7 +410,7 @@ $(document).ready(function () {
       $('.student-details').each(function () {
         formData[this.id] = $(this).val();
       });
-
+	  formData['formDate']=new Date().toISOString().split('T')[0];
       $.ajax({
         url: '/admission/student/create',
         type: 'POST',
@@ -411,7 +427,7 @@ $(document).ready(function () {
 		        const installmentId = $row.find("input[name$='.installmentId']").val();
 
 		        if (status === "Paid" && installmentId) {
-		          generateInvoiceForRow($row);
+		         // generateInvoiceForRow($row);
 		        }
 		      });
 			location.reload();

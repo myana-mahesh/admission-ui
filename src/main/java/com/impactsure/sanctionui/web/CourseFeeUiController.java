@@ -66,7 +66,8 @@ public class CourseFeeUiController {
             	    form.getInstallmentIds().add(inst.getId());
             	    form.getInstallmentSequences().add(inst.getSequence());
             	    form.getInstallmentAmounts().add(inst.getAmount());
-            	    form.getInstallmentDueDays().add(inst.getDueDaysFromAdmission());
+            	    form.getInstallmentDueDays().add(inst.getDueDayOfMonth());
+            	    form.getInstallmentDueMonths().add(inst.getDueMonth());
             	    form.getInstallmentYears().add(inst.getYearNumber() != null ? inst.getYearNumber() : 1); 
             	});
 
@@ -115,6 +116,8 @@ public class CourseFeeUiController {
                     .sequence(form.getInstallmentSequences().get(i))
                     .amount(amount)
                     .dueDaysFromAdmission(form.getInstallmentDueDays().get(i))
+                    .dueDayOfMonth(form.getInstallmentDueDays().get(i))
+                    .dueMonth(form.getInstallmentDueMonths().get(i))
                     .yearNumber(yearNumber)       
                     .build();
 

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar">
+
+<div th:replace="fragments/sidebar :: app_sidebar(active='colleges')"></div>
+
+<div class="app-main-wrap">
+    <div class="container-xl py-3 max-width-100">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h3 class="mb-0">College Master</h3>
+                <small class="text-muted">Configure colleges and seat capacity per course.</small>
+            </div>
+            <div>
+                <a class="btn btn-sm btn-primary-theme" th:href="@{/collegesnew}">
+                    + Add New College
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="table_header_theme" style="width: 80px;">ID</th>
+                        <th class="table_header_theme">Code</th>
+                        <th class="table_header_theme">College Name</th>
+                        <th class="table_header_theme">Courses (Seats)</th>
+                        <th class="table_header_theme" style="width: 160px;">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(colleges)}">
+                        <td colspan="5" class="text-center text-muted py-3">
+                            No colleges found.
+                        </td>
+                    </tr>
+                    <tr th:each="c : ${colleges}">
+                        <td th:text="${c.collegeId}">1</td>
+                        <td th:text="${c.code}">MAIN</td>
+                        <td th:text="${c.name}">Main Campus</td>
+                        <td>
+                            <span th:if="${c.courses == null or #lists.isEmpty(c.courses)}">—</span>
+                            <span th:if="${c.courses != null and !#lists.isEmpty(c.courses)}"
+                                  th:each="cc, stat : ${c.courses}">
+                                <span th:text="${cc.courseCode}">COURSE</span>
+                                <span th:text="${'(' + cc.totalSeats + ')'}">(0)</span>
+                                <span th:if="${!stat.last}">, </span>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a class="btn btn-sm btn-outline-primary-theme"
+                                   th:href="@{/collegesedit(collegeId=${c.collegeId})}">
+                                    Edit
+                                </a>
+                                <form th:action="@{'/collegesdelete/' + ${c.collegeId}}"
+                                      method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Delete this college?');">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

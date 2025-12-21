@@ -41,6 +41,7 @@ public class AdmissionRequestFromUI {
 	private String motherMobile;
 	
 	private Long course;
+	private Long collegeId;
 	
 	private String lastCollege;
 	private String collegeAttended;
@@ -53,6 +54,9 @@ public class AdmissionRequestFromUI {
 	private Double totalFees;
     
     private Double discountAmount;
+    private String discountRemark;
+    
+    private String discountRemarkOther;
     private String studentId;
     private Integer installmentsCount;
 	

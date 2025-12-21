@@ -44,6 +44,7 @@ import com.impactsure.sanctionui.enums.GuardianRelation;
 import com.impactsure.sanctionui.repository.CourseRepository;
 import com.impactsure.sanctionui.repository.YearlyFeesRepository;
 import com.impactsure.sanctionui.service.impl.AdmissionApiClientService;
+import com.impactsure.sanctionui.service.impl.CollegeApiClientService;
 import com.impactsure.sanctionui.service.impl.InvoiceClient;
 import com.impactsure.sanctionui.service.impl.PaymentModeApiClientService;
 import com.nimbusds.jwt.SignedJWT;
@@ -61,6 +62,9 @@ public class AdmissionFormController {
 	
 	@Autowired
 	private AdmissionApiClientService admissionApiClientService;
+
+	@Autowired
+	private CollegeApiClientService collegeApiClientService;
 	
 	@Autowired
 	private YearlyFeesRepository yearlyFeesRepository;
@@ -72,7 +76,10 @@ public class AdmissionFormController {
 	private InvoiceClient invoiceClient;
 	
 
-
+	public List<String> getDiscountRemarkMasterList(){
+		return Arrays.asList("reason1","reason2","Other");
+	}
+	
 	public List<String> clientRoleNames(OidcUser user){
 		return user.getAuthorities().stream()
 			      .map(a -> a.getAuthority())
@@ -107,16 +114,25 @@ public class AdmissionFormController {
 		 String accessToken = client.getAccessToken().getTokenValue();
 		ModelAndView model =  new ModelAndView();
 		List<Course> courses = this.courseRepository.findAll();
+		model.addObject("colleges", collegeApiClientService.listAll(accessToken));
 		
 		List<PaymentModeDto> paymentModes = paymentModeApiClientService.getPaymentModes(accessToken);
 		 List<String> paymentModeStrings = new ArrayList<>();
 	        for(PaymentModeDto  mode:paymentModes) {
 	        	paymentModeStrings.add(mode.getCode());
 	        }
+	    List<String> roles = clientRoleNames(oidcUser);
+	    String role = getSingleRole(roles);
+	    model.addObject("role", role);
 		model.addObject("courses",courses);
 		model.addObject("paymentModes", paymentModeStrings);
-		model.setViewName("admission-from");
 		
+		
+		List<String> discountRemarks =  getDiscountRemarkMasterList();
+		model.addObject("discountRemarks", discountRemarks);
+		
+		model.addObject("userName", oidcUser.getFullName());
+		model.setViewName("admission-from");
 		return model;
 	}
 	
@@ -205,6 +221,7 @@ public class AdmissionFormController {
         model.addObject("mother", mother);
 	    model.addObject("admission", admission);
 	    model.addObject("courses", courseRepository.findAll());
+	    model.addObject("colleges", collegeApiClientService.listAll(accessToken));
 	    model.addObject("receipts", receipts);
 	    model.addObject("docUploads", docUploads);
 	    model.addObject("yearlyFees", yearlyFeesMap); 
@@ -228,8 +245,13 @@ public class AdmissionFormController {
                 ));
 
         model.addObject("invoices", invoiceMap);
+        
+        List<String> discountRemarks =  getDiscountRemarkMasterList();
+		model.addObject("discountRemarks", discountRemarks);
 
-	    return model; // -> templates/admissions/view.html
+		model.addObject("userName", oidcUser.getFullName());
+		
+	    return model; 
 	}
 	
 	@GetMapping("/admissionsprint")

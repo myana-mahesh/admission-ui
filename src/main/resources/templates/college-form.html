@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar">
+
+<div th:replace="fragments/sidebar :: app_sidebar(active='colleges')"></div>
+
+<div class="app-main-wrap">
+    <div class="container-xl py-3 max-width-100">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h3 class="mb-0" th:text="${collegeForm.collegeId != null ? 'Edit College' : 'Add College'}">
+                    Add College
+                </h3>
+                <small class="text-muted">Set up college details and course-wise seat capacity.</small>
+            </div>
+            <div>
+                <a class="btn btn-sm btn-outline-secondary" th:href="@{/colleges}">Back to List</a>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <form th:action="@{/collegessave}" th:object="${collegeForm}" method="post">
+                    <input type="hidden" th:field="*{collegeId}"/>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{code}" required
+                                   placeholder="e.g. MAIN, ABS01">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">College Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{name}" required
+                                   placeholder="College name">
+                        </div>
+                    </div>
+
+                    <hr class="my-4"/>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0">Courses and Seat Capacity</h5>
+                        <button type="button" class="btn btn-sm btn-outline-primary-theme"
+                                onclick="addCourseRow()">
+                            + Add Course
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="courseTable" class="table table-sm align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th style="width: 55%;">Course</th>
+                                <th style="width: 25%;">Total Seats</th>
+                                <th style="width: 20%;">Action</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="cid, stat : ${collegeForm.courseIds}">
+                                <td>
+                                    <select class="form-select"
+                                            th:name="'courseIds[' + ${stat.index} + ']'">
+                                        <option value="">Select course</option>
+                                        <option th:each="opt : ${courseOptions}"
+                                                th:value="${opt.courseId}"
+                                                th:text="${opt.code + ' - ' + opt.name}"
+                                                th:selected="${opt.courseId == cid}">
+                                        </option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control" min="0"
+                                           th:name="'totalSeats[' + ${stat.index} + ']'"
+                                           th:value="${collegeForm.totalSeats[stat.index]}"/>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="removeRow(this)">
+                                        Remove
+                                    </button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="submit" class="btn btn-primary-theme">Save</button>
+                        <a class="btn btn-outline-secondary" th:href="@{/colleges}">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<template id="courseRowTemplate">
+    <tr>
+        <td>
+            <select class="form-select" name="courseIds[__INDEX__]">
+                <option value="">Select course</option>
+                <option th:each="opt : ${courseOptions}"
+                        th:value="${opt.courseId}"
+                        th:text="${opt.code + ' - ' + opt.name}">
+                </option>
+            </select>
+        </td>
+        <td>
+            <input type="number" class="form-control" min="0" name="totalSeats[__INDEX__]" value="0"/>
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)">
+                Remove
+            </button>
+        </td>
+    </tr>
+</template>
+
+<script>
+    function addCourseRow() {
+        const tbody = document.querySelector('#courseTable tbody');
+        const index = tbody.querySelectorAll('tr').length;
+        const template = document.getElementById('courseRowTemplate');
+        const html = template.innerHTML.replace(/__INDEX__/g, index);
+        const wrapper = document.createElement('tbody');
+        wrapper.innerHTML = html.trim();
+        tbody.appendChild(wrapper.firstElementChild);
+    }
+
+    function removeRow(button) {
+        const row = button.closest('tr');
+        if (row) {
+            row.remove();
+        }
+    }
+</script>
+
+</body>
+</html>
