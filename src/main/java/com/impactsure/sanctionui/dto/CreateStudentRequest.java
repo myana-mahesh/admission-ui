@@ -1,5 +1,7 @@
 package com.impactsure.sanctionui.dto;
 
+import com.impactsure.sanctionui.entities.HscDetails;
+import com.impactsure.sanctionui.entities.SscDetailsRequest;
 import lombok.*;
 
 import org.hibernate.annotations.processing.Pattern;
@@ -40,4 +42,14 @@ public class CreateStudentRequest {
 	private String motherMobile;
 	private Long studendId;
 	private Long course;
+	private String bloodGroup;
+	private SscDetailsRequest sscDetails;
+	private HscDetails hscDetails;
+	private String batch;
+	private String registrationNumber;
+	private String referenceName;
+	private Integer age;
+/*	private Long courseCode; // e.g., DPHARM
+	private String academicYearLabel; // e.g., 2025-26*/
+
 }

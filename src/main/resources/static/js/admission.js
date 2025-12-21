@@ -395,6 +395,24 @@ $(document).ready(function () {
         formData[this.id] = $(this).val();
       });
 
+      // ✅ Attach SSC details explicitly
+      formData.sscDetails = {
+        percentage: $('#sscPercentage').val(),
+        board: $('#sscBoard').val(),
+        passingYear: $('#sscYear').val(),
+        registrationNumber: $('#sscRegNo').val()
+      };
+
+      formData.hscDetails = {
+        collegeName: $('#hscCollege').val(),
+        subjects: $('#hscSubjects').val(),
+        passingYear: $('#hscYear').val(),
+        physicsMarks: $('#phyMarks').val(),
+        chemistryMarks: $('#chemMarks').val(),
+        biologyMarks: $('#bioMarks').val(),
+        pcbPercentage: $('#pcbPercentage').val()
+      };
+
       $.ajax({
         url: '/admission/student/create',
         type: 'POST',
@@ -499,7 +517,7 @@ function submitCancelAdmission(buttonId) {
   let remarks = $("#remarks_admission_cancel").val();
   let handlingPerson = ""
 	debugger
-  if(buttonId!="confirmCancelAdmissionBtn"){
+  if(buttonId!=="confirmCancelAdmissionBtn"){
 	// ✅ simple mandatory validation
 	  if (!charges || charges.trim() === "") {
 	    alert("Cancel Charges is required");
@@ -550,82 +568,6 @@ function submitCancelAdmission(buttonId) {
     }
   });
 }
-function showResponseModal(type, message, redirectUrl) {
-  const modalEl = document.getElementById("responseModal");
-  const modal = new bootstrap.Modal(modalEl);
-
-  const title = document.getElementById("responseModalTitle");
-  const msg = document.getElementById("responseModalMessage");
-  const icon = document.getElementById("responseModalIcon");
-
-  msg.textContent = message;
-
-  if (type === "success") {
-    title.textContent = "Success";
-    icon.className = "bi bi-check-circle-fill text-success";
-  } else {
-    title.textContent = "Error";
-    icon.className = "bi bi-x-circle-fill text-danger";
-  }
-
-  modal.show();
-
-  // Redirect after modal close
-  if (redirectUrl) {
-    modalEl.addEventListener(
-        "hidden.bs.modal",
-        function () {
-          window.location.href = redirectUrl;
-        },
-        { once: true }
-
-    );
-  }
-}
-
-
-$("body").on("click", "#updateCancellationBtn", function () {
-  saveCancellationDetails();
-});
-
-function saveCancellationDetails() {
-  const formData = new FormData();
-
-  formData.append("admissionId", $("#admissionId").val());
-  formData.append("cancelCharges", $("input[name='cancelCharges']").val());
-  formData.append("handlingPerson", $("input[name='handlingPerson']").val());
-  formData.append("remark", $("textarea[name='remark']").val());
-
-  const refundFile = $("input[name='refundProof']")[0].files[0];
-  if (refundFile) {
-    formData.append("refundProof", refundFile);                 // ✅ FILE
-    formData.append("refundProofFileName", refundFile.name);    // ✅ NAME
-  }
-
-  $.ajax({
-    url: "/admission/save-cancellation-details",
-    type: "POST",
-    data: formData,
-    processData: false,
-    contentType: false,
-    success: function (response) {
-      showResponseModal(
-          "success",
-          response ,
-          "/admissions?id=" + $("#admissionId").val()
-      );
-    },
-    error: function (xhr) {
-     // alert("Error saving cancellation details");
-      showResponseModal(
-          "error",
-          "Error saving cancellation details" ,
-          "/admissions?id=" + $("#admissionId").val()
-      );
-      console.error(xhr);
-    }
-  });
-}
 
 
 function showResponseModal(type, message, redirectUrl) {
@@ -673,12 +615,25 @@ function saveCancellationDetails() {
   formData.append("handlingPerson", $("input[name='handlingPerson']").val());
   formData.append("remark", $("textarea[name='remark']").val());
 
-  const refundFile = $("input[name='refundProof']")[0].files[0];
-  if (refundFile) {
+  // Refund Proof
+  const refundInput = $("input[name='refundProof']")[0];
+  if (refundInput && refundInput.files.length > 0) {
+    const refundFile = refundInput.files[0];
     formData.append("refundProof", refundFile);                 // ✅ FILE
     formData.append("refundProofFileName", refundFile.name);    // ✅ NAME
+  }else{
+    formData.append("refundProofFileName",$("#refundProofText").text());
   }
 
+  // Student Acknowledgement Proof
+  const acknowledgementInput = $("input[name='studentAcknowledgementProof']")[0];
+  if (acknowledgementInput && acknowledgementInput.files.length > 0) {
+    const acknowledgementFile = acknowledgementInput.files[0];
+    formData.append("studentAcknowledgementProof", acknowledgementFile);                 // ✅ FILE
+    formData.append("studentAcknowledgementProofFileName", acknowledgementFile.name);    // ✅ NAME
+  }else{
+    formData.append("studentAcknowledgementProofFileName",$("#studentAcknowledgementProofText").text());
+  }
   $.ajax({
     url: "/admission/save-cancellation-details",
     type: "POST",
@@ -702,4 +657,165 @@ function saveCancellationDetails() {
       console.error(xhr);
     }
   });
+}
+
+
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+$("body").on("change", "input[type='file'][name='docFiles']", function () {
+
+  const file = this.files[0];
+
+  if (file && file.size > MAX_FILE_SIZE) {
+
+    alert(
+        "Upload Error!\n\n" +
+        file.name + " exceeds the maximum allowed size.\n" +
+        "Max file size per document is 10 MB."
+    );
+
+    // reset file input
+    $(this).val("");
+  }
+});
+
+$("body").on("change", ".doc-radio", function () {
+debugger
+  const admissionId = $("#admissionId").val();
+  const documentCode = $(this).attr("name")
+      .replace("docType[", "")
+      .replace("]", "");
+  const receivedType = $(this).val();
+
+  $.post("/admission/document-verification-save", {
+    admissionId: admissionId,
+    documentCode: documentCode,
+    receivedType: receivedType
+  });
+});
+
+
+
+$("body").on("click", ".verify-btn", function () {
+
+  const admissionId = $("#admissionId").val();
+  const documentCode = $(this).data("doc");
+  const card = $(this).closest(".checklist-item");
+
+  $.post("/admission/document-verification-verify", {
+    admissionId: admissionId,
+    documentCode: documentCode
+  }, function () {
+    card.removeClass("pending").addClass("verified");
+    card.find(".form-check-label").removeClass("text-danger")
+        .addClass("text-success");
+  });
+});
+
+
+function onPercentageChange(el) {
+  const value = parseFloat(el.value);
+
+  if (isNaN(value) || value < 0 || value > 100) {
+    alert("❌ Percentage must be between 0 and 100");
+    el.value = "";
+    el.focus();
+  }
+}
+
+
+function onYearChange(el) {
+  const year = parseInt(el.value);
+  const currentYear = new Date().getFullYear();
+
+  if (isNaN(year) || year < 1950 || year > currentYear) {
+    alert("❌ Enter a valid passing year (1950 - " + currentYear + ")");
+    el.value = "";
+    el.focus();
+  }
+}
+
+
+  function onMarksChange() {
+
+  let phy = Number($('#phyMarks').val());
+  let chem = Number($('#chemMarks').val());
+  let bio = Number($('#bioMarks').val());
+
+  if ([phy, chem, bio].some(m => m < 0 || m > 100)) {
+  alert("Marks must be between 0 and 100");
+  return;
+}
+
+  if (phy && chem && bio) {
+  let pcb = ((phy + chem + bio) / 300) * 100;
+  $('#pcbPercentage').val(pcb.toFixed(2));
+}
+}
+
+  function onHscYearChange(input) {
+  const year = Number(input.value);
+  const currentYear = new Date().getFullYear();
+
+  if (year < 1950 || year > currentYear) {
+  alert("Enter a valid HSC passing year");
+  input.value = '';
+}
+}
+
+
+function calculateAge() {
+  const dobInput = document.getElementById('dob').value;
+  const ageInput = document.getElementById('age');
+
+  if (!dobInput) {
+    ageInput.value = '';
+    return;
+  }
+
+  const dob = new Date(dobInput);
+  const today = new Date();
+
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  const dayDiff = today.getDate() - dob.getDate();
+
+  // Adjust if birthday not yet occurred this year
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age--;
+  }
+
+  ageInput.value = age;
+}
+
+
+function applyFilters() {
+
+  const params = new URLSearchParams();
+
+  // pagination (keep current or reset)
+  params.append("page", 0);
+  params.append("size", document.getElementById("paginationSize")?.value || 10);
+
+  // search text
+  const q = document.querySelector("input[name='q']")?.value;
+  if (q && q.trim() !== "") {
+    params.append("q", q.trim());
+  }
+
+  // batch (single)
+  const batch = document.getElementById("batch")?.value;
+  if (batch && batch !== "") {
+    params.append("batch", batch);
+  }
+
+  // gender (🔥 SINGLE VALUE ONLY)
+  const genderSelect = document.getElementById("gender");
+  if (genderSelect && genderSelect.value) {
+    params.append("gender", genderSelect.value);   // FEMALE / MALE
+  }
+
+  // redirect
+  window.location.href = "/studentlist-filters?" + params.toString();
 }

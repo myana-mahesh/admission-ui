@@ -195,4 +195,41 @@ public class StudentController {
 		return new ResponseEntity<Student>(student,HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
+
+	@GetMapping("/studentlist-filters")
+	public String listStudents(
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size,
+			@RequestParam(required = false) String q,
+
+			@RequestParam(required = false) String course,
+			@RequestParam(required = false) String batch,
+			@RequestParam(required = false) Integer year,
+			@RequestParam(required = false) String gender,
+
+			@RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
+			@AuthenticationPrincipal OidcUser oidcUser,
+			Model model
+	) {
+
+		String accessToken = client.getAccessToken().getTokenValue();
+
+		PagedResponse<StudentDto> studentsPage =
+				studentApiClientService.getStudentsByFilter(
+						page, size, q, course, batch, year, gender, accessToken
+				);
+
+		model.addAttribute("page", studentsPage);
+		model.addAttribute("q", q);
+		model.addAttribute("size", size);
+
+		// Keep filters for UI persistence
+		model.addAttribute("course", course);
+		model.addAttribute("batch", batch);
+		model.addAttribute("year", year);
+		model.addAttribute("gender", gender);
+
+		return "studentlist";
+	}
+
 }

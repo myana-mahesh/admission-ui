@@ -16,6 +16,8 @@ import com.impactsure.sanctionui.dto.PagedResponse;
 import com.impactsure.sanctionui.dto.StudentDto;
 import com.impactsure.sanctionui.entities.Student;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class StudentApiClientService {
@@ -107,5 +109,56 @@ public class StudentApiClientService {
         );
         return response.getBody();
     }
+
+    public PagedResponse<StudentDto> getStudentsByFilter(
+            int page,
+            int size,
+            String q,
+            String course,
+            String batch,
+            Integer year,
+            String gender,
+            String accessToken
+    ) {
+
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromHttpUrl(studentApiUrl + "/api/students/students-filter")
+                .queryParam("page", page)
+                .queryParam("size", size);
+
+        if (q != null && !q.isBlank())
+            builder.queryParam("q", q);
+
+        if (course != null)
+            builder.queryParam("course", course);
+
+        if (batch != null)
+            builder.queryParam("batch", batch);
+
+        if (year != null)
+            builder.queryParam("year", year);
+
+        if (gender != null)
+            builder.queryParam("gender", gender);
+
+        String url = builder.toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<PagedResponse<StudentDto>> response =
+                restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        entity,
+                        new ParameterizedTypeReference<>() {}
+                );
+
+        return response.getBody();
+    }
+
 }
 

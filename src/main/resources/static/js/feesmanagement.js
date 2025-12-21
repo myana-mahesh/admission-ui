@@ -1080,7 +1080,7 @@ jQuery(window).on("load", function () {
   $("body").on("change", "#course", function () {
     let selectedCourseId = $(this).val();
     selectedCourseId = Number.parseInt(selectedCourseId);
-	debugger
+	//debugger
     const course = courses.find(c => c.courseId === selectedCourseId);
     console.log("Selected course:", course);
 

@@ -1,6 +1,7 @@
 package com.impactsure.sanctionui.web;
 
 import com.impactsure.sanctionui.dto.*;
+import com.impactsure.sanctionui.service.impl.StudentDocumentVerificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -44,6 +45,9 @@ public class AdmissionController {
 	
 	@Autowired
 	private  AdmissionApiClientService admissionApiClientService;
+
+	@Autowired
+	private  StudentDocumentVerificationService documentService;
 
 	@Value("${upload.base-dir}")
 	private String uploadBaseDir;
@@ -91,7 +95,15 @@ public class AdmissionController {
 				    .motherName(admissionReq.getMotherName())
 				    .motherMobile(admissionReq.getMotherMobile())
 				    .course(admissionReq.getCourse())
+					.bloodGroup(admissionReq.getBloodGroup())
 				    .studendId(studenId)
+					.sscDetails(admissionReq.getSscDetails())
+					.hscDetails(admissionReq.getHscDetails())
+					.batch(admissionReq.getBatch())
+					.registrationNumber(admissionReq.getRegistrationNumber())
+					.age(admissionReq.getAge())
+					//.courseCode(admissionReq.getCourse())
+					///.academicYearLabel("2025-2026")
 				    .build();
 
 			student = this.studentApiClientService.createOrUpdateStudent(createReq,accessToken);
@@ -104,6 +116,9 @@ public class AdmissionController {
 					    .remarks(admissionReq.getRemarks())
 					    .examDueDate(admissionReq.getExamDueDate())
 					    .dateOfAdmission(admissionReq.getDateOfAdmission())
+						.batch(admissionReq.getBatch())
+						.registrationNumber(admissionReq.getRegistrationNumber())
+						.referenceName(admissionReq.getReferenceName())
 					    .build();
 				
 				CreateAdmissionRequest createAdmissionReq = CreateAdmissionRequest.builder()
@@ -116,6 +131,9 @@ public class AdmissionController {
 						.noOfInstallments(admissionReq.getInstallmentsCount())
 						.formNo(admissionReq.getFormNo())
 						.formDate(admissionReq.getFormDate())
+						.admissionBranchId(admissionReq.getAdmissionBranchId())
+						.lectureBranchId(admissionReq.getLectureBranchId())
+
 						.build();
 				
 				Admission2 result = admissionApiClientService.createAdmission(createAdmissionReq,accessToken);
@@ -180,6 +198,8 @@ public class AdmissionController {
 			@RequestParam String remark,
 			@RequestParam(required = false) String refundProofFileName,
 			@RequestPart(required = false) MultipartFile refundProof,
+			@RequestParam(required = false) String studentAcknowledgementProofFileName,
+			@RequestPart(required = false) MultipartFile studentAcknowledgementProof,
 			@RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
 			@AuthenticationPrincipal OidcUser oidcUser
 	) {
@@ -202,12 +222,29 @@ public class AdmissionController {
 			}
 		}
 
+
+		// 🔹 Student Acknowledgement Proof FILE SAVE
+		if (studentAcknowledgementProof != null && !studentAcknowledgementProof.isEmpty()) {
+			try {
+				Path admissionDir = Paths.get(cancelBaseDir, String.valueOf(admissionId));
+				Files.createDirectories(admissionDir);
+
+				Path targetFile = admissionDir.resolve(Objects.requireNonNull(studentAcknowledgementProof.getOriginalFilename()));
+				Files.copy(studentAcknowledgementProof.getInputStream(), targetFile, StandardCopyOption.REPLACE_EXISTING);
+
+				studentAcknowledgementProofFileName = targetFile.getFileName().toString();
+			} catch (IOException e) {
+				throw new RuntimeException("Student acknowledgement proof file upload failed", e);
+			}
+		}
+
 		this.admissionApiClientService.cancelAdmissionDetailsUpdate(
 				admissionId,
 				cancelCharges,
 				handlingPerson,
 				remark,
 				refundProofFileName,
+				studentAcknowledgementProofFileName,
 				accessToken
 		);
 
@@ -235,6 +272,28 @@ public class AdmissionController {
 						"attachment; filename=\"" + fileName + "\"")
 				.contentType(MediaType.APPLICATION_OCTET_STREAM)
 				.body(resource);
+	}
+
+	// Save Xerox / Original
+	@PostMapping("/document-verification-save")
+	public ResponseEntity<?> saveReceivedType(
+			@RequestParam Long admissionId,
+			@RequestParam String documentCode,
+			@RequestParam String receivedType
+	) {
+		documentService.saveReceivedType(admissionId, documentCode, receivedType);
+		return ResponseEntity.ok("Saved");
+	}
+
+	// HO Verify
+	@PostMapping("/document-verification-verify")
+	public ResponseEntity<?> verifyDocument(
+			@RequestParam Long admissionId,
+			@RequestParam String documentCode,
+			@AuthenticationPrincipal OidcUser user
+	) {
+		documentService.verifyDocument(admissionId, documentCode, user.getFullName());
+		return ResponseEntity.ok("Verified");
 	}
 
 }
