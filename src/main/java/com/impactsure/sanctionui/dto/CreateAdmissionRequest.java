@@ -21,6 +21,9 @@ public class CreateAdmissionRequest {
 	private Double totalFees;
     
     private Double discount;
+    private String discountRemark;
+    
+    private String discountRemarkOther;
     
     private Integer noOfInstallments;
 

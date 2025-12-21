@@ -53,6 +53,9 @@ public class AdmissionRequestFromUI {
 	private Double totalFees;
     
     private Double discountAmount;
+    private String discountRemark;
+    
+    private String discountRemarkOther;
     private String studentId;
     private Integer installmentsCount;
 	

@@ -87,6 +87,10 @@ public class Admission2 extends Auditable {
     
     private Double discount;
     
+    private String discountRemark;
+    
+    private String discountRemarkOther;
+    
     private Integer noOfInstallments;
     
     private Integer courseYears;

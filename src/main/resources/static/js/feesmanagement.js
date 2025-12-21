@@ -6,6 +6,8 @@ let budgetsSource = 'auto';
 $(document).ready(function() {
   $('#course').trigger('change');
   
+  
+  
 });
 
 jQuery(window).on("load", function () {
@@ -17,6 +19,16 @@ jQuery(window).on("load", function () {
 	});
 
 (function () {
+	
+	$(document).ready(function() {
+	  
+	  
+	  $("body").on("click",".installment_delete_btn",function(){
+		console.log(this.closest('tr'));
+		handleDeleteInstallmentRow(this.closest('tr'),true,this.id)
+	  })
+	  
+	});
 
   const totalFeesEl   = document.getElementById('totalFees');
   const discountEl    = document.getElementById('discountAmount');
@@ -256,9 +268,8 @@ jQuery(window).on("load", function () {
   /* ---------- build row (tagged with data-year) ---------- */
 
   // 🔹 NEW: handler for delete
-  function handleDeleteInstallmentRow(tr) {
+  function handleDeleteInstallmentRow(tr,isView,instId) {
     const year = Number(tr.dataset.year || getActiveYear());
-
     if (isPaidRow(tr)) {
       alert('Paid installment cannot be deleted.');
       return;
@@ -275,8 +286,30 @@ jQuery(window).on("load", function () {
     // re-split remaining unpaid installments in that year
     equalSplitUnpaidForYear(year);
     recalcInstallmentsSum();
+	
+	if(isView){
+		apiCallForInstallmentDeletion(instId)
+	}
+	
   }
 
+  function apiCallForInstallmentDeletion(instId){
+	instId = instId.split("_")[1]
+	$.ajax({
+	  url: "/api/installments/" + instId + "/delete?deleteFilesAlso="+true,
+	  type: "DELETE",
+	  success: function(res){
+	    alert(res.message || "Deleted");
+	    // remove row
+	    //$(btn).closest("tr").remove();
+		$("#submit_admission_form").click()
+	  },
+	  error: function(xhr){
+	    alert("Delete failed: " + (xhr.responseJSON?.message || xhr.responseText));
+		location.reload()
+	  }
+	});
+  }
   function buildRow(rowIndexInYear, year, statusText = 'Un Paid') {
     const tr = document.createElement('tr');
     tr.dataset.year = String(year);
@@ -312,16 +345,72 @@ jQuery(window).on("load", function () {
     const modeSel = buildModeSelect(`inst_${year}_${rowIndexInYear}_mode`);
     tdMode.appendChild(modeSel);
     tr.appendChild(tdMode);
+	
+	
+	// TXNID
+   const tdTxnRef = document.createElement('td');
+   const txnRef = document.createElement('input');
+   txnRef.type = 'text'; txnRef.className = 'form-control';
+   txnRef.setAttribute('data-field', 'txnRef');
+   txnRef.id = `inst_${year}_${rowIndexInYear}_txnRef`;
+   tdTxnRef.appendChild(txnRef);
+   tr.appendChild(tdTxnRef);
 
     // Receipt (file)
-    const tdFile = document.createElement('td');
-    const file = document.createElement('input');
-    file.type = 'file'; file.className = 'form-control';
-    file.accept = '.pdf,.jpg,.jpeg,.png';
-    file.setAttribute('data-field', 'receipt');
-    file.id = `inst_${year}_${rowIndexInYear}_file`;
-    tdFile.appendChild(file);
-    tr.appendChild(tdFile);
+	const tdFile = document.createElement('td');
+
+	// wrapper (hover area)
+	const wrap = document.createElement('div');
+	wrap.className = 'file-wrap';
+	wrap.style.position = 'relative';
+
+	// input
+	const file = document.createElement('input');
+	file.type = 'file';
+	file.className = 'form-control';
+	file.accept = '.pdf,.jpg,.jpeg,.png';
+	file.setAttribute('data-field', 'receipt');
+	file.id = `inst_${year}_${rowIndexInYear}_file`;
+
+	// preview box
+	const preview = document.createElement('div');
+	preview.className = 'file-preview';
+
+	wrap.appendChild(file);
+	wrap.appendChild(preview);
+
+	tdFile.appendChild(wrap);
+	tr.appendChild(tdFile);
+
+	let objUrl = null;
+
+	file.addEventListener('change', () => {
+	  const f = file.files && file.files[0];
+
+	  // reset
+	  wrap.classList.remove('has-file');
+	  preview.innerHTML = '';
+	  if (objUrl) URL.revokeObjectURL(objUrl);
+	  objUrl = null;
+
+	  if (!f) return;
+
+	  wrap.classList.add('has-file');
+
+	  objUrl = URL.createObjectURL(f);
+
+	  const isImage = (f.type || '').startsWith('image/');
+	  const isPdf = (f.type || '') === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
+
+	  preview.innerHTML = `
+	    <div class="fp-name">${f.name}</div>
+	    ${isImage ? `<img class="fp-img" src="${objUrl}" alt="preview" />` : ''}
+	    <div class="fp-meta">${(f.size/1024).toFixed(1)} KB • ${f.type || 'file'}</div>
+	    ${isPdf ? `<a class="btn btn-sm btn-dark mt-2 w-100" href="${objUrl}" target="_blank" rel="noopener">View PDF</a>` : ''}
+	  `;
+	});
+
+	
 
     // Received By
     const tdReceivedBy = document.createElement('td');
@@ -339,6 +428,13 @@ jQuery(window).on("load", function () {
     statusSel.value = statusText;
     tdStatus.appendChild(statusSel);
     tr.appendChild(tdStatus);
+	
+	// Invoice
+    const tdInvoice = document.createElement('td');
+    const invoiceRef = document.createElement('span');
+   
+    tdInvoice.appendChild(invoiceRef);
+    tr.appendChild(tdInvoice);
 
     // 🔹 NEW: Actions (Delete button)
     const tdActions = document.createElement('td');
@@ -940,10 +1036,11 @@ jQuery(window).on("load", function () {
         .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
         .forEach(function (inst) {
           const amt = inst.amount || 0;
+		  const dueDate = inst.dueDate || 0;
           const y   = inst.yearNumber && inst.yearNumber > 0 ? inst.yearNumber : 1;
           activeYearSel.value = String(y);
           const year = getActiveYear();
-          addInstallment({ amount: amt, year: year });
+          addInstallment({ amount: amt, year: year ,date:dueDate});
         });
 
       // back to year 1

@@ -3,10 +3,15 @@ package com.impactsure.sanctionui.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.impactsure.sanctionui.dto.FeeInstallmentInvoiceResponse;
 import com.impactsure.sanctionui.dto.FeeInstallmentStatusUpdateRequest;
@@ -96,5 +101,33 @@ public class FeeInstallmentUiClient {
             String accessToken
     ) {
         return updateInstallmentStatus(installmentId, "Un Paid", accessToken);
+    }
+    
+    public Map deleteInstallment(Long installmentId, boolean deleteFilesAlso, String bearerTokenIfAny) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(admissionServiceBaseUrl)
+                .path("/api/fee-installments/{id}")
+                .queryParam("deleteFilesAlso", deleteFilesAlso)
+                .buildAndExpand(installmentId)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
+
+        // If your Admission Service is secured (JWT)
+        if (bearerTokenIfAny != null && !bearerTokenIfAny.isBlank()) {
+            headers.setBearerAuth(bearerTokenIfAny);
+        }
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<Map> res = restTemplate.exchange(url, HttpMethod.DELETE, entity, Map.class);
+            return res.getBody();
+        } catch (HttpStatusCodeException ex) {
+            // Return backend error JSON (if any) to UI caller
+            String body = ex.getResponseBodyAsString();
+            throw new RuntimeException("Admission API failed (" + ex.getStatusCode() + "): " + body, ex);
+        }
     }
 }

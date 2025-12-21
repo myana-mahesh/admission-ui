@@ -58,8 +58,10 @@ public class FileUploadController {
 	        headers.setContentType(MediaType.APPLICATION_JSON);
 	        headers.setBearerAuth(accessToken);
 	        try {
+	        	List<String> roles = clientRoleNames(oidcUser);
+	    	    String role = getSingleRole(roles);
 	        	return ResponseEntity.ok(
-	        	        fileIngestService.ingestAndForward(id, metadata, files, accessToken)
+	        	        fileIngestService.ingestAndForward(id, metadata, files, accessToken,role)
 	        	    );
 			} catch (Exception e) {
 				log.error("errpr adding files to admission "+id);
@@ -67,5 +69,26 @@ public class FileUploadController {
 			}
 	        return new ResponseEntity<>(null,HttpStatus.INTERNAL_SERVER_ERROR);
 	  }
+	  
+	  public List<String> clientRoleNames(OidcUser user){
+			return user.getAuthorities().stream()
+				      .map(a -> a.getAuthority())
+				      .filter(a -> a.startsWith("ROLE_"))
+				      .map(a -> a.substring("ROLE_".length()))
+				      .toList();
+		    	}
+		
+		public String getSingleRole(List<String> roles) {
+			String role="";
+			
+			if(roles.contains("ADMIN")) {
+				role="ADMIN";
+			}else if(roles.contains("BRANCH_USER")) {
+				role="BRANCH_USER";
+			}else if(roles.contains("HO")) {
+				role="HO";
+			}
+			return role;	 
+		}
 
 }

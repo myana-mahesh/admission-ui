@@ -113,6 +113,8 @@ public class AdmissionController {
 						.officeUpdateRequest(officeReq)
 						.totalFees(admissionReq.getTotalFees())
 						.discount(admissionReq.getDiscountAmount())
+						.discountRemark(admissionReq.getDiscountRemark())
+						.discountRemarkOther(admissionReq.getDiscountRemarkOther())
 						.noOfInstallments(admissionReq.getInstallmentsCount())
 						.formNo(admissionReq.getFormNo())
 						.formDate(admissionReq.getFormDate())

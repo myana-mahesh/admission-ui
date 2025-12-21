@@ -4,6 +4,7 @@ package com.impactsure.sanctionui.dto;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -43,6 +44,9 @@ public class CourseFeeRequestDto {
         private BigDecimal amount;
         private Integer dueDaysFromAdmission;
         private Integer yearNumber; 
+        private Integer dueDayOfMonth; // NEW
+        private Integer dueMonth;
+        private LocalDate dueDate;
     }
 
 }
