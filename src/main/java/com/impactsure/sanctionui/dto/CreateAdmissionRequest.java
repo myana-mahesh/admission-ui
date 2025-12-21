@@ -28,4 +28,6 @@ public class CreateAdmissionRequest {
     private Integer noOfInstallments;
 
 	private OfficeUpdateRequest officeUpdateRequest;
+	private Long lectureBranchId;
+	private Long  admissionBranchId;
 }

@@ -3,6 +3,8 @@ package com.impactsure.sanctionui.web;
 import com.impactsure.sanctionui.dto.CancelAdmissionDTO;
 import com.impactsure.sanctionui.dto.FeeInvoiceDto;
 
+import com.impactsure.sanctionui.entities.*;
+import com.impactsure.sanctionui.service.impl.*;
 import lombok.RequiredArgsConstructor;
 
 import java.text.ParseException;
@@ -34,18 +36,10 @@ import org.springframework.web.servlet.ModelAndView;
 
 import com.impactsure.sanctionui.dto.AdmissionDto;
 import com.impactsure.sanctionui.dto.PaymentModeDto;
-import com.impactsure.sanctionui.entities.Admission2;
-import com.impactsure.sanctionui.entities.Course;
-import com.impactsure.sanctionui.entities.FileUpload;
-import com.impactsure.sanctionui.entities.Guardian;
-import com.impactsure.sanctionui.entities.YearlyFees;
 import com.impactsure.sanctionui.enums.AdmissionStatus;
 import com.impactsure.sanctionui.enums.GuardianRelation;
 import com.impactsure.sanctionui.repository.CourseRepository;
 import com.impactsure.sanctionui.repository.YearlyFeesRepository;
-import com.impactsure.sanctionui.service.impl.AdmissionApiClientService;
-import com.impactsure.sanctionui.service.impl.InvoiceClient;
-import com.impactsure.sanctionui.service.impl.PaymentModeApiClientService;
 import com.nimbusds.jwt.SignedJWT;
 
 import ch.qos.logback.core.model.Model;
@@ -70,12 +64,16 @@ public class AdmissionFormController {
 	
 	@Autowired
 	private InvoiceClient invoiceClient;
-	
 
 	public List<String> getDiscountRemarkMasterList(){
 		return Arrays.asList("reason1","reason2","Other");
 	}
 	
+	@Autowired
+	private StudentDocumentVerificationService documentVerificationService;
+
+	private final BranchService branchService;
+
 	public List<String> clientRoleNames(OidcUser user){
 		return user.getAuthorities().stream()
 			      .map(a -> a.getAuthority())
@@ -119,6 +117,7 @@ public class AdmissionFormController {
 	    List<String> roles = clientRoleNames(oidcUser);
 	    String role = getSingleRole(roles);
 	    model.addObject("role", role);
+		model.addObject("branches", branchService.getAllBranches());
 		model.addObject("courses",courses);
 		model.addObject("paymentModes", paymentModeStrings);
 		
@@ -208,6 +207,11 @@ public class AdmissionFormController {
         	paymentModeStrings.add(mode.getCode());
         }
         CancelAdmissionDTO cancelAdmissionDTO = admissionApiClientService.fetchCancelAdmissionDetails(id,accessToken);
+
+		// NEW
+		Map<String, StudentDocumentVerification> verificationMap = documentVerificationService.getVerificationMap(id);
+
+		model.addObject("branches", branchService.getAllBranches());
         List<String> roles = clientRoleNames(oidcUser);
 	    String role = getSingleRole(roles);
 	    model.addObject("role", role);
@@ -221,6 +225,7 @@ public class AdmissionFormController {
 	    model.addObject("yearlyFees", yearlyFeesMap); 
 		model.addObject("paymentModes", paymentModeStrings);
 		model.addObject("cancellation", cancelAdmissionDTO);
+		model.addObject("verificationMap", verificationMap);
 	    model.setViewName("admissions/admission-view");
 	    
 	    model.addObject("hasExistingInstallments", !admission.getInstallments().isEmpty());

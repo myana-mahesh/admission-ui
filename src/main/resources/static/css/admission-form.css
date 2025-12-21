@@ -1,4 +1,4 @@
-/* =========================================================
+	/* =========================================================
    ABS “Lilac Pro” Theme (Light)
    Drop-in theme for all admission pages (forms + lists)
    ========================================================= */
@@ -293,3 +293,45 @@ body.has-sidebar .app-main-wrap{ margin-left: var(--sbw); transition: margin-lef
 }
 
 
+.doc-check.pending {
+  accent-color: red;
+}
+
+.doc-check.verified {
+  accent-color: green;
+}
+/* User selected but not verified */
+.checklist-item input:checked + label {
+  color: #dc3545; /* red */
+  font-weight: 600;
+}
+
+/* Verified by HO */
+.checklist-item.verified {
+  border-left: 4px solid #198754;
+  padding-left: 10px;
+}
+
+.checklist-item.verified label {
+  color: #198754 !important;
+}
+
+
+/*
+for padding */
+
+.checklist-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+}
+
+.checklist-item.pending {
+  border-left: 5px solid #dc3545;
+}
+
+.checklist-item.verified {
+  border-left: 5px solid #28a745;
+  background: #f8fff9;
+}

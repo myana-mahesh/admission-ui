@@ -244,6 +244,7 @@ public class AdmissionApiClientService {
             String handlingPerson,
             String remark,
             String refundProofFileName,
+            String studentAcknowledgementProofFileName,
             String accessToken) {
 
         try {
@@ -257,6 +258,7 @@ public class AdmissionApiClientService {
             dto.setHandlingPerson(handlingPerson);
             dto.setRemark(remark);
             dto.setRefundProofFileName(refundProofFileName);
+            dto.setStudentAcknowledgementProofFileName(studentAcknowledgementProofFileName);
 
             HttpEntity<CancelAdmissionDTO> requestEntity =
                     new HttpEntity<>(dto, headers);
