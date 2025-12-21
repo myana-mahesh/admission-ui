@@ -20,6 +20,7 @@ public class StudentDto {
     private String religion;
     private String caste;
     private String email;
+    private String bloodGroup;
     private String mobile;
     private List<GuardianDto> guardians;
     private List<StudentAddressDto> addresses;

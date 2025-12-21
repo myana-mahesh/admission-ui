@@ -1,5 +1,6 @@
 package com.impactsure.sanctionui.dto;
 
+import jakarta.persistence.Column;
 import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDate;
@@ -18,4 +19,7 @@ public class OfficeUpdateRequest {
 	private LocalDate examDueDate;
 	@DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
 	private LocalDate dateOfAdmission;
+	private String batch;
+	private String registrationNumber;
+	private String referenceName;
 }

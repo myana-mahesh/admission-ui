@@ -6,17 +6,7 @@ import java.util.List;
 
 import com.impactsure.sanctionui.enums.Gender;
 
-import jakarta.persistence.Index;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -66,11 +56,34 @@ public class Student extends Auditable {
     @Column(length = 20)
     private String mobile;
 
+    @Column(length = 5)
+    private String bloodGroup;
     // Relations
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Guardian> guardians = new ArrayList<>();
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StudentAddress> addresses = new ArrayList<>();
+
+    private Integer age;
+
+    @Column(name = "batch")
+    private String batch;
+
+    @Column(name = "registration_number", unique = true)
+    private String registrationNumber;
+
+    // 🔥 INVERSE SIDE
+    @OneToOne(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private SscDetails sscDetails;
+
+    @OneToOne(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    private HscDetails hscDetails;
+
+ /*   @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "course_id", nullable = false)
+    private Course course;
+
+    private String academicYearLabel; // e.g., 2025-26*/
 }
 

@@ -2,6 +2,8 @@ package com.impactsure.sanctionui.dto;
 
 import java.time.LocalDate;
 
+import com.impactsure.sanctionui.entities.HscDetails;
+import com.impactsure.sanctionui.entities.SscDetailsRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import com.impactsure.sanctionui.enums.Gender;
@@ -39,7 +41,7 @@ public class AdmissionRequestFromUI {
 	private String fatherMobile;
 	private String motherName;
 	private String motherMobile;
-	
+	private String bloodGroup;
 	private Long course;
 	private Long collegeId;
 	
@@ -59,6 +61,16 @@ public class AdmissionRequestFromUI {
     private String discountRemarkOther;
     private String studentId;
     private Integer installmentsCount;
-	
+	private SscDetailsRequest sscDetails;
+	private HscDetails hscDetails;
+	private String batch;
+	private String registrationNumber;
+	private String referenceName;
+	private Long lectureBranchId;
+	private Long  admissionBranchId;
+	private Integer age;
+/*	private Long courseCode; // e.g., DPHARM
+	private String academicYearLabel; // e.g., 2025-26*/
+
 
 }

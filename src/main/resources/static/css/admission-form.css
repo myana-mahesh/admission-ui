@@ -1,4 +1,4 @@
-/* =========================================================
+	/* =========================================================
    ABS “Lilac Pro” Theme (Light)
    Drop-in theme for all admission pages (forms + lists)
    ========================================================= */
@@ -293,3 +293,77 @@ body.has-sidebar .app-main-wrap{ margin-left: var(--sbw); transition: margin-lef
 }
 
 
+.file-wrap { position: relative; }
+
+.file-preview{
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  width: 260px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.12);
+  display: none;
+  z-index: 9999;
+}
+
+.file-wrap.has-file:hover .file-preview { display: block; }
+
+.fp-name{ font-size: 12px; font-weight: 800; color:#111; margin-bottom:6px; word-break: break-word; }
+.fp-meta{ font-size: 12px; color:#444; margin-top:6px; }
+.fp-img{ width: 100%; height: auto; border-radius: 10px; display:block; }
+.file-preview::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -10px;      /* bridge height */
+  height: 10px;
+  background: transparent;
+}
+
+
+.doc-check.pending {
+  accent-color: red;
+}
+
+.doc-check.verified {
+  accent-color: green;
+}
+/* User selected but not verified */
+.checklist-item input:checked + label {
+  color: #dc3545; /* red */
+  font-weight: 600;
+}
+
+/* Verified by HO */
+.checklist-item.verified {
+  border-left: 4px solid #198754;
+  padding-left: 10px;
+}
+
+.checklist-item.verified label {
+  color: #198754 !important;
+}
+
+
+/*
+for padding */
+
+.checklist-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+}
+
+.checklist-item.pending {
+  border-left: 5px solid #dc3545;
+}
+
+.checklist-item.verified {
+  border-left: 5px solid #28a745;
+  background: #f8fff9;
+}

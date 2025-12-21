@@ -80,7 +80,7 @@
           <div class="title mb-2"><span class="dot"></span><h5 class="mb-0">Student Details</h5></div>
 
           <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-3">
               <div class="form-floating">
                 <input type="text"
                        class="form-control student-details"
@@ -101,9 +101,22 @@
                        th:name="student.dob"
                        id="dob"
                        th:value="${#strings.substring(admission.student.dob,0,10)}"
+                       onchange="calculateAge()"
                        required />
                 <label for="dob">Date of Birth</label>
                 <div class="invalid-feedback small">Date of birth is required.</div>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-floating">
+                <input type="number"
+                       class="form-control student-details"
+                       th:field="*{student.age}"
+                       id="age"
+                       name="age"
+                       required>
+                <label for="age">Age</label>
               </div>
             </div>
 
@@ -123,7 +136,7 @@
 
             <!-- Parents quick fields -->
             <div class="row g-3 mt-0">
-              <div class="col-md-6">
+              <div class="col-md-3">
                 <div class="form-floating">
                   <input type="text"
                          class="form-control student-details"
@@ -148,7 +161,7 @@
                 </div>
               </div>
 
-              <div class="col-md-6">
+              <div class="col-md-3">
                 <div class="form-floating">
                   <input type="text"
                          class="form-control student-details"
@@ -172,7 +185,18 @@
                   <div class="invalid-feedback small">Enter a valid mobile number.</div>
                 </div>
               </div>
-            </div>
+              <!-- Blood Group -->
+              <div class="col-md-3">
+                <div class="form-floating">
+                  <input type="text"
+                         class="form-control student-details"
+                         th:value="*{student.bloodGroup}"
+                         id="bloodGroup"
+                         placeholder=" ">
+                  <label for="bloodGroup">Blood Group</label>
+                </div>
+              </div>
+
 
             <div class="col-md-3">
               <div class="form-floating">
@@ -223,6 +247,30 @@
                        placeholder=" ">
                 <label for="caste">Caste</label>
                 <div class="invalid-feedback small">Caste is required.</div>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-floating">
+                <input type="text"
+                       class="form-control student-details"
+                       th:field="*{batch}"
+                       id="batch"
+                       placeholder=" ">
+                <label for="batch">Batch</label>
+                <div class="invalid-feedback small">Batch is required.</div>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-floating">
+                <input type="text"
+                       class="form-control student-details"
+                       th:field="*{registrationNumber}"
+                       id="registrationNumber"
+                       placeholder=" ">
+                <label for="registrationNumber">Registration Number</label>
+                <div class="invalid-feedback small">Registration Number is required.</div>
               </div>
             </div>
 
@@ -285,12 +333,178 @@
           </div>
         </div>
 
+
+        <!-- ================= SSC (10th) DETAILS ================= -->
+        <div class="section px-2 mt-4">
+          <div class="title mb-2">
+            <span class="dot bg-info"></span>
+            <h5 class="mb-0">10th (SSC) Details</h5>
+          </div>
+
+          <div class="row g-3">
+
+            <!-- Board -->
+            <div class="col-md-3">
+              <label class="form-label">Board</label>
+              <input type="text"
+                     id="sscBoard"
+                     name="sscDetails.board"
+                     class="form-control student-details"
+                     placeholder="e.g. Maharashtra Board"
+                     th:value="${admission.student != null and admission.student.sscDetails != null
+                        ? admission.student.sscDetails.board : ''}">
+            </div>
+
+            <!-- Passing Year -->
+            <div class="col-md-3">
+              <label class="form-label">Passing Year</label>
+              <input type="number"
+                     id="sscYear"
+                     name="sscDetails.passingYear"
+                     class="form-control student-details"
+                     placeholder="YYYY"
+                     th:value="${admission.student != null and admission.student.sscDetails != null
+                        ? admission.student.sscDetails.passingYear : ''}"
+                     onchange="onYearChange(this)">
+            </div>
+
+            <!-- Registration No -->
+            <div class="col-md-3">
+              <label class="form-label">Registration Number</label>
+              <input type="text"
+                     id="sscRegNo"
+                     name="sscDetails.registrationNumber"
+                     class="form-control student-details"
+                     th:value="${admission.student != null and admission.student.sscDetails != null
+                        ? admission.student.sscDetails.registrationNumber : ''}">
+            </div>
+
+            <!-- Percentage -->
+            <div class="col-md-3">
+              <label class="form-label">Percentage</label>
+              <input type="number"
+                     id="sscPercentage"
+                     name="sscDetails.percentage"
+                     class="form-control student-details"
+                     min="0" max="100" step="0.01"
+                     placeholder="0 - 100"
+                     th:value="${admission.student != null and admission.student.sscDetails != null
+                        ? admission.student.sscDetails.percentage : ''}"
+                     onchange="onPercentageChange(this)">
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ================= HSC (12th) DETAILS ================= -->
+        <div class="section px-2 mt-4">
+          <div class="title mb-2">
+            <span class="dot bg-success"></span>
+            <h5 class="mb-0">12th (HSC) Details</h5>
+          </div>
+
+          <div class="row g-3">
+
+            <!-- College -->
+            <div class="col-md-4">
+              <label class="form-label">College Name</label>
+              <input type="text"
+                     id="hscCollege"
+                     name="hscDetails.collegeName"
+                     class="form-control"
+                     th:value="${admission.student != null and admission.student.hscDetails != null
+                        ? admission.student.hscDetails.collegeName : ''}">
+            </div>
+
+            <!-- Subjects -->
+            <div class="col-md-4">
+              <label class="form-label">Subjects</label>
+              <input type="text"
+                     id="hscSubjects"
+                     name="hscDetails.subjects"
+                     class="form-control"
+                     th:value="${admission.student != null and admission.student.hscDetails != null
+                        ? admission.student.hscDetails.subjects : ''}">
+            </div>
+
+            <!-- Passing Year -->
+            <div class="col-md-4">
+              <label class="form-label">Passing Year</label>
+              <input type="number"
+                     id="hscYear"
+                     name="hscDetails.passingYear"
+                     class="form-control"
+                     onchange="onHscYearChange(this)"
+                     th:value="${admission.student != null and admission.student.hscDetails != null
+                        ? admission.student.hscDetails.passingYear : ''}">
+            </div>
+
+            <!-- Physics -->
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">
+                Physics Marks <small class="text-muted">(out of 100)</small>
+              </label>
+              <input type="number"
+                     id="phyMarks"
+                     name="hscDetails.physicsMarks"
+                     class="form-control"
+                     min="0" max="100"
+                     onchange="onMarksChange()"
+                     th:value="${admission.student != null and admission.student.hscDetails != null
+                        ? admission.student.hscDetails.physicsMarks : ''}">
+            </div>
+
+            <!-- Chemistry -->
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">
+                Chemistry Marks <small class="text-muted">(out of 100)</small>
+              </label>
+              <input type="number"
+                     id="chemMarks"
+                     name="hscDetails.chemistryMarks"
+                     class="form-control"
+                     min="0" max="100"
+                     onchange="onMarksChange()"
+                     th:value="${admission.student != null and admission.student.hscDetails != null
+                        ? admission.student.hscDetails.chemistryMarks : ''}">
+            </div>
+
+            <!-- Biology -->
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">
+                Biology Marks <small class="text-muted">(out of 100)</small>
+              </label>
+              <input type="number"
+                     id="bioMarks"
+                     name="hscDetails.biologyMarks"
+                     class="form-control"
+                     min="0" max="100"
+                     onchange="onMarksChange()"
+                     th:value="${admission.student != null and admission.student.hscDetails != null
+                        ? admission.student.hscDetails.biologyMarks : ''}">
+            </div>
+
+            <!-- PCB % -->
+            <div class="col-md-3">
+              <label class="form-label">PCB %</label>
+              <input type="number"
+                     id="pcbPercentage"
+                     class="form-control"
+                     readonly
+                     th:value="${admission.student != null and admission.student.hscDetails != null
+                        ? admission.student.hscDetails.pcbPercentage : ''}">
+            </div>
+
+          </div>
+        </div>
+
+
         <!-- =================== OFFICE USE ONLY =================== -->
         <div class="section px-2 mt-4">
           <div class="title mb-2"><span class="dot"></span><h5 class="mb-0">Office Use Only</h5></div>
 
           <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-3">
               <div class="form-floating">
                 <select class="form-select student-details"
                         th:field="*{college.collegeId}"
@@ -324,7 +538,7 @@
               </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-3">
               <div class="form-floating">
                 <input type="number"
                        min="1"
@@ -338,7 +552,7 @@
               </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-3">
               <div class="form-floating">
                 <input type="date"
                        class="form-control student-details"
@@ -352,7 +566,7 @@
               </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-3">
               <div class="form-floating">
                 <input type="text"
                        class="form-control student-details"
@@ -364,7 +578,7 @@
               </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-3">
               <div class="form-floating">
                 <input type="text"
                        class="form-control student-details"
@@ -376,7 +590,60 @@
               </div>
             </div>
 
-            <div class="col-12">
+            <div class="col-md-3">
+              <div class="form-floating">
+                <select class="form-select student-details"
+                        id="admissionBranchId"
+                        name="admissionBranchId">
+
+                  <option value="">-- Select Admission Branch --</option>
+
+                  <option th:each="b : ${branches}"
+                          th:value="${b.id}"
+                          th:text="${b.name}"
+                          th:selected="${admission.admissionBranch != null
+                            and b.id == admission.admissionBranch.id}">
+                  </option>
+
+                </select>
+                <label for="admissionBranchId">Admission Branch</label>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-floating">
+                <select class="form-select student-details"
+                        id="lectureBranchId"
+                        name="lectureBranchId">
+
+                  <option value="">-- Select Lecture Branch --</option>
+
+                  <option th:each="b : ${branches}"
+                          th:value="${b.id}"
+                          th:text="${b.name}"
+                          th:selected="${admission.lectureBranch != null
+                            and b.id == admission.lectureBranch.id}">
+                  </option>
+
+                </select>
+                <label for="lectureBranchId">Lecture Branch</label>
+              </div>
+            </div>
+
+
+            <div class="col-md-3">
+              <div class="form-floating">
+                <input type="text"
+                       class="form-control student-details"
+                       th:field="*{referenceName}"
+                       id="referenceName"
+                       placeholder=" ">
+                <label for="referenceName">Reference Name</label>
+                <div class="invalid-feedback small">Reference Name is required.</div>
+              </div>
+            </div>
+
+            <div class="col-6">
               <div class="form-floating">
                 <input type="text"
                        class="form-control student-details"
@@ -387,6 +654,8 @@
                 <div class="invalid-feedback small"></div>
               </div>
             </div>
+
+
           </div>
         </div>
 
@@ -696,9 +965,187 @@
         <!-- Hidden Admission Id -->
         <input type="hidden" id="role"
                th:value="${role}"/>
-			   
-			   
-			   <!-- =================== UPLOADS / DECLARATION / SUBMIT =================== -->
+        <!-- =================== DOCUMENT CHECKLIST =================== -->
+        <div class="section px-2 mt-4">
+          <div class="title mb-2">
+            <span class="dot bg-warning"></span>
+            <h5 class="mb-0">Document Checklist</h5>
+          </div>
+
+          <div class="row g-3">
+
+            <!-- ================= 10th Marksheet ================= -->
+            <div class="col-md-6 checklist-item"
+                 th:classappend="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified ? 'verified' : 'pending'}">
+              <label class="form-label fw-semibold">10th Marksheet</label>
+
+              <div th:if="${docUploads != null and docUploads['SSC10'] != null}">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[SSC10]" value="XEROX"
+                         th:checked="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].receivedType == 'XEROX'}"
+                         th:disabled="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified ? 'text-success' : 'text-danger'}">Xerox</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[SSC10]" value="ORIGINAL"
+                         th:checked="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].receivedType == 'ORIGINAL'}"
+                         th:disabled="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified ? 'text-success' : 'text-danger'}">Original</label>
+                </div>
+                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO' and verificationMap != null and verificationMap['SSC10'] != null and !verificationMap['SSC10'].verified}"
+                        data-doc="SSC10">Verify</button>
+              </div>
+              <div class="text-muted small" th:if="${docUploads == null or docUploads['SSC10'] == null}">Document not uploaded</div>
+            </div>
+
+            <!-- ================= 12th Marksheet ================= -->
+            <div class="col-md-6 checklist-item"
+                 th:classappend="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified ? 'verified' : 'pending'}">
+              <label class="form-label fw-semibold">12th Marksheet</label>
+
+              <div th:if="${docUploads != null and docUploads['HSC12'] != null}">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[HSC12]" value="XEROX"
+                         th:checked="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].receivedType == 'XEROX'}"
+                         th:disabled="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified ? 'text-success' : 'text-danger'}">Xerox</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[HSC12]" value="ORIGINAL"
+                         th:checked="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].receivedType == 'ORIGINAL'}"
+                         th:disabled="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified ? 'text-success' : 'text-danger'}">Original</label>
+                </div>
+                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO' and verificationMap != null and verificationMap['HSC12'] != null and !verificationMap['HSC12'].verified}"
+                        data-doc="HSC12">Verify</button>
+              </div>
+              <div class="text-muted small" th:if="${docUploads == null or docUploads['HSC12'] == null}">Document not uploaded</div>
+            </div>
+
+            <!-- ================= Leaving Certificate ================= -->
+            <div class="col-md-6 checklist-item"
+                 th:classappend="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified ? 'verified' : 'pending'}">
+              <label class="form-label fw-semibold">Leaving Certificate / TC</label>
+
+              <div th:if="${docUploads != null and docUploads['LC'] != null}">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[LC]" value="XEROX"
+                         th:checked="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].receivedType == 'XEROX'}"
+                         th:disabled="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified ? 'text-success' : 'text-danger'}">Xerox</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[LC]" value="ORIGINAL"
+                         th:checked="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].receivedType == 'ORIGINAL'}"
+                         th:disabled="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified ? 'text-success' : 'text-danger'}">Original</label>
+                </div>
+                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO' and verificationMap != null and verificationMap['LC'] != null and !verificationMap['LC'].verified}"
+                        data-doc="LC">Verify</button>
+              </div>
+              <div class="text-muted small" th:if="${docUploads == null or docUploads['LC'] == null}">Document not uploaded</div>
+            </div>
+
+            <!-- ================= Migration Certificate ================= -->
+            <div class="col-md-6 checklist-item"
+                 th:classappend="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified ? 'verified' : 'pending'}">
+              <label class="form-label fw-semibold">Migration Certificate</label>
+
+              <div th:if="${docUploads != null and docUploads['MIG'] != null}">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[MIG]" value="XEROX"
+                         th:checked="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].receivedType == 'XEROX'}"
+                         th:disabled="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified ? 'text-success' : 'text-danger'}">Xerox</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[MIG]" value="ORIGINAL"
+                         th:checked="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].receivedType == 'ORIGINAL'}"
+                         th:disabled="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified ? 'text-success' : 'text-danger'}">Original</label>
+                </div>
+                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO' and verificationMap != null and verificationMap['MIG'] != null and !verificationMap['MIG'].verified}"
+                        data-doc="MIG">Verify</button>
+              </div>
+              <div class="text-muted small" th:if="${docUploads == null or docUploads['MIG'] == null}">Document not uploaded</div>
+            </div>
+
+            <!-- ================= Aadhaar ================= -->
+            <div class="col-md-6 checklist-item"
+                 th:classappend="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified ? 'verified' : 'pending'}">
+              <label class="form-label fw-semibold">Aadhaar Card</label>
+
+              <div th:if="${docUploads != null and docUploads['AADHAAR'] != null}">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[AADHAAR]" value="XEROX"
+                         th:checked="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].receivedType == 'XEROX'}"
+                         th:disabled="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified ? 'text-success' : 'text-danger'}">Xerox</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[AADHAAR]" value="ORIGINAL"
+                         th:checked="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].receivedType == 'ORIGINAL'}"
+                         th:disabled="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified ? 'text-success' : 'text-danger'}">Original</label>
+                </div>
+                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO' and verificationMap != null and verificationMap['AADHAAR'] != null and !verificationMap['AADHAAR'].verified}"
+                        data-doc="AADHAAR">Verify</button>
+              </div>
+              <div class="text-muted small" th:if="${docUploads == null or docUploads['AADHAAR'] == null}">Document not uploaded</div>
+            </div>
+
+            <!-- ================= Passport Photo ================= -->
+            <div class="col-md-6 checklist-item"
+                 th:classappend="${verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].verified ? 'verified' : 'pending'}">
+              <label class="form-label fw-semibold">Passport Size Photo</label>
+
+              <div th:if="${docUploads != null and docUploads['PHOTO'] != null}">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[PHOTO]" value="ORIGINAL"
+                         th:checked="${verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].receivedType == 'ORIGINAL'}"
+                         th:disabled="${verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].verified}">
+                  <label class="form-check-label"
+                         th:classappend="${verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].verified ? 'text-success' : 'text-danger'}">Original</label>
+                </div>
+                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO' and verificationMap != null and verificationMap['PHOTO'] != null and !verificationMap['PHOTO'].verified}"
+                        data-doc="PHOTO">Verify</button>
+              </div>
+              <div class="text-muted small" th:if="${docUploads == null or docUploads['PHOTO'] == null}">Document not uploaded</div>
+            </div>
+
+          </div>
+        </div>
+
+
+
+        <!-- =================== UPLOADS / DECLARATION / SUBMIT =================== -->
 			   		<div class="section px-2 mt-4 uploadsection">
 			   		  <div class="title mb-2"><span class="dot"></span><h5 class="mb-0">Upload Documents</h5></div>
 
@@ -824,6 +1271,8 @@
 			   		  </div>
 			   		</div>
 
+
+        <!--cancellation details section -->
         <th:block th:if="*{status.name() == 'UNDER_CANCELLATION' || status.name() == 'CANCELLED'}">
 
           <div class="section px-2 mt-4">
@@ -866,14 +1315,14 @@
 	                  admissionId=${admission.admissionId},
 	                  fileName=${cancellation.refundProofFileName})}">
 	                    <i class="bi bi-paperclip ms-1"></i>
-	                    <span th:text="${cancellation.refundProofFileName}"></span>
+	                    <span id="refundProofText" th:text="${cancellation.refundProofFileName}"></span>
 	                  </a>
 				</div>
                 
 
                 <!-- 🔹 Download existing file -->
                 <div class="mb-2"
-                     th:if="${cancellation != null and cancellation.refundProofFileName != null}">
+                     th:if="${cancellation != null}">
 					 <input type="file"
                         class="form-control form-control-sm mb-2"
                         name="refundProof"
@@ -891,13 +1340,45 @@
                 
               </div>
 
+
+              <!-- Student Acknowledgement Proof Upload + Download -->
+              <div class="col-md-4">
+                <div class="d-flex">
+                  <label class="form-label fw-semibold mb-0">Student Acknowledgement Proof</label>
+                  <!-- Download link if file exists -->
+                  <a th:if="${cancellation.studentAcknowledgementProofFileName != null and cancellation.studentAcknowledgementProofFileName != ''}"
+                     class="ms-1 btn-sm"
+                     th:href="@{/admission/download-cancellation-proof/{admissionId}/{fileName}(
+                    admissionId=${admission.admissionId},
+                    fileName=${cancellation.studentAcknowledgementProofFileName})}">
+                    <i class="bi bi-paperclip ms-1"></i>
+                    <span id="studentAcknowledgementProofText" th:text="${cancellation.studentAcknowledgementProofFileName}"></span>
+                  </a>
+                </div>
+
+                <!-- File input to upload/replace -->
+                <div class="mb-2"
+                     th:if="${cancellation != null}">
+                  <input type="file"
+                         class="form-control form-control-sm mb-2"
+                         name="studentAcknowledgementProof"
+                         accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+
+                <!-- No file uploaded -->
+                <div class="text-muted small mb-2"
+                     th:if="${cancellation == null or cancellation.studentAcknowledgementProofFileName == null}">
+                  No attachment uploaded
+                </div>
+              </div>
+
               <!-- Remarks -->
-              <div class="col-md-12 mt-2">
+              <div class="col-md-8 mt-2">
                 <div class="form-floating">
-          <textarea class="form-control"
-                    style="height:120px"
-                    name="remark"
-                    th:text="${cancellation.remark}"></textarea>
+                  <textarea class="form-control"
+                            style="height:120px"
+                            name="remark"
+                            th:text="${cancellation.remark}"></textarea>
                   <label>Cancellation Remarks</label>
                 </div>
               </div>
@@ -1062,6 +1543,7 @@
       </div>
     </div>
   </div>
+
 
 
   <!-- Bootstrap -->
