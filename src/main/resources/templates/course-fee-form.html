@@ -23,7 +23,7 @@
   </aside>
 
   <!-- Main -->
-  <div class="main">
+  <div class="main" th:with="canEditCourses=${isSuperAdmin or #sets.contains(permissionSet,'courses:EDIT')}">
     <!-- Header -->
     <header class="header">
       <div>
@@ -42,18 +42,21 @@
         </p>
 
         <!-- IMPORTANT: matches @PostMapping("/coursessave") -->
-        <form th:action="@{/coursessave}" th:object="${courseForm}" method="post">
+        <form th:action="@{/coursessave}" th:object="${courseForm}" method="post"
+              th:attr="data-existing-codes=${existingCourseCodes != null ? #strings.arrayJoin(existingCourseCodes, ',') : ''},
+                       data-original-code=${courseForm.code != null ? courseForm.code : ''},
+                       data-readonly=${!canEditCourses}">
 
           <!-- Hidden IDs -->
           <input type="hidden" th:field="*{courseId}" />
-          <input type="hidden" th:field="*{templateId}" />
 
           <!-- Course Details -->
           <h3>Course Details</h3>
           <div class="row">
             <div class="field">
               <label>Course Code</label>
-              <input type="text" th:field="*{code}" placeholder="DPHARM" required />
+              <input type="text" th:field="*{code}" id="courseCode" placeholder="DPHARM" required />
+              <div class="field-error text-danger small" id="courseCodeError"></div>
             </div>
             <div class="field">
               <label>Course Name</label>
@@ -155,16 +158,22 @@
               </td>
 
               <td>
-                <button type="button" class="btn btn-remove" onclick="removeRow(this)">✕</button>
+                <button type="button" class="btn btn-remove" onclick="removeRow(this)"
+                        th:disabled="${!canEditCourses}"
+                        th:classappend="${!canEditCourses} ? ' is-disabled' : ''">✕</button>
               </td>
             </tr>
             </tbody>
           </table>
 
-          <button type="button" class="btn btn-add" onclick="addInstallmentRow()">+ Add Installment</button>
+          <button type="button" class="btn btn-add" onclick="addInstallmentRow()"
+                  th:disabled="${!canEditCourses}"
+                  th:classappend="${!canEditCourses} ? ' is-disabled' : ''">+ Add Installment</button>
 
           <div class="actions">
-            <button type="submit" class="btn btn-primary-theme">Save</button>
+            <button type="submit" class="btn btn-primary-theme"
+                    th:disabled="${!canEditCourses}"
+                    th:classappend="${!canEditCourses} ? ' is-disabled' : ''">Save</button>
           </div>
         </form>
       </div>
@@ -173,6 +182,8 @@
 </div>
 
 <script>
+  let courseFormReadOnly = false;
+
   function recalcTotal() {
     let total = 0;
     document.querySelectorAll('.amount-input').forEach(function (input) {
@@ -193,6 +204,7 @@
   }
 
   function addInstallmentRow() {
+    if (courseFormReadOnly) return;
     const tbody = document.getElementById('installmentsTable').querySelector('tbody');
     const rowCount = tbody.rows.length;
     const newIndex = rowCount;
@@ -282,6 +294,7 @@
   }
 
   function removeRow(btn) {
+    if (courseFormReadOnly) return;
     const row = btn.closest('tr');
     const tbody = row.parentNode;
     tbody.removeChild(row);
@@ -309,6 +322,61 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form[action="/coursessave"]');
+    const courseCodeInput = document.getElementById('courseCode');
+    const courseCodeError = document.getElementById('courseCodeError');
+    courseFormReadOnly = !!(form && form.dataset.readonly === 'true');
+
+    if (courseFormReadOnly && form) {
+      form.querySelectorAll('input, select, textarea, button').forEach(function (el) {
+        if (el.type === 'hidden') return;
+        el.disabled = true;
+        el.classList.add('is-disabled');
+      });
+    }
+
+    function getExistingCodes() {
+      const raw = (form && form.dataset.existingCodes) ? form.dataset.existingCodes : '';
+      if (!raw.trim()) return new Set();
+      return new Set(raw.split(',').map(v => v.trim().toUpperCase()).filter(Boolean));
+    }
+
+    function validateCourseCode() {
+      if (!courseCodeInput || !courseCodeError) return true;
+      const code = (courseCodeInput.value || '').trim().toUpperCase();
+      const original = (form.dataset.originalCode || '').trim().toUpperCase();
+      const existing = getExistingCodes();
+      const isDuplicate = code && code !== original && existing.has(code);
+
+      if (isDuplicate) {
+        courseCodeError.textContent = 'Course code already exists. Please use a unique code.';
+        courseCodeInput.classList.add('is-invalid');
+        return false;
+      }
+
+      courseCodeError.textContent = '';
+      courseCodeInput.classList.remove('is-invalid');
+      return true;
+    }
+
+    if (courseCodeInput) {
+      courseCodeInput.addEventListener('input', validateCourseCode);
+      courseCodeInput.addEventListener('blur', validateCourseCode);
+    }
+
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        if (courseFormReadOnly) {
+          e.preventDefault();
+          return;
+        }
+        if (!validateCourseCode()) {
+          e.preventDefault();
+          courseCodeInput && courseCodeInput.focus();
+        }
+      });
+    }
+
     document.querySelectorAll('.amount-input').forEach(function (input) {
       input.addEventListener('input', recalcTotal);
     });

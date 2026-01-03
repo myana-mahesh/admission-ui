@@ -6,7 +6,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Page specific CSS -->
-    <link rel="stylesheet" th:href="@{/css/courses-list.css}" />
+    <link rel="stylesheet" th:href="@{/css/course.css}" />
 </head>
 <body>
 <div class="layout">
@@ -27,7 +27,7 @@
     </aside>
 
     <!-- Main -->
-    <div class="main">
+    <div class="main" th:with="canEditCourses=${isSuperAdmin or #sets.contains(permissionSet,'courses:EDIT')}">
         <!-- Header (matching your form header) -->
         <header class="header">
             <div>
@@ -53,8 +53,10 @@
                     </div>
                     <div class="course-card-actions">
                         <!-- uses your existing /coursescreate mapping -->
-                        <a th:href="@{/coursescreate}">
-                            <button type="button" class="btn btn-primary-theme">
+                        <a th:href="${canEditCourses} ? @{/coursescreate} : '#'"
+                           th:classappend="${!canEditCourses} ? ' is-disabled' : ''"
+                           th:attr="aria-disabled=${!canEditCourses}, tabindex=${!canEditCourses} ? -1 : 0">
+                            <button type="button" class="btn btn-primary-theme" th:disabled="${!canEditCourses}">
                                 + Add New Course
                             </button>
                         </a>
@@ -68,6 +70,28 @@
                            class="course-list-search-input"
                            placeholder="Search by course code or course name..."
                            oninput="filterCourses()" />
+                </div>
+                <div id="courseDeleteAlert" class="course-alert" role="status" style="display: none;"></div>
+                <div id="courseDeleteModal" class="status-modal" aria-hidden="true">
+                    <div class="status-modal-card">
+                        <div class="status-modal-icon" id="courseDeleteModalIcon">!</div>
+                        <div class="status-modal-title" id="courseDeleteModalTitle">Status</div>
+                        <div class="status-modal-message" id="courseDeleteModalMessage"></div>
+                        <div class="status-modal-actions">
+                            <button type="button" class="btn btn-primary-theme" id="courseDeleteModalClose">OK</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="courseConfirmModal" class="status-modal" aria-hidden="true">
+                    <div class="status-modal-card">
+                        <div class="status-modal-icon" id="courseConfirmModalIcon">?</div>
+                        <div class="status-modal-title" id="courseConfirmModalTitle">Confirm Delete</div>
+                        <div class="status-modal-message" id="courseConfirmModalMessage"></div>
+                        <div class="status-modal-actions">
+                            <button type="button" class="btn btn-outline-secondary" id="courseConfirmCancel">Cancel</button>
+                            <button type="button" class="btn btn-primary-theme" id="courseConfirmOk">Delete</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Table -->
@@ -88,7 +112,8 @@
 						<tbody>
 						<!-- courses is List<CourseFeeRequestDto> -->
 						<tr th:each="c, stat : ${courses}"
-						    th:onclick="'window.location.href=\'' + @{/courseedit(courseId=${c.courseId})} + '\';'">
+						    th:onclick="${canEditCourses} ? 'window.location.href=\'' + @{/courseedit(courseId=${c.courseId})} + '\';' : null"
+						    th:classappend="${!canEditCourses} ? ' course-row-disabled' : ''">
 						    <td th:text="${stat.index + 1}"></td>
 						    <td th:text="${c.code}"></td>
 						    <td th:text="${c.name}"></td>
@@ -118,15 +143,25 @@
 						                  : '—'}">
 						    </td>
 
-						    <td class="course-table-action-cell"
-						        onclick="event.stopPropagation();">
-						        <a th:href="@{/courseedit(courseId=${c.courseId})}">
-						            <button type="button" class="btn btn-outline-theme">
-						                Edit
-						            </button>
-						        </a>
-						    </td>
-						</tr>
+                            <td class="course-table-action-cell"
+                                onclick="event.stopPropagation();">
+                                <a th:href="${canEditCourses} ? @{/courseedit(courseId=${c.courseId})} : '#'"
+                                   th:classappend="${!canEditCourses} ? ' is-disabled' : ''"
+                                   th:attr="aria-disabled=${!canEditCourses}, tabindex=${!canEditCourses} ? -1 : 0">
+                                    <button type="button" class="btn btn-outline-theme" th:disabled="${!canEditCourses}">
+                                        Edit
+                                    </button>
+                                </a>
+                                <button type="button"
+                                        class="btn btn-outline-danger course-delete-btn"
+                                        th:classappend="${!canEditCourses} ? ' is-disabled' : ''"
+                                        th:disabled="${!canEditCourses}"
+                                        th:attr="data-course-id=${canEditCourses ? c.courseId : ''},data-course-name=${canEditCourses ? c.name : ''}"
+                                        onclick="event.stopPropagation();">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
 
 						<!-- Empty state -->
 						<tr th:if="${#lists.isEmpty(courses)}">
@@ -145,6 +180,103 @@
 </div>
 
 <script>
+    function showCourseAlert(message, isError) {
+        const alert = document.getElementById('courseDeleteAlert');
+        if (alert) {
+            alert.textContent = message;
+            alert.classList.toggle('is-error', !!isError);
+            alert.classList.toggle('is-success', !isError);
+            alert.style.display = 'none';
+        }
+
+        const modal = document.getElementById('courseDeleteModal');
+        const modalIcon = document.getElementById('courseDeleteModalIcon');
+        const modalTitle = document.getElementById('courseDeleteModalTitle');
+        const modalMessage = document.getElementById('courseDeleteModalMessage');
+        if (modal && modalIcon && modalTitle && modalMessage) {
+            modalIcon.classList.toggle('is-success', !isError);
+            modalTitle.textContent = isError ? 'Unable to delete course' : 'Course deleted';
+            modalMessage.textContent = message;
+            modal.classList.add('is-open');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    (function () {
+        const modal = document.getElementById('courseDeleteModal');
+        const closeBtn = document.getElementById('courseDeleteModalClose');
+        if (!modal || !closeBtn) return;
+        const close = () => {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+        };
+        closeBtn.addEventListener('click', close);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') close();
+        });
+    })();
+
+    function openConfirmModal(message, onConfirm) {
+        const modal = document.getElementById('courseConfirmModal');
+        const msg = document.getElementById('courseConfirmModalMessage');
+        const okBtn = document.getElementById('courseConfirmOk');
+        const cancelBtn = document.getElementById('courseConfirmCancel');
+        if (!modal || !msg || !okBtn || !cancelBtn) return;
+        msg.textContent = message;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+
+        const close = () => {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+            okBtn.removeEventListener('click', onConfirmHandler);
+        };
+        const onConfirmHandler = () => {
+            close();
+            if (typeof onConfirm === 'function') onConfirm();
+        };
+        okBtn.addEventListener('click', onConfirmHandler);
+        cancelBtn.addEventListener('click', close, { once: true });
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close();
+        }, { once: true });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') close();
+        }, { once: true });
+    }
+
+    function wireCourseDeleteButtons() {
+        document.querySelectorAll('.course-delete-btn').forEach(btn => {
+            if (btn.dataset.bound) return;
+            btn.dataset.bound = 'true';
+            btn.addEventListener('click', () => {
+                const courseId = btn.getAttribute('data-course-id');
+                const courseName = btn.getAttribute('data-course-name') || 'this course';
+                if (!courseId) return;
+                openConfirmModal(`Delete ${courseName}? This cannot be undone.`, () => {
+                    fetch(`/courses/${courseId}`, { method: 'DELETE' })
+                        .then(async response => {
+                            if (response.ok) {
+                                const row = btn.closest('tr');
+                                if (row) row.remove();
+                                showCourseAlert(`Deleted ${courseName} successfully.`, false);
+                                return;
+                            }
+                            const message = await response.text();
+                            const fallback = response.status === 409
+                                ? 'Cannot delete this course because admissions already exist for it.'
+                                : 'Unable to delete the course.';
+                            showCourseAlert(message || fallback, true);
+                        })
+                        .catch(() => showCourseAlert('Unable to delete the course.', true));
+                });
+            });
+        });
+    }
+
     function filterCourses() {
         const query = (document.getElementById('courseSearch').value || '').toLowerCase();
         const rows = document.querySelectorAll('#coursesTable tbody tr');
@@ -168,6 +300,8 @@
             }
         });
     }
+
+    wireCourseDeleteButtons();
 </script>
 </body>
 </html>

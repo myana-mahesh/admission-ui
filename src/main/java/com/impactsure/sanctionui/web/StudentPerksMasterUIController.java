@@ -78,14 +78,12 @@ public class StudentPerksMasterUIController {
 
     // DELETE /perks/master/{id}  -> used by deletePerk()
     @DeleteMapping("/perks/master/{id}")
-    public ResponseEntity<Void> deletePerk(@PathVariable Long id,@RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
+    public ResponseEntity<String> deletePerk(@PathVariable Long id,@RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
 	        @AuthenticationPrincipal OidcUser oidcUser
 	        ) {
 		
 		 String accessToken = client.getAccessToken().getTokenValue();
-        boolean ok = perksClient.deletePerk(id, accessToken);
-        return ok ? ResponseEntity.noContent().build()
-                  : ResponseEntity.status(500).build();
+        ResponseEntity<String> resp = perksClient.deletePerk(id, accessToken);
+        return ResponseEntity.status(resp.getStatusCode()).body(resp.getBody());
     }
 }
-

@@ -5,31 +5,55 @@
 
 <div th:replace="fragments/sidebar :: app_sidebar(active='colleges')"></div>
 
-<div class="app-main-wrap">
+<div class="app-main-wrap" th:with="canEditColleges=${isSuperAdmin or #sets.contains(permissionSet,'colleges:EDIT')}">
     <div class="container-xl py-3 max-width-100">
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h3 class="mb-0">College Master</h3>
-                <small class="text-muted">Configure colleges and seat capacity per course.</small>
-            </div>
-            <div>
-                <a class="btn btn-sm btn-primary-theme" th:href="@{/collegesnew}">
-                    + Add New College
-                </a>
+        <div class="hero-card mb-3">
+            <div class="hero-content">
+                <div>
+                    <div class="eyebrow">Colleges</div>
+                    <h3 class="mb-0">College Master</h3>
+                    <div class="hero-subtitle">Configure colleges and seat capacity per course.</div>
+                </div>
+                <div>
+                    <a class="btn btn-sm btn-primary-theme" th:href="@{/collegesnew}" th:if="${canEditColleges}">
+                        + Add New College
+                    </a>
+                </div>
             </div>
         </div>
 
         <div class="card">
             <div class="card-body p-0">
-                <table class="table table-hover mb-0">
+                <div id="collegeDeleteModal" class="status-modal" aria-hidden="true">
+                    <div class="status-modal-card">
+                        <div class="status-modal-icon" id="collegeDeleteModalIcon">!</div>
+                        <div class="status-modal-title" id="collegeDeleteModalTitle">Status</div>
+                        <div class="status-modal-message" id="collegeDeleteModalMessage"></div>
+                        <div class="status-modal-actions">
+                            <button type="button" class="btn btn-primary-theme" id="collegeDeleteModalClose">OK</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="collegeConfirmModal" class="status-modal" aria-hidden="true">
+                    <div class="status-modal-card">
+                        <div class="status-modal-icon" id="collegeConfirmModalIcon">?</div>
+                        <div class="status-modal-title" id="collegeConfirmModalTitle">Confirm Delete</div>
+                        <div class="status-modal-message" id="collegeConfirmModalMessage"></div>
+                        <div class="status-modal-actions">
+                            <button type="button" class="btn btn-outline-secondary" id="collegeConfirmCancel">Cancel</button>
+                            <button type="button" class="btn btn-primary-theme" id="collegeConfirmOk">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                     <tr>
-                        <th class="table_header_theme" style="width: 80px;">ID</th>
-                        <th class="table_header_theme">Code</th>
-                        <th class="table_header_theme">College Name</th>
-                        <th class="table_header_theme">Courses (Seats)</th>
-                        <th class="table_header_theme" style="width: 160px;">Actions</th>
+                        <th class="table_header_theme" style="width: 70px;">ID</th>
+                        <th class="table_header_theme" style="width: 120px;">Code</th>
+                        <th class="table_header_theme">College</th>
+                        <th class="table_header_theme">Course Seats</th>
+                        <th class="table_header_theme" style="width: 160px;" th:if="${canEditColleges}">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -39,31 +63,58 @@
                         </td>
                     </tr>
                     <tr th:each="c : ${colleges}">
-                        <td th:text="${c.collegeId}">1</td>
-                        <td th:text="${c.code}">MAIN</td>
-                        <td th:text="${c.name}">Main Campus</td>
                         <td>
-                            <span th:if="${c.courses == null or #lists.isEmpty(c.courses)}">—</span>
-                            <span th:if="${c.courses != null and !#lists.isEmpty(c.courses)}"
-                                  th:each="cc, stat : ${c.courses}">
-                                <span th:text="${cc.courseCode}">COURSE</span>
-                                <span th:text="${'(' + cc.totalSeats + ')'}">(0)</span>
-                                <span th:if="${!stat.last}">, </span>
-                            </span>
+                            <div class="fw-semibold" th:text="${c.collegeId}">1</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border" th:text="${c.code}">MAIN</span>
+                        </td>
+                        <td>
+                            <div class="fw-semibold" th:text="${c.name}">Main Campus</div>
+                            <div class="text-muted small">Courses & seat usage by college</div>
+                        </td>
+                        <td>
+                            <div th:if="${collegeSeatMap[c.collegeId] == null or #lists.isEmpty(collegeSeatMap[c.collegeId])}"
+                                 class="text-muted small">—</div>
+                            <div th:if="${collegeSeatMap[c.collegeId] != null and !#lists.isEmpty(collegeSeatMap[c.collegeId])}">
+                                <div th:each="cc : ${collegeSeatMap[c.collegeId]}"
+                                     class="seat-row">
+                                    <div class="seat-course">
+                                        <div class="fw-semibold" th:text="${cc.courseCode}">COURSE</div>
+                                        <div class="text-muted small" th:text="${cc.courseName}">Course Name</div>
+                                    </div>
+                                    <div class="seat-meter">
+                                        <!--<div class="seat-bar">
+                                            <span class="seg utilized"
+                                                  th:style="${'width:' + (cc.totalSeats != null and cc.totalSeats > 0 ? (cc.utilizedSeats * 100.0 / cc.totalSeats) : 0) + '%'}"></span>
+                                            <span class="seg onhold"
+                                                  th:style="${'width:' + (cc.totalSeats != null and cc.totalSeats > 0 ? (cc.onHoldSeats * 100.0 / cc.totalSeats) : 0) + '%'}"></span>
+                                            <span class="seg remaining"
+                                                  th:style="${'width:' + (cc.totalSeats != null and cc.totalSeats > 0 ? (cc.remainingSeats * 100.0 / cc.totalSeats) : 0) + '%'}"></span>
+                                        </div>-->
+                                        <div class="seat-legend">
+                                            <span class="seat-pill utilized">Utilized: <strong th:text="${cc.utilizedSeats}">0</strong></span>
+                                            <span class="seat-pill onhold">On Hold: <strong th:text="${cc.onHoldSeats}">0</strong></span>
+                                            <span class="seat-pill remaining">Remaining: <strong th:text="${cc.remainingSeats}">0</strong></span>
+                                            <span class="seat-pill total">Total: <strong th:text="${cc.totalSeats}">0</strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                         <td>
                             <div class="d-flex gap-1">
                                 <a class="btn btn-sm btn-outline-primary-theme"
-                                   th:href="@{/collegesedit(collegeId=${c.collegeId})}">
+                                   th:href="@{/collegesedit(collegeId=${c.collegeId})}"
+                                   th:if="${canEditColleges}">
                                     Edit
                                 </a>
-                                <form th:action="@{'/collegesdelete/' + ${c.collegeId}}"
-                                      method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('Delete this college?');">
-                                        Delete
-                                    </button>
-                                </form>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger college-delete-btn"
+                                        th:if="${canEditColleges}"
+                                        th:attr="data-college-id=${c.collegeId},data-college-name=${c.name}">
+                                    Delete
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -75,5 +126,215 @@
     </div>
 </div>
 
+<style>
+  .hero-card {
+    background: linear-gradient(135deg, #3b3070 0%, #7a6cb0 100%);
+    color: #f8fafc;
+    border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 16px 30px rgba(15,23,42,.25);
+  }
+  .hero-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    font-size: .7rem;
+    color: rgba(248,250,252,.7);
+    margin-bottom: 6px;
+  }
+  .hero-subtitle { color: rgba(226,232,240,.8); }
+  .seat-row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px dashed #e2e8f0;
+  }
+  .seat-row:last-child { border-bottom: 0; }
+  .seat-course { min-width: 200px; }
+  .seat-meter { display: flex; flex-direction: column; gap: 8px; }
+  .seat-bar {
+    height: 10px;
+    background: #f1f5f9;
+    border-radius: 999px;
+    overflow: hidden;
+    display: flex;
+  }
+  .seat-bar .seg { height: 100%; display: block; }
+  .seat-bar .seg.utilized { background: #7c9cff; }
+  .seat-bar .seg.onhold { background: #f3b46b; }
+  .seat-bar .seg.remaining { background: #8bd9c7; }
+  .seat-legend {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .seat-pill {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #475569;
+  }
+  .seat-pill strong { color: #0f172a; }
+  .seat-pill.utilized { border-color: rgba(124,156,255,.5); }
+  .seat-pill.onhold { border-color: rgba(243,180,107,.6); }
+  .seat-pill.remaining { border-color: rgba(139,217,199,.6); }
+  .seat-pill.total { border-color: rgba(148,163,184,.5); }
+  .status-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    backdrop-filter: blur(4px);
+  }
+  .status-modal.is-open { display: flex; }
+  .status-modal-card {
+    width: min(420px, 92vw);
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+    text-align: center;
+  }
+  .status-modal-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+  .status-modal-icon.is-success {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .status-modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #0f172a;
+  }
+  .status-modal-message {
+    font-size: 0.92rem;
+    color: #475569;
+    margin-bottom: 16px;
+  }
+  .status-modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+  @media (max-width: 1200px) {
+    .seat-row { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+  function showCollegeModal(message, isError) {
+    const modal = document.getElementById('collegeDeleteModal');
+    const modalIcon = document.getElementById('collegeDeleteModalIcon');
+    const modalTitle = document.getElementById('collegeDeleteModalTitle');
+    const modalMessage = document.getElementById('collegeDeleteModalMessage');
+    if (!modal || !modalIcon || !modalTitle || !modalMessage) return;
+    modalIcon.classList.toggle('is-success', !isError);
+    modalTitle.textContent = isError ? 'Unable to delete college' : 'College deleted';
+    modalMessage.textContent = message;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  (function () {
+    const modal = document.getElementById('collegeDeleteModal');
+    const closeBtn = document.getElementById('collegeDeleteModalClose');
+    if (!modal || !closeBtn) return;
+    const close = () => {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    };
+    closeBtn.addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) close();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close();
+    });
+  })();
+
+  function openCollegeConfirmModal(message, onConfirm) {
+    const modal = document.getElementById('collegeConfirmModal');
+    const msg = document.getElementById('collegeConfirmModalMessage');
+    const okBtn = document.getElementById('collegeConfirmOk');
+    const cancelBtn = document.getElementById('collegeConfirmCancel');
+    if (!modal || !msg || !okBtn || !cancelBtn) return;
+    msg.textContent = message;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+
+    const close = () => {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      okBtn.removeEventListener('click', onConfirmHandler);
+    };
+    const onConfirmHandler = () => {
+      close();
+      if (typeof onConfirm === 'function') onConfirm();
+    };
+    okBtn.addEventListener('click', onConfirmHandler);
+    cancelBtn.addEventListener('click', close, { once: true });
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) close();
+    }, { once: true });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close();
+    }, { once: true });
+  }
+
+  function wireCollegeDeleteButtons() {
+    document.querySelectorAll('.college-delete-btn').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const collegeId = btn.getAttribute('data-college-id');
+        const collegeName = btn.getAttribute('data-college-name') || 'this college';
+        if (!collegeId) return;
+        openCollegeConfirmModal(`Delete ${collegeName}? This cannot be undone.`, () => {
+          fetch(`/colleges/${collegeId}`, { method: 'DELETE' })
+            .then(async response => {
+              if (response.ok) {
+                const row = btn.closest('tr');
+                if (row) row.remove();
+                showCollegeModal(`Deleted ${collegeName} successfully.`, false);
+                return;
+              }
+              const message = await response.text();
+              const fallback = response.status === 409
+                ? 'Cannot delete this college because admissions already exist for it.'
+                : 'Unable to delete the college.';
+              showCollegeModal(message || fallback, true);
+            })
+            .catch(() => showCollegeModal('Unable to delete the college.', true));
+        });
+      });
+    });
+  }
+
+  wireCollegeDeleteButtons();
+</script>
 </body>
 </html>

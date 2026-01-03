@@ -10,6 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import com.impactsure.sanctionui.enums.Gender;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -32,6 +33,7 @@ public class CreateStudentRequest {
 	private String absId;
 	// Optional simple address fields for quick create
 	private String addressLine1;
+	private String area;
 	private String city;
 	private String state;
 	private String pincode;
@@ -42,6 +44,7 @@ public class CreateStudentRequest {
 	private String motherMobile;
 	private Long studendId;
 	private Long course;
+	private Long courseCode;
 	private String bloodGroup;
 	private SscDetailsRequest sscDetails;
 	private HscDetails hscDetails;
@@ -49,6 +52,7 @@ public class CreateStudentRequest {
 	private String registrationNumber;
 	private String referenceName;
 	private Integer age;
+    private List<OtherPaymentFieldValueRequest> otherPayments;
 /*	private Long courseCode; // e.g., DPHARM
 	private String academicYearLabel; // e.g., 2025-26*/
 

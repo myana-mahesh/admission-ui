@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar" th:with="canEditOtherPayments=${isSuperAdmin or #sets.contains(permissionSet, 'other-payments:EDIT')}">
+<div th:replace="fragments/sidebar :: app_sidebar(active=${active})"></div>
+<div class="app-main-wrap"
+     >
+  <div class="container-xl py-3 max-width-100">
+    <div class="hero-card mb-4">
+      <div class="hero-content">
+        <div>
+          <div class="eyebrow">OTHER PAYMENTS</div>
+          <h2 class="hero-title">Other Payments Fields</h2>
+          <div class="hero-subtitle">Configure dynamic fields shown in admission form and view.</div>
+        </div>
+        <div class="hero-actions" th:if="${canEditOtherPayments}">
+          <button class="btn btn-primary-theme btn-sm" type="button" id="openCreateField">
+            Add Field
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+          <tr>
+            <th class="table_header_theme" style="width: 70px;">#</th>
+            <th class="table_header_theme">Label</th>
+            <th class="table_header_theme">Type</th>
+            <th class="table_header_theme">Required</th>
+            <th class="table_header_theme">Active</th>
+            <th class="table_header_theme">Sort</th>
+            <th class="table_header_theme">Options</th>
+            <th class="table_header_theme" style="width: 180px;" th:if="${canEditOtherPayments}">Actions</th>
+          </tr>
+          </thead>
+          <tbody id="fieldTableBody">
+          <tr>
+            <td th:colspan="${canEditOtherPayments} ? 8 : 7" class="text-center text-muted py-4">Loading fields...</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="fieldModal" tabindex="-1" aria-labelledby="fieldModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="fieldModalTitle">Add Field</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editingFieldId" value="">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Label</label>
+            <input type="text" class="form-control" id="fieldLabel" placeholder="Enter label">
+            <div class="invalid-feedback">Label is required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Input Type</label>
+            <select class="form-select" id="fieldType">
+              <option value="text">Text</option>
+              <option value="number">Number</option>
+              <option value="date">Date</option>
+              <option value="textarea">Textarea</option>
+              <option value="select">Select</option>
+              <option value="checkbox">Checkbox</option>
+              <option value="radio">Radio</option>
+              <option value="email">Email</option>
+              <option value="tel">Tel</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Sort Order</label>
+            <input type="number" class="form-control" id="fieldSort" value="0" min="0">
+          </div>
+          <div class="col-md-4 d-flex align-items-center gap-2">
+            <input class="form-check-input mt-0" type="checkbox" id="fieldRequired">
+            <label class="form-check-label" for="fieldRequired">Required</label>
+          </div>
+          <div class="col-md-4 d-flex align-items-center gap-2">
+            <input class="form-check-input mt-0" type="checkbox" id="fieldActive" checked>
+            <label class="form-check-label" for="fieldActive">Active</label>
+          </div>
+        </div>
+
+        <div class="option-section mt-4" id="optionSection">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0">Options</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="addOptionBtn">
+              <i class="bi bi-plus-circle me-1"></i>Add Option
+            </button>
+          </div>
+          <div id="optionRows" class="d-grid gap-2"></div>
+          <div class="text-muted small mt-2" id="optionHint">Add at least one option for this field type.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary-theme" id="saveFieldBtn" th:if="${canEditOtherPayments}">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  :root {
+    --ink: #0f172a;
+    --muted: #64748b;
+  }
+  .hero-card {
+    background: linear-gradient(135deg, #3b3070 0%, #7a6cb0 100%);
+    color: #f8fafc;
+    border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 16px 30px rgba(15,23,42,.25);
+  }
+  .hero-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    font-size: .7rem;
+    color: rgba(248,250,252,.7);
+    margin-bottom: 6px;
+  }
+  .hero-title {
+    font-family: "Space Grotesk", "Segoe UI", sans-serif;
+    font-weight: 600;
+    margin: 0;
+  }
+  .hero-subtitle { color: rgba(226,232,240,.8); }
+  .option-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 120px auto;
+    gap: 10px;
+    align-items: center;
+  }
+  @media (max-width: 768px) {
+    .option-row { grid-template-columns: 1fr; }
+  }
+  #optionSection.is-hidden { display: none; }
+</style>
+
+<script th:inline="javascript">
+  const canEditOtherPayments = /*[[${canEditOtherPayments}]]*/ false;
+  const API_BASE = '/other-payment-fields/master';
+  let fieldsCache = [];
+
+  const modalEl = document.getElementById('fieldModal');
+  const modal = new bootstrap.Modal(modalEl);
+  const fieldLabel = document.getElementById('fieldLabel');
+  const fieldType = document.getElementById('fieldType');
+  const fieldSort = document.getElementById('fieldSort');
+  const fieldRequired = document.getElementById('fieldRequired');
+  const fieldActive = document.getElementById('fieldActive');
+  const fieldModalTitle = document.getElementById('fieldModalTitle');
+  const editingFieldId = document.getElementById('editingFieldId');
+  const optionSection = document.getElementById('optionSection');
+  const optionRows = document.getElementById('optionRows');
+
+  function resetModal() {
+    editingFieldId.value = '';
+    fieldLabel.value = '';
+    fieldType.value = 'text';
+    fieldSort.value = '0';
+    fieldRequired.checked = false;
+    fieldActive.checked = true;
+    fieldLabel.classList.remove('is-invalid');
+    optionRows.innerHTML = '';
+    toggleOptionSection();
+  }
+
+  function toggleOptionSection() {
+    const type = fieldType.value;
+    const needsOptions = ['select', 'radio', 'checkbox'].includes(type);
+    optionSection.classList.toggle('is-hidden', !needsOptions);
+  }
+
+  function addOptionRow(option = {}) {
+    const row = document.createElement('div');
+    row.className = 'option-row';
+    row.innerHTML = `
+      <input type="hidden" class="opt-id" value="${option.id || ''}">
+      <input type="text" class="form-control opt-label" placeholder="Option label" value="${option.label || ''}">
+      <input type="text" class="form-control opt-value" placeholder="Option value" value="${option.value || ''}">
+      <input type="number" class="form-control opt-sort" value="${option.sortOrder ?? 0}" min="0">
+      <button type="button" class="btn btn-outline-danger btn-sm opt-remove">Remove</button>
+    `;
+    row.querySelector('.opt-remove').addEventListener('click', () => row.remove());
+    optionRows.appendChild(row);
+  }
+
+  function collectOptions() {
+    const rows = Array.from(optionRows.querySelectorAll('.option-row'));
+    return rows.map(row => ({
+      id: row.querySelector('.opt-id').value || null,
+      label: row.querySelector('.opt-label').value.trim(),
+      value: row.querySelector('.opt-value').value.trim(),
+      sortOrder: Number(row.querySelector('.opt-sort').value || 0)
+    })).filter(opt => opt.label);
+  }
+
+  async function loadFields() {
+    const res = await fetch(API_BASE);
+    fieldsCache = await res.json();
+    renderTable(fieldsCache);
+  }
+
+  function renderTable(fields) {
+    const tbody = document.getElementById('fieldTableBody');
+    tbody.innerHTML = '';
+    const totalCols = canEditOtherPayments ? 8 : 7;
+    if (!fields || !fields.length) {
+      tbody.innerHTML = `<tr><td colspan="${totalCols}" class="text-center text-muted py-4">No fields configured.</td></tr>`;
+      return;
+    }
+    fields.forEach((field, idx) => {
+      const tr = document.createElement('tr');
+      const optionCount = field.options ? field.options.length : 0;
+      const activeLabel = field.active === false ? 'No' : 'Yes';
+      const activeClass = field.active === false ? 'badge bg-secondary' : 'badge bg-success';
+      const actions = canEditOtherPayments ? `
+        <td>
+          <button class="btn btn-sm btn-outline-primary me-2 btn-edit" data-id="${field.id}">Edit</button>
+          <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${field.id}">Delete</button>
+        </td>
+      ` : '';
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${field.label || ''}</td>
+        <td class="text-uppercase">${field.inputType || ''}</td>
+        <td>${field.required ? 'Yes' : 'No'}</td>
+        <td><span class="${activeClass}">${activeLabel}</span></td>
+        <td>${field.sortOrder ?? 0}</td>
+        <td>${optionCount}</td>
+        ${actions}
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function openCreate() {
+    resetModal();
+    fieldModalTitle.textContent = 'Add Field';
+    modal.show();
+  }
+
+  function openEdit(field) {
+    resetModal();
+    editingFieldId.value = field.id;
+    fieldModalTitle.textContent = 'Edit Field';
+    fieldLabel.value = field.label || '';
+    fieldType.value = field.inputType || 'text';
+    fieldSort.value = field.sortOrder ?? 0;
+    fieldRequired.checked = !!field.required;
+    fieldActive.checked = field.active !== false;
+    toggleOptionSection();
+    if (field.options && field.options.length) {
+      field.options.forEach(addOptionRow);
+    }
+    modal.show();
+  }
+
+  async function saveField() {
+    const label = fieldLabel.value.trim();
+    if (!label) {
+      fieldLabel.classList.add('is-invalid');
+      return;
+    }
+    fieldLabel.classList.remove('is-invalid');
+    const needsOptions = ['select', 'radio', 'checkbox'].includes(fieldType.value);
+    const options = needsOptions ? collectOptions() : [];
+    if (needsOptions && options.length === 0) {
+      alert('Please add at least one option.');
+      return;
+    }
+    const payload = {
+      label,
+      inputType: fieldType.value,
+      sortOrder: Number(fieldSort.value || 0),
+      required: fieldRequired.checked,
+      active: fieldActive.checked,
+      options
+    };
+
+    const id = editingFieldId.value;
+    const res = await fetch(id ? `${API_BASE}/${id}` : API_BASE, {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      alert('Failed to save field.');
+      return;
+    }
+    modal.hide();
+    await loadFields();
+  }
+
+  async function deleteField(id) {
+    if (!confirm('Disable this field? Existing student values will be kept.')) return;
+    const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      alert('Failed to delete field.');
+      return;
+    }
+    await loadFields();
+  }
+
+  if (canEditOtherPayments) {
+    document.getElementById('openCreateField')?.addEventListener('click', openCreate);
+    document.getElementById('addOptionBtn')?.addEventListener('click', () => addOptionRow());
+    document.getElementById('saveFieldBtn')?.addEventListener('click', saveField);
+  }
+  fieldType.addEventListener('change', toggleOptionSection);
+
+  document.getElementById('fieldTableBody').addEventListener('click', (event) => {
+    if (!canEditOtherPayments) {
+      return;
+    }
+    const editBtn = event.target.closest('.btn-edit');
+    const deleteBtn = event.target.closest('.btn-delete');
+    if (editBtn) {
+      const id = Number(editBtn.dataset.id);
+      const field = fieldsCache.find(item => item.id === id);
+      if (field) openEdit(field);
+    }
+    if (deleteBtn) {
+      deleteField(deleteBtn.dataset.id);
+    }
+  });
+
+  loadFields().catch(() => {
+    const tbody = document.getElementById('fieldTableBody');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">Failed to load fields.</td></tr>';
+  });
+</script>
+</body>
+</html>

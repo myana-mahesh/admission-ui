@@ -12,10 +12,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "academic_year",
        indexes = { @Index(name = "uk_year_label", columnList = "label", unique = true) })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AcademicYear extends Auditable {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,4 +26,3 @@ public class AcademicYear extends Auditable {
     @Column(length = 9, nullable = false, unique = true)
     private String label; // 2025-26
 }
-

@@ -25,16 +25,32 @@ public interface Admission2Repository extends JpaRepository<Admission2, Long> , 
 	  List<Admission2> findExamDueBetween(LocalDate from, LocalDate to);
 
 	  Optional<Admission2> findByStudentStudentIdAndYearYearId(Long studentId, Long yearId);
+
+	  @EntityGraph(attributePaths = {"student","course","college","installments"})
+	  Optional<Admission2> findTopByStudentStudentIdOrderByAdmissionIdDesc(Long studentId);
 	  
 	// choose whichever fetch strategy you prefer
 	    @EntityGraph(attributePaths = {"student","course","installments"})
 	    Optional<Admission2> findById(Long id);
 
-	    @Query("select a from Admission2 a " +
+	  @Query("select distinct a from Admission2 a " +
 	           "left join fetch a.student " +
 	           "left join fetch a.course " +
 	           "left join fetch a.installments " +
 	           "where a.admissionId = :id")
 	    Optional<Admission2> findByIdWithStudentCourseInstallments(@Param("id") Long id);
+
+	  @Query("select a from Admission2 a " +
+	         "left join fetch a.student " +
+	         "left join fetch a.course " +
+	         "left join fetch a.college " +
+	         "left join fetch a.installments " +
+	         "where a.student.studentId in :studentIds " +
+	         "and a.admissionId in (" +
+	         "  select max(a2.admissionId) from Admission2 a2 " +
+	         "  where a2.student.studentId in :studentIds " +
+	         "  group by a2.student.studentId" +
+	         ")")
+	  List<Admission2> findLatestByStudentIds(@Param("studentIds") List<Long> studentIds);
 
 }

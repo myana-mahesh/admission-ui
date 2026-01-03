@@ -78,17 +78,19 @@ public class FileUploadController {
 				      .toList();
 		    	}
 		
-		public String getSingleRole(List<String> roles) {
-			String role="";
-			
-			if(roles.contains("ADMIN")) {
-				role="ADMIN";
-			}else if(roles.contains("BRANCH_USER")) {
-				role="BRANCH_USER";
-			}else if(roles.contains("HO")) {
-				role="HO";
-			}
-			return role;	 
+	public String getSingleRole(List<String> roles) {
+		String role="";
+		
+		if(roles.contains("SUPER_ADMIN")) {
+			role="SUPER_ADMIN";
+		}else if(roles.contains("ADMIN")) {
+			role="ADMIN";
+		}else if(roles.contains("HO")) {
+			role="HO";
+		}else if(roles.contains("BRANCH_USER")) {
+			role="BRANCH_USER";
 		}
+		return role;	 
+	}
 
 }

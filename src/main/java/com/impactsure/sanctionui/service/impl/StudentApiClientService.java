@@ -114,9 +114,11 @@ public class StudentApiClientService {
             int page,
             int size,
             String q,
-            String course,
+            String courseId,
+            String collegeId,
             String batch,
-            Integer year,
+            String admissionYearId,
+            String perkId,
             String gender,
             String accessToken
     ) {
@@ -129,14 +131,20 @@ public class StudentApiClientService {
         if (q != null && !q.isBlank())
             builder.queryParam("q", q);
 
-        if (course != null)
-            builder.queryParam("course", course);
+        if (courseId != null)
+            builder.queryParam("courseId", courseId);
+
+        if (collegeId != null)
+            builder.queryParam("collegeId", collegeId);
 
         if (batch != null)
             builder.queryParam("batch", batch);
 
-        if (year != null)
-            builder.queryParam("year", year);
+        if (admissionYearId != null)
+            builder.queryParam("admissionYearId", admissionYearId);
+
+        if (perkId != null)
+            builder.queryParam("perkId", perkId);
 
         if (gender != null)
             builder.queryParam("gender", gender);
@@ -161,4 +169,3 @@ public class StudentApiClientService {
     }
 
 }
-

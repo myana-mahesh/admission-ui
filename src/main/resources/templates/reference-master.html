@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar">
+<div th:replace="fragments/sidebar :: app_sidebar(active=${active})"></div>
+<div class="app-main-wrap">
+    <div class="container-xl py-3 max-width-100">
+        <div class="hero-card mb-4">
+            <div class="hero-content">
+                <div>
+                    <div class="eyebrow" th:text="${entityLabel}">Master</div>
+                    <h2 class="hero-title" th:text="${title}">Master</h2>
+                    <div class="hero-subtitle" th:text="${subtitle}">Create, edit and delete entries.</div>
+                </div>
+                <div class="hero-actions">
+                    <button class="btn btn-primary-theme btn-sm" type="button" id="openCreateBtn" th:if="${canManage}">
+                        Add <span th:text="${entityLabel}">Item</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            
+            <div class="card-body p-0">
+                <div id="masterDeleteModal" class="status-modal" aria-hidden="true">
+                    <div class="status-modal-card">
+                        <div class="status-modal-icon" id="masterDeleteModalIcon">!</div>
+                        <div class="status-modal-title" id="masterDeleteModalTitle">Status</div>
+                        <div class="status-modal-message" id="masterDeleteModalMessage"></div>
+                        <div class="status-modal-actions">
+                            <button type="button" class="btn btn-primary-theme" id="masterDeleteModalClose">OK</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="masterConfirmModal" class="status-modal" aria-hidden="true">
+                    <div class="status-modal-card">
+                        <div class="status-modal-icon" id="masterConfirmModalIcon">?</div>
+                        <div class="status-modal-title" id="masterConfirmModalTitle">Confirm Delete</div>
+                        <div class="status-modal-message" id="masterConfirmModalMessage"></div>
+                        <div class="status-modal-actions">
+                            <button type="button" class="btn btn-outline-secondary" id="masterConfirmCancel">Cancel</button>
+                            <button type="button" class="btn btn-primary-theme" id="masterConfirmOk">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                <table class="table table-hover align-middle mb-0" id="masterTable">
+                    <thead>
+                    <tr>
+                        <th class="table_header_theme" style="width: 80px;">#</th>
+                        <th class="table_header_theme" th:text="${entityLabel}">Name</th>
+                        <th class="table_header_theme" style="width: 180px;" th:if="${canManage}">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="masterTableBody">
+                    <tr th:if="${#lists.isEmpty(options)}">
+                        <td th:attr="colspan=${canManage} ? 3 : 2" class="text-center text-muted py-4">No entries found.</td>
+                    </tr>
+                    <tr th:each="opt, idx : ${options}">
+                        <td th:text="${idx.index + 1}">1</td>
+                        <td th:text="${opt.name}">Item</td>
+                        <td th:if="${canManage}">
+                            <button class="btn btn-sm btn-outline-primary btn-edit"
+                                    th:attr="data-id=${opt.id},data-name=${opt.name}">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger btn-delete"
+                                    th:attr="data-id=${opt.id},data-name=${opt.name}">Delete</button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="masterModal" tabindex="-1" aria-labelledby="masterModalLabel" aria-hidden="true" th:if="${canManage}">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="masterModalTitle">Add</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editingId" value="">
+                <div class="mb-3">
+                    <label class="form-label" th:text="${entityLabel}">Name</label>
+                    <input type="text" id="nameInput" class="form-control" placeholder="Enter name">
+                    <div class="invalid-feedback">Name is required.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary-theme" id="saveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+  :root {
+    --ink: #0f172a;
+    --muted: #64748b;
+    --surface: #ffffff;
+    --soft: #f8fafc;
+    --border: #e2e8f0;
+  }
+  @media (max-width: 991.98px) { :root { --sbw: 0px; } }
+  body.has-sidebar .app-main-wrap { margin-left: var(--sbw); transition: margin-left .2s ease; }
+  .hero-card {
+    background: linear-gradient(135deg, #3b3070 0%, #7a6cb0 100%);
+    color: #f8fafc;
+    border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 16px 30px rgba(15,23,42,.25);
+  }
+  .hero-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    font-size: .7rem;
+    color: rgba(248,250,252,.7);
+    margin-bottom: 6px;
+  }
+  .hero-title {
+    font-family: "Space Grotesk", "Segoe UI", sans-serif;
+    font-weight: 600;
+    margin: 0;
+  }
+  .hero-subtitle { color: rgba(226,232,240,.8); }
+  @media (max-width: 768px) {
+    .hero-card { padding: 18px; }
+    .hero-title { font-size: 1.4rem; }
+  }
+  .status-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 2000;
+    padding: 24px;
+  }
+  .status-modal.is-open {
+    display: flex;
+  }
+  .status-modal-card {
+    width: min(420px, 92vw);
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+    text-align: center;
+  }
+  .status-modal-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+  .status-modal-icon.is-success {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .status-modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #0f172a;
+  }
+  .status-modal-message {
+    font-size: 0.92rem;
+    color: #475569;
+    margin-bottom: 16px;
+  }
+  .status-modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+</style>
+
+<script th:inline="javascript">
+  const API_BASE = /*[[${apiBaseUrl}]]*/ '/master';
+  const entityLabel = /*[[${entityLabel}]]*/ 'Item';
+  const canManage = /*[[${canManage}]]*/ true;
+
+  let editingId = null;
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('masterModal');
+    const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+    const nameInput = document.getElementById('nameInput');
+    const editingField = document.getElementById('editingId');
+    const titleEl = document.getElementById('masterModalTitle');
+
+    function resetForm() {
+      editingId = null;
+      if (editingField) editingField.value = '';
+      if (nameInput) {
+        nameInput.value = '';
+        nameInput.classList.remove('is-invalid');
+      }
+      if (titleEl) titleEl.textContent = `Add ${entityLabel}`;
+    }
+
+    function openCreate() {
+      resetForm();
+      if (modal) {
+        modal.show();
+      }
+      if (nameInput) nameInput.focus();
+    }
+
+    function openEdit(id, name) {
+      editingId = id;
+      if (editingField) editingField.value = id;
+      if (nameInput) {
+        nameInput.value = name || '';
+        nameInput.classList.remove('is-invalid');
+      }
+      if (titleEl) titleEl.textContent = `Edit ${entityLabel}`;
+      if (modal) {
+        modal.show();
+      }
+      if (nameInput) nameInput.focus();
+    }
+
+    function loadItems() {
+      fetch(API_BASE)
+        .then(r => r.json())
+        .then(data => renderTable(data || []))
+        .catch(() => alert(`Failed to load ${entityLabel.toLowerCase()}s.`));
+    }
+
+    function renderTable(items) {
+      const tbody = document.getElementById('masterTableBody');
+      tbody.innerHTML = '';
+      if (!items.length) {
+        const colSpan = canManage ? 3 : 2;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center text-muted py-4">No entries found.</td></tr>`;
+        return;
+      }
+      items.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        const actions = canManage
+          ? `<td>
+              <button class="btn btn-sm btn-outline-primary btn-edit" data-id="${item.id}" data-name="${item.name || ''}">Edit</button>
+              <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${item.id}" data-name="${item.name || ''}">Delete</button>
+            </td>`
+          : '';
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${item.name || ''}</td>
+          ${actions}
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function saveItem() {
+      const name = nameInput.value.trim();
+      if (!name) {
+        nameInput.classList.add('is-invalid');
+        return;
+      }
+      nameInput.classList.remove('is-invalid');
+      const method = editingId ? 'PUT' : 'POST';
+      const url = editingId ? `${API_BASE}/${editingId}` : API_BASE;
+      fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      })
+        .then(r => {
+          if (!r.ok) throw new Error();
+          return r.json();
+        })
+        .then(() => {
+          if (modal) {
+            modal.hide();
+          }
+          resetForm();
+          loadItems();
+        })
+        .catch(() => alert(`Failed to save ${entityLabel.toLowerCase()}.`));
+    }
+
+    function deleteItem(id, name) {
+      openMasterConfirmModal(`Delete ${name || 'this item'}? This cannot be undone.`, () => {
+        fetch(`${API_BASE}/${id}`, { method: 'DELETE' })
+          .then(async r => {
+            if (r.ok) {
+              showMasterModal(`Deleted ${name || 'item'} successfully.`, false);
+              loadItems();
+              return;
+            }
+            const message = await r.text();
+            const fallback = r.status === 409
+              ? `Cannot delete this ${entityLabel.toLowerCase()} because admissions already exist for it.`
+              : `Unable to delete the ${entityLabel.toLowerCase()}.`;
+            showMasterModal(message || fallback, true);
+          })
+          .catch(() => showMasterModal(`Unable to delete the ${entityLabel.toLowerCase()}.`, true));
+      });
+    }
+
+    const openCreateBtn = document.getElementById('openCreateBtn');
+    if (openCreateBtn) {
+      openCreateBtn.addEventListener('click', openCreate);
+    }
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', saveItem);
+    }
+
+    document.getElementById('masterTableBody').addEventListener('click', function (e) {
+      const editBtn = e.target.closest('.btn-edit');
+      const delBtn = e.target.closest('.btn-delete');
+      if (editBtn) {
+        openEdit(editBtn.dataset.id, editBtn.dataset.name);
+      } else if (delBtn) {
+        deleteItem(delBtn.dataset.id, delBtn.dataset.name);
+      }
+    });
+
+    loadItems();
+  });
+
+  function showMasterModal(message, isError) {
+    const modal = document.getElementById('masterDeleteModal');
+    const modalIcon = document.getElementById('masterDeleteModalIcon');
+    const modalTitle = document.getElementById('masterDeleteModalTitle');
+    const modalMessage = document.getElementById('masterDeleteModalMessage');
+    if (!modal || !modalIcon || !modalTitle || !modalMessage) return;
+    modalIcon.classList.toggle('is-success', !isError);
+    modalTitle.textContent = isError ? `Unable to delete ${entityLabel}` : `${entityLabel} deleted`;
+    modalMessage.textContent = message;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  (function () {
+    const modal = document.getElementById('masterDeleteModal');
+    const closeBtn = document.getElementById('masterDeleteModalClose');
+    if (!modal || !closeBtn) return;
+    const close = () => {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    };
+    closeBtn.addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) close();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close();
+    });
+  })();
+
+  function openMasterConfirmModal(message, onConfirm) {
+    const modal = document.getElementById('masterConfirmModal');
+    const msg = document.getElementById('masterConfirmModalMessage');
+    const okBtn = document.getElementById('masterConfirmOk');
+    const cancelBtn = document.getElementById('masterConfirmCancel');
+    if (!modal || !msg || !okBtn || !cancelBtn) return;
+    msg.textContent = message;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+
+    const close = () => {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      okBtn.removeEventListener('click', onConfirmHandler);
+    };
+    const onConfirmHandler = () => {
+      close();
+      if (typeof onConfirm === 'function') onConfirm();
+    };
+    okBtn.addEventListener('click', onConfirmHandler);
+    cancelBtn.addEventListener('click', close, { once: true });
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) close();
+    }, { once: true });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close();
+    }, { once: true });
+  }
+</script>
+</body>
+</html>

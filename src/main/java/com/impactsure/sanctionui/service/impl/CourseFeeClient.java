@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpStatusCodeException;
 
 import com.impactsure.sanctionui.dto.CourseFeeRequestDto;
 
@@ -88,5 +89,17 @@ public class CourseFeeClient {
             return Collections.emptyList();
         }
         return Arrays.asList(body);
+    }
+
+    public ResponseEntity<String> deleteCourse(Long courseId, String accessToken) {
+        String url = admissionServiceBaseUrl + "/api/courses/" + courseId;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        try {
+            return restTemplate.exchange(url, HttpMethod.DELETE, entity, String.class);
+        } catch (HttpStatusCodeException ex) {
+            return ResponseEntity.status(ex.getStatusCode()).body(ex.getResponseBodyAsString());
+        }
     }
 }

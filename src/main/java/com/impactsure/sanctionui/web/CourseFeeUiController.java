@@ -7,6 +7,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Controller;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
@@ -28,17 +29,31 @@ public class CourseFeeUiController {
 
     // Show create form
     @GetMapping("/coursescreate")
-    public String showCreateForm(Model model) {
+    public String showCreateForm(Model model,
+                                 @RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
+                                 @AuthenticationPrincipal OidcUser oidcUser) {
         CourseFeeForm form = new CourseFeeForm();
         // One empty row by default
         form.getInstallmentIds().add(null);
         form.getInstallmentSequences().add(1);
         form.getInstallmentAmounts().add(BigDecimal.ZERO);
         form.getInstallmentDueDays().add(0);
+        form.getInstallmentDueMonths().add(1); // default Month = Jan
         form.getInstallmentYears().add(1); // default Year 1
 
+        form.ensureSize(form.getInstallmentAmounts().size());
+
+        String accessToken = client.getAccessToken().getTokenValue();
+        List<CourseFeeRequestDto> courses = courseFeeClient.getAllCoursesWithFee(accessToken);
+        List<String> existingCodes = new ArrayList<>();
+        for (CourseFeeRequestDto c : courses) {
+            if (c.getCode() != null && !c.getCode().isBlank()) {
+                existingCodes.add(c.getCode().trim().toUpperCase());
+            }
+        }
 
         model.addAttribute("courseForm", form);
+        model.addAttribute("existingCourseCodes", existingCodes);
         return "course-fee-form"; // templates/course-fee-form.html
     }
 
@@ -80,11 +95,26 @@ public class CourseFeeUiController {
         	form.getInstallmentSequences().add(1);
         	form.getInstallmentAmounts().add(BigDecimal.ZERO);
         	form.getInstallmentDueDays().add(0);
+        	form.getInstallmentDueMonths().add(1);
         	form.getInstallmentYears().add(1); // default Year 1
 
         }
 
+        form.ensureSize(form.getInstallmentAmounts().size());
+
+        List<CourseFeeRequestDto> courses = courseFeeClient.getAllCoursesWithFee(accessToken);
+        List<String> existingCodes = new ArrayList<>();
+        for (CourseFeeRequestDto c : courses) {
+            if (c.getCode() != null && !c.getCode().isBlank()) {
+                String code = c.getCode().trim().toUpperCase();
+                if (!code.equalsIgnoreCase(form.getCode())) {
+                    existingCodes.add(code);
+                }
+            }
+        }
+
         model.addAttribute("courseForm", form);
+        model.addAttribute("existingCourseCodes", existingCodes);
         return "course-fee-form";
     }
 
@@ -131,7 +161,7 @@ public class CourseFeeUiController {
 
         CourseFeeRequestDto.FeeTemplateDto feeTemplate =
                 CourseFeeRequestDto.FeeTemplateDto.builder()
-                        .id(form.getTemplateId())
+                        .id(null)
                         .name(form.getTemplateName())
                         .totalAmount(total)
                         .installments(installments)
@@ -186,5 +216,14 @@ public class CourseFeeUiController {
 
         model.addAttribute("courses", courses);
         return "course-list";   // -> templates/course-fee-list.html
+    }
+
+    @DeleteMapping("/courses/{courseId}")
+    @ResponseBody
+    public ResponseEntity<String> deleteCourse(@PathVariable Long courseId,
+                                               @RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
+                                               @AuthenticationPrincipal OidcUser oidcUser) {
+        String accessToken = client.getAccessToken().getTokenValue();
+        return courseFeeClient.deleteCourse(courseId, accessToken);
     }
 }

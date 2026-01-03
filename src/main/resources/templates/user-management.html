@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar"
+      th:with="canEditUserMgmt=${isSuperAdmin or #sets.contains(permissionSet,'user-management:EDIT')}">
+
+  <div th:replace="fragments/sidebar :: app_sidebar(active='user-management')"></div>
+
+  <div class="app-main-wrap">
+    <div class="container-xl py-3 max-width-100">
+
+      <div class="hero-card mb-4 p-4">
+        <div class="hero-content">
+          <div>
+            <div class="eyebrow mb-0">Admin</div>
+            <h2 class="hero-title">User Management</h2>
+            <div class="hero-subtitle mt-0">Create users, assign roles, and map branches.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-card p-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+          <div>
+            <h5 class="mb-1">Users</h5>
+            <div class="text-muted small">Manage Keycloak users for the ERP client.</div>
+          </div>
+          <div class="d-flex gap-2">
+            <input class="form-control" id="userSearchInput" placeholder="Search users">
+            <button class="btn btn-primary-theme" id="openCreateUserBtn" th:if="${canEditUserMgmt}">Create User</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 modern-table">
+            <thead class="table-light">
+              <tr>
+                <th class="table_header_theme">User</th>
+                <th class="table_header_theme">Email</th>
+                <th class="table_header_theme">Status</th>
+                <th class="table_header_theme">Roles</th>
+                <th class="table_header_theme">Branches</th>
+                <th class="table_header_theme text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody">
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">Loading users…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="app-modal" id="userCreateModal" aria-hidden="true">
+    <div class="app-modal-card">
+      <div class="app-modal-header">
+        <h5 class="mb-0">Create User</h5>
+        <button type="button" class="btn-close" id="closeCreateUserModal"></button>
+      </div>
+      <div class="app-modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Username</label>
+            <input class="form-control" id="createUserUsername">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input class="form-control" id="createUserEmail" type="email">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">First name</label>
+            <input class="form-control" id="createUserFirstName">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Last name</label>
+            <input class="form-control" id="createUserLastName">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Password</label>
+            <input class="form-control" id="createUserPassword" type="password">
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <label class="form-check">
+              <input class="form-check-input" type="checkbox" id="createUserTempPassword" checked>
+              <span class="form-check-label">Temporary</span>
+            </label>
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <label class="form-check">
+              <input class="form-check-input" type="checkbox" id="createUserEnabled" checked>
+              <span class="form-check-label">Enabled</span>
+            </label>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Roles</label>
+            <div class="modern-multiselect" id="createRoleMultiSelect">
+              <div class="multiselect-trigger">
+                <div class="multiselect-tags">
+                  <span class="multiselect-placeholder">Select roles…</span>
+                </div>
+                <i class="bi bi-chevron-down multiselect-arrow"></i>
+              </div>
+              <div class="multiselect-dropdown">
+                <div class="multiselect-option" th:each="r : ${roles}" th:attr="data-value=${r.name}">
+                  <input type="checkbox" th:id="'create-role-' + ${r.name}">
+                  <label th:for="'create-role-' + ${r.name}" th:text="${r.name}">Role</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Branches</label>
+            <div class="modern-multiselect" id="createBranchMultiSelect">
+              <div class="multiselect-trigger">
+                <div class="multiselect-tags">
+                  <span class="multiselect-placeholder">Select branches…</span>
+                </div>
+                <i class="bi bi-chevron-down multiselect-arrow"></i>
+              </div>
+              <div class="multiselect-dropdown">
+                <div class="multiselect-option" th:each="b : ${branches}" th:attr="data-value=${b.id}">
+                  <input type="checkbox" th:id="'create-branch-' + ${b.id}">
+                  <label th:for="'create-branch-' + ${b.id}" th:text="${b.name}">Branch</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="app-modal-footer">
+        <button class="btn btn-outline-secondary" id="cancelCreateUserBtn">Cancel</button>
+        <button class="btn btn-primary-theme" id="createUserSubmitBtn">Create User</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-modal" id="userEditModal" aria-hidden="true">
+    <div class="app-modal-card">
+      <div class="app-modal-header">
+        <h5 class="mb-0">Edit User</h5>
+        <button type="button" class="btn-close" id="closeEditUserModal"></button>
+      </div>
+      <div class="app-modal-body">
+        <input type="hidden" id="editUserId">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Username</label>
+            <input class="form-control" id="editUserUsername">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input class="form-control" id="editUserEmail" type="email">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">First name</label>
+            <input class="form-control" id="editUserFirstName">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Last name</label>
+            <input class="form-control" id="editUserLastName">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">New password</label>
+            <input class="form-control" id="editUserPassword" type="password" placeholder="Leave blank to keep">
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <label class="form-check">
+              <input class="form-check-input" type="checkbox" id="editUserTempPassword" checked>
+              <span class="form-check-label">Temporary</span>
+            </label>
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <label class="form-check">
+              <input class="form-check-input" type="checkbox" id="editUserEnabled" checked>
+              <span class="form-check-label">Enabled</span>
+            </label>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Roles</label>
+            <div class="modern-multiselect" id="editRoleMultiSelect">
+              <div class="multiselect-trigger">
+                <div class="multiselect-tags">
+                  <span class="multiselect-placeholder">Select roles…</span>
+                </div>
+                <i class="bi bi-chevron-down multiselect-arrow"></i>
+              </div>
+              <div class="multiselect-dropdown">
+                <div class="multiselect-option" th:each="r : ${roles}" th:attr="data-value=${r.name}">
+                  <input type="checkbox" th:id="'edit-role-' + ${r.name}">
+                  <label th:for="'edit-role-' + ${r.name}" th:text="${r.name}">Role</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Branches</label>
+            <div class="modern-multiselect" id="editBranchMultiSelect">
+              <div class="multiselect-trigger">
+                <div class="multiselect-tags">
+                  <span class="multiselect-placeholder">Select branches…</span>
+                </div>
+                <i class="bi bi-chevron-down multiselect-arrow"></i>
+              </div>
+              <div class="multiselect-dropdown">
+                <div class="multiselect-option" th:each="b : ${branches}" th:attr="data-value=${b.id}">
+                  <input type="checkbox" th:id="'edit-branch-' + ${b.id}">
+                  <label th:for="'edit-branch-' + ${b.id}" th:text="${b.name}">Branch</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="app-modal-footer">
+        <button class="btn btn-outline-secondary" id="cancelEditUserBtn">Cancel</button>
+        <button class="btn btn-primary-theme" id="saveUserBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-modal" id="userDeleteModal" aria-hidden="true">
+    <div class="app-modal-card">
+      <div class="app-modal-header">
+        <h5 class="mb-0">Delete User</h5>
+        <button type="button" class="btn-close" id="closeDeleteUserModal"></button>
+      </div>
+      <div class="app-modal-body">
+        <div class="text-muted" id="deleteUserMessage">Delete this user? This cannot be undone.</div>
+        <input type="hidden" id="deleteUserId">
+      </div>
+      <div class="app-modal-footer">
+        <button class="btn btn-outline-secondary" id="cancelDeleteUserBtn">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteUserBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%, 0% 0%; }
+      50% { background-position: 100% 50%, 0% 0%; }
+      100% { background-position: 0% 50%, 0% 0%; }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.1) inset; }
+      50% { box-shadow: 0 20px 40px rgba(15,23,42,.35), 0 0 0 1px rgba(255,255,255,0.16) inset; }
+    }
+
+    @keyframes orbitFloat {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+      50% { transform: translate(-40px, 30px) scale(1.05); opacity: 0.85; }
+      100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+    }
+
+    @keyframes orbitFloatReverse {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+      50% { transform: translate(30px, -20px) scale(1.06); opacity: 0.85; }
+      100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+    }
+
+    @keyframes shimmerLine {
+      0%, 100% { opacity: 0.7; transform: scaleX(0.9); }
+      50% { opacity: 1; transform: scaleX(1.1); }
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, #3b3070 0%, #7a6cb0 100%);
+      background-size: 400% 400%, 100% 100%;
+      color: #ffffff;
+      border-radius: var(--radius-xl);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      animation: gradientFlow 15s ease-in-out infinite, pulseGlow 6s ease-in-out infinite;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.1) inset;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #221b44 0%, #7a6cb0 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.35), transparent 65%);
+      top: -120px;
+      right: -80px;
+      animation: orbitFloat 8s ease-in-out infinite;
+      z-index: 1;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 32px;
+      height: 3px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.4));
+      border-radius: 2px;
+      animation: shimmerLine 2.5s ease-in-out infinite;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      transform-origin: left;
+    }
+
+    .eyebrow::after {
+      content: "●";
+      font-size: 0.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      animation: shimmerLine 2.5s ease-in-out infinite reverse;
+    }
+
+    .hero-title {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      margin: 0;
+      position: relative;
+      z-index: 1;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: white;
+      background-clip: text;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+    }
+
+    .hero-subtitle {
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 0.98rem;
+      position: relative;
+      z-index: 1;
+      margin-top: 8px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      line-height: 1.6;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .status-pill.enabled {
+      background: rgba(16, 185, 129, 0.16);
+      color: #0f766e;
+    }
+
+    .status-pill.disabled {
+      background: rgba(239, 68, 68, 0.12);
+      color: #b91c1c;
+    }
+
+    /* Modern multi-select */
+    .modern-multiselect {
+      position: relative;
+      width: 100%;
+    }
+    .multiselect-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 42px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .multiselect-trigger:hover {
+      border-color: rgba(59, 48, 112, 0.35);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    }
+    .modern-multiselect.active .multiselect-trigger {
+      border-color: rgba(59, 48, 112, 0.6);
+      box-shadow: 0 0 0 3px rgba(59, 48, 112, 0.12);
+    }
+    .multiselect-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .multiselect-placeholder {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .multiselect-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .multiselect-tag-remove {
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--primary);
+    }
+    .multiselect-arrow {
+      color: var(--muted);
+      transition: transform 0.2s ease;
+    }
+    .modern-multiselect.active .multiselect-arrow {
+      transform: rotate(180deg);
+    }
+    .multiselect-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      width: 100%;
+      max-height: 240px;
+      overflow: auto;
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-6px);
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+      z-index: 20;
+      padding: 6px;
+    }
+    .modern-multiselect.active .multiselect-dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .multiselect-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .multiselect-option:hover {
+      background: rgba(59, 48, 112, 0.08);
+    }
+    .multiselect-option input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+    }
+    .multiselect-option label {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .multiselect-option input[type="checkbox"]:checked + label {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .app-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 1200;
+      padding: 24px;
+    }
+    .app-modal.show { display: flex; }
+    .app-modal-card {
+      background: #fff;
+      border-radius: 16px;
+      width: min(640px, 92vw);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22);
+      overflow: visible;
+    }
+    .app-modal-header,
+    .app-modal-footer {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e7e9f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .app-modal-footer {
+      border-top: 1px solid #e7e9f0;
+      border-bottom: none;
+      justify-content: flex-end;
+    }
+    .app-modal-body { padding: 18px 20px 28px; overflow: visible; }
+
+    .app-modal .modern-multiselect .multiselect-dropdown {
+      top: auto;
+      bottom: calc(100% + 8px);
+      z-index: 2000;
+    }
+  </style>
+
+  <script th:inline="javascript">
+    const canEditUserMgmt = /*[[${canEditUserMgmt}]]*/ false;
+    const branchOptions = /*[[${branches}]]*/ [];
+
+    const userTableBody = document.getElementById('userTableBody');
+    const userSearchInput = document.getElementById('userSearchInput');
+    const branchLookup = new Map((branchOptions || []).map(b => [String(b.id), b.name]));
+
+    const userRoleCache = new Map();
+    const userBranchCache = new Map();
+    let userCache = [];
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('show');
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.remove('show');
+    }
+
+    function getMultiSelectValues(multiSelectEl) {
+      if (!multiSelectEl) return [];
+      const values = [];
+      multiSelectEl.querySelectorAll('.multiselect-option').forEach(option => {
+        const checkbox = option.querySelector('input[type="checkbox"]');
+        if (checkbox && checkbox.checked) {
+          const value = option.getAttribute('data-value');
+          if (value !== null && value !== '') values.push(value);
+        }
+      });
+      return values;
+    }
+
+    function updateMultiSelectTags(multiSelectEl, placeholderText) {
+      if (!multiSelectEl) return;
+      const tagsContainer = multiSelectEl.querySelector('.multiselect-tags');
+      if (!tagsContainer) return;
+
+      const selected = [];
+      multiSelectEl.querySelectorAll('.multiselect-option').forEach(option => {
+        const checkbox = option.querySelector('input[type="checkbox"]');
+        const label = option.querySelector('label');
+        if (checkbox && checkbox.checked) {
+          selected.push({
+            value: option.getAttribute('data-value'),
+            label: label ? label.textContent.trim() : ''
+          });
+        }
+      });
+
+      tagsContainer.innerHTML = '';
+      if (!selected.length) {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'multiselect-placeholder';
+        placeholder.textContent = placeholderText;
+        tagsContainer.appendChild(placeholder);
+        return;
+      }
+
+      selected.forEach(item => {
+        const tag = document.createElement('span');
+        tag.className = 'multiselect-tag';
+        tag.innerHTML = `
+          ${escapeHtml(item.label)}
+          <span class="multiselect-tag-remove" data-value="${escapeHtml(item.value)}">×</span>
+        `;
+        tag.querySelector('.multiselect-tag-remove').addEventListener('click', (event) => {
+          event.stopPropagation();
+          const checkbox = multiSelectEl.querySelector(`.multiselect-option[data-value="${CSS.escape(item.value)}"] input`);
+          if (checkbox) {
+            checkbox.checked = false;
+            updateMultiSelectTags(multiSelectEl, placeholderText);
+          }
+        });
+        tagsContainer.appendChild(tag);
+      });
+    }
+
+    function setMultiSelectValues(multiSelectEl, values, placeholderText) {
+      if (!multiSelectEl) return;
+      const valuesSet = new Set((values || []).map(String));
+      multiSelectEl.querySelectorAll('.multiselect-option').forEach(option => {
+        const value = option.getAttribute('data-value');
+        const checkbox = option.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = valuesSet.has(String(value));
+      });
+      updateMultiSelectTags(multiSelectEl, placeholderText);
+    }
+
+    function wireMultiSelect(multiSelectEl, placeholderText) {
+      if (!multiSelectEl) return;
+      const trigger = multiSelectEl.querySelector('.multiselect-trigger');
+      if (!multiSelectEl.dataset.bound && trigger) {
+        trigger.addEventListener('click', () => {
+          multiSelectEl.classList.toggle('active');
+        });
+        document.addEventListener('click', (event) => {
+          if (!multiSelectEl.contains(event.target)) {
+            multiSelectEl.classList.remove('active');
+          }
+        });
+        multiSelectEl.dataset.bound = 'true';
+      }
+
+      multiSelectEl.querySelectorAll('.multiselect-option input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+          updateMultiSelectTags(multiSelectEl, placeholderText);
+        });
+      });
+
+      updateMultiSelectTags(multiSelectEl, placeholderText);
+    }
+
+    wireMultiSelect(document.getElementById('createRoleMultiSelect'), 'Select roles…');
+    wireMultiSelect(document.getElementById('createBranchMultiSelect'), 'Select branches…');
+    wireMultiSelect(document.getElementById('editRoleMultiSelect'), 'Select roles…');
+    wireMultiSelect(document.getElementById('editBranchMultiSelect'), 'Select branches…');
+
+    function buildRoleBadges(roles) {
+      if (!roles || !roles.length) return '<span class="text-muted">—</span>';
+      return roles.map(role => `<span class="badge bg-light text-dark border me-1">${escapeHtml(role)}</span>`).join(' ');
+    }
+
+    function buildBranchBadges(branchIds) {
+      if (!branchIds || !branchIds.length) return '<span class="text-muted">—</span>';
+      return branchIds.map(id => {
+        const name = branchLookup.get(String(id)) || id;
+        return `<span class="badge bg-light text-dark border me-1">${escapeHtml(name)}</span>`;
+      }).join(' ');
+    }
+
+    function renderUserTable(users) {
+      const search = userSearchInput?.value?.trim().toLowerCase() || '';
+      const filtered = (users || []).filter(u => {
+        if (!search) return true;
+        return [u.username, u.email, u.firstName, u.lastName]
+          .filter(Boolean)
+          .some(val => String(val).toLowerCase().includes(search));
+      });
+
+      if (!filtered.length) {
+        userTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No users found.</td></tr>';
+        return;
+      }
+
+      userTableBody.innerHTML = filtered.map(user => {
+        const roleList = userRoleCache.get(user.id);
+        const branchList = userBranchCache.get(user.id);
+        const statusClass = user.enabled ? 'enabled' : 'disabled';
+        const statusText = user.enabled ? 'Enabled' : 'Disabled';
+        const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
+
+        const actionButtons = canEditUserMgmt
+          ? `<button class="btn btn-outline-secondary btn-sm me-2" data-edit-id="${escapeHtml(user.id)}">Edit</button>
+             <button class="btn btn-outline-danger btn-sm" data-delete-id="${escapeHtml(user.id)}">Delete</button>`
+          : '';
+
+        return `
+          <tr data-user-id="${escapeHtml(user.id)}">
+            <td>
+              <div class="fw-semibold">${escapeHtml(user.username)}</div>
+              <div class="text-muted small">${escapeHtml(name || '—')}</div>
+            </td>
+            <td>${escapeHtml(user.email || '—')}</td>
+            <td><span class="status-pill ${statusClass}">${statusText}</span></td>
+            <td class="user-roles">${buildRoleBadges(roleList || [])}</td>
+            <td class="user-branches">${buildBranchBadges(branchList || [])}</td>
+            <td class="text-end">
+              ${actionButtons}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateUserRow(userId) {
+      const row = userTableBody.querySelector(`tr[data-user-id="${CSS.escape(userId)}"]`);
+      if (!row) return;
+      const rolesEl = row.querySelector('.user-roles');
+      const branchesEl = row.querySelector('.user-branches');
+      if (rolesEl) rolesEl.innerHTML = buildRoleBadges(userRoleCache.get(userId) || []);
+      if (branchesEl) branchesEl.innerHTML = buildBranchBadges(userBranchCache.get(userId) || []);
+    }
+
+    function loadUserRoles(userId) {
+      return fetch(`/api/user-management/users/${userId}/roles`)
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          userRoleCache.set(userId, data || []);
+          updateUserRow(userId);
+          return data || [];
+        });
+    }
+
+    function loadUserBranches(userId) {
+      return fetch(`/api/user-management/users/${userId}/branches`)
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          userBranchCache.set(userId, data || []);
+          updateUserRow(userId);
+          return data || [];
+        });
+    }
+
+    function fetchUsers() {
+      fetch('/api/user-management/users')
+        .then(r => r.ok ? r.json() : [])
+        .then(list => {
+          userCache = list || [];
+          renderUserTable(userCache);
+          userCache.forEach(user => {
+            loadUserRoles(user.id);
+            loadUserBranches(user.id);
+          });
+          return userCache;
+        })
+        .catch(() => {
+          userTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Failed to load users.</td></tr>';
+        });
+    }
+
+    function findUser(userId) {
+      return (userCache || []).find(u => String(u.id) === String(userId));
+    }
+
+    function resetUserForm(prefix) {
+      document.getElementById(`${prefix}UserUsername`).value = '';
+      document.getElementById(`${prefix}UserEmail`).value = '';
+      document.getElementById(`${prefix}UserFirstName`).value = '';
+      document.getElementById(`${prefix}UserLastName`).value = '';
+      document.getElementById(`${prefix}UserPassword`).value = '';
+      document.getElementById(`${prefix}UserTempPassword`).checked = true;
+      document.getElementById(`${prefix}UserEnabled`).checked = true;
+    }
+
+    function fillEditForm(user, roles, branches) {
+      document.getElementById('editUserId').value = user.id;
+      document.getElementById('editUserUsername').value = user.username || '';
+      document.getElementById('editUserEmail').value = user.email || '';
+      document.getElementById('editUserFirstName').value = user.firstName || '';
+      document.getElementById('editUserLastName').value = user.lastName || '';
+      document.getElementById('editUserPassword').value = '';
+      document.getElementById('editUserEnabled').checked = !!user.enabled;
+
+      setMultiSelectValues(document.getElementById('editRoleMultiSelect'), roles || [], 'Select roles…');
+      setMultiSelectValues(document.getElementById('editBranchMultiSelect'), (branches || []).map(String), 'Select branches…');
+    }
+
+    document.getElementById('openCreateUserBtn')?.addEventListener('click', () => {
+      resetUserForm('create');
+      setMultiSelectValues(document.getElementById('createRoleMultiSelect'), [], 'Select roles…');
+      setMultiSelectValues(document.getElementById('createBranchMultiSelect'), [], 'Select branches…');
+      openModal('userCreateModal');
+    });
+
+    document.getElementById('cancelCreateUserBtn')?.addEventListener('click', () => closeModal('userCreateModal'));
+    document.getElementById('closeCreateUserModal')?.addEventListener('click', () => closeModal('userCreateModal'));
+    document.getElementById('cancelEditUserBtn')?.addEventListener('click', () => closeModal('userEditModal'));
+    document.getElementById('closeEditUserModal')?.addEventListener('click', () => closeModal('userEditModal'));
+    document.getElementById('cancelDeleteUserBtn')?.addEventListener('click', () => closeModal('userDeleteModal'));
+    document.getElementById('closeDeleteUserModal')?.addEventListener('click', () => closeModal('userDeleteModal'));
+
+    document.getElementById('createUserSubmitBtn')?.addEventListener('click', () => {
+      const payload = {
+        username: document.getElementById('createUserUsername').value.trim(),
+        email: document.getElementById('createUserEmail').value.trim(),
+        firstName: document.getElementById('createUserFirstName').value.trim(),
+        lastName: document.getElementById('createUserLastName').value.trim(),
+        password: document.getElementById('createUserPassword').value,
+        temporaryPassword: document.getElementById('createUserTempPassword').checked,
+        enabled: document.getElementById('createUserEnabled').checked,
+        roleNames: getMultiSelectValues(document.getElementById('createRoleMultiSelect')),
+        branchIds: getMultiSelectValues(document.getElementById('createBranchMultiSelect')).map(v => Number(v))
+      };
+
+      if (!payload.username) {
+        alert('Username is required.');
+        return;
+      }
+
+      fetch('/api/user-management/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(r => r.ok ? r.text() : r.text().then(t => Promise.reject(t)))
+        .then(() => {
+          closeModal('userCreateModal');
+          fetchUsers();
+        })
+        .catch(err => alert(err || 'Failed to create user.'));
+    });
+
+    userTableBody?.addEventListener('click', (event) => {
+      const editBtn = event.target.closest('[data-edit-id]');
+      const deleteBtn = event.target.closest('[data-delete-id]');
+      if (editBtn) {
+        const userId = editBtn.getAttribute('data-edit-id');
+        const user = findUser(userId);
+        if (!user) return;
+        Promise.all([loadUserRoles(userId), loadUserBranches(userId)])
+          .then(([roles, branches]) => {
+            fillEditForm(user, roles, branches);
+            openModal('userEditModal');
+          });
+      }
+      if (deleteBtn) {
+        const userId = deleteBtn.getAttribute('data-delete-id');
+        document.getElementById('deleteUserId').value = userId;
+        document.getElementById('deleteUserMessage').textContent = 'Delete this user? This cannot be undone.';
+        openModal('userDeleteModal');
+      }
+    });
+
+    document.getElementById('saveUserBtn')?.addEventListener('click', () => {
+      const userId = document.getElementById('editUserId').value;
+      const passwordValue = document.getElementById('editUserPassword').value;
+      const payload = {
+        username: document.getElementById('editUserUsername').value.trim(),
+        email: document.getElementById('editUserEmail').value.trim(),
+        firstName: document.getElementById('editUserFirstName').value.trim(),
+        lastName: document.getElementById('editUserLastName').value.trim(),
+        password: passwordValue ? passwordValue : null,
+        temporaryPassword: document.getElementById('editUserTempPassword').checked,
+        enabled: document.getElementById('editUserEnabled').checked,
+        roleNames: getMultiSelectValues(document.getElementById('editRoleMultiSelect')),
+        branchIds: getMultiSelectValues(document.getElementById('editBranchMultiSelect')).map(v => Number(v))
+      };
+
+      if (!payload.username) {
+        alert('Username is required.');
+        return;
+      }
+
+      fetch(`/api/user-management/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(r => r.ok ? r.text() : r.text().then(t => Promise.reject(t)))
+        .then(() => {
+          closeModal('userEditModal');
+          fetchUsers();
+        })
+        .catch(err => alert(err || 'Failed to update user.'));
+    });
+
+    document.getElementById('confirmDeleteUserBtn')?.addEventListener('click', () => {
+      const userId = document.getElementById('deleteUserId').value;
+      fetch(`/api/user-management/users/${userId}`, { method: 'DELETE' })
+        .then(r => r.ok ? r.text() : r.text().then(t => Promise.reject(t)))
+        .then(() => {
+          closeModal('userDeleteModal');
+          fetchUsers();
+        })
+        .catch(err => alert(err || 'Failed to delete user.'));
+    });
+
+    userSearchInput?.addEventListener('input', () => renderUserTable(userCache));
+
+    fetchUsers();
+  </script>
+</body>
+</html>

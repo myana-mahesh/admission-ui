@@ -6,7 +6,7 @@
 <!-- Sidebar -->
 <div th:replace="fragments/sidebar :: app_sidebar('students')"></div>
 
-<div class="app-main-wrap">
+<div class="app-main-wrap" th:with="canEditStudents=${isSuperAdmin or #sets.contains(permissionSet,'students:EDIT')}">
   <div class="toolbar">
     <div class="container-xl"></div>
   </div>
@@ -49,7 +49,9 @@
                      class="form-control student-details"
                      th:field="*{absId}"
                      id="absId"
-                     placeholder=" ">
+                     placeholder=" "
+                     readonly
+                     disabled>
               <label for="absId">ABS ID</label>
             </div>
           </div>
@@ -93,11 +95,14 @@
           <!-- Nationality -->
           <div class="col-md-3">
             <div class="form-floating">
-              <input type="text"
-                     class="form-control student-details"
-                     th:field="*{nationality}"
-                     id="nationality"
-                     placeholder=" ">
+              <select class="form-select student-details"
+                      th:field="*{nationality}"
+                      id="nationality">
+                <option value=""></option>
+                <option th:each="n : ${nationalities}"
+                        th:value="${n.name}"
+                        th:text="${n.name}"></option>
+              </select>
               <label for="nationality">Nationality</label>
             </div>
           </div>
@@ -105,11 +110,14 @@
           <!-- Religion -->
           <div class="col-md-3">
             <div class="form-floating">
-              <input type="text"
-                     class="form-control student-details"
-                     th:field="*{religion}"
-                     id="religion"
-                     placeholder=" ">
+              <select class="form-select student-details"
+                      th:field="*{religion}"
+                      id="religion">
+                <option value=""></option>
+                <option th:each="r : ${religions}"
+                        th:value="${r.name}"
+                        th:text="${r.name}"></option>
+              </select>
               <label for="religion">Religion</label>
             </div>
           </div>
@@ -165,6 +173,85 @@
               <label for="email">Email</label>
             </div>
           </div>
+
+          <!-- Blood Group -->
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     th:field="*{bloodGroup}"
+                     id="bloodGroup"
+                     placeholder=" ">
+              <label for="bloodGroup">Blood Group</label>
+            </div>
+          </div>
+
+          <!-- Age -->
+          <div class="col-md-2">
+            <div class="form-floating">
+              <input type="number"
+                     class="form-control student-details"
+                     th:value="${student.age != null ? student.age : (student.dob != null ? T(java.time.Period).between(student.dob, T(java.time.LocalDate).now()).years : '')}"
+                     id="age"
+                     placeholder=" ">
+              <label for="age">Age</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ ACADEMIC DETAILS ============ -->
+      <div class="section px-2 mt-4">
+        <div class="title mb-2">
+          <span class="dot"></span><h5 class="mb-0">Academic Details</h5>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control"
+                     id="collegeName"
+                     th:value="${admission != null && admission.college != null ? admission.college.name : ''}"
+                     placeholder=" "
+                     readonly>
+              <label for="collegeName">College</label>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control"
+                     id="courseName"
+                     th:value="${admission != null && admission.course != null ? admission.course.name : ''}"
+                     placeholder=" "
+                     readonly>
+              <label for="courseName">Course</label>
+            </div>
+          </div>
+
+          <div class="col-md-2">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     th:value="${student.batch != null ? student.batch : (admission != null ? admission.batch : '')}"
+                     id="batch"
+                     placeholder=" ">
+              <label for="batch">Batch</label>
+            </div>
+          </div>
+
+          <div class="col-md-2">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     th:value="${student.registrationNumber != null ? student.registrationNumber : (admission != null ? admission.registrationNumber : '')}"
+                     id="registrationNumber"
+                     placeholder=" ">
+              <label for="registrationNumber">Registration No.</label>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -217,6 +304,150 @@
                      th:value="${mother != null ? mother.mobile : ''}"
                      placeholder=" ">
               <label for="motherMobile">Mother’s Mobile</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SSC DETAILS ============ -->
+      <div class="section px-2 mt-4">
+        <div class="title mb-2">
+          <span class="dot"></span><h5 class="mb-0">SSC Details</h5>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-5">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     id="sscBoard"
+                     th:value="${student.sscDetails != null ? student.sscDetails.board : ''}"
+                     placeholder=" ">
+              <label for="sscBoard">Board</label>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="form-floating">
+              <input type="number"
+                     class="form-control student-details"
+                     id="sscPassingYear"
+                     th:value="${student.sscDetails != null ? student.sscDetails.passingYear : ''}"
+                     placeholder=" ">
+              <label for="sscPassingYear">Passing Year</label>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     id="sscRegNo"
+                     th:value="${student.sscDetails != null ? student.sscDetails.registrationNumber : ''}"
+                     placeholder=" ">
+              <label for="sscRegNo">Reg. No.</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="number"
+                     class="form-control student-details"
+                     id="sscPercentage"
+                     th:value="${student.sscDetails != null ? student.sscDetails.percentage : ''}"
+                     placeholder=" ">
+              <label for="sscPercentage">SSC %</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ HSC DETAILS ============ -->
+      <div class="section px-2 mt-4">
+        <div class="title mb-2">
+          <span class="dot"></span><h5 class="mb-0">HSC Details</h5>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     id="hscCollege"
+                     th:value="${student.hscDetails != null ? student.hscDetails.collegeName : ''}"
+                     placeholder=" ">
+              <label for="hscCollege">College</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-floating">
+              <select class="form-select student-details"
+                      id="hscSubjects">
+                <option value=""></option>
+                <option value="PCB"
+                        th:selected="${student.hscDetails != null and student.hscDetails.subjects == 'PCB'}">PCB</option>
+                <option value="PCMB"
+                        th:selected="${student.hscDetails != null and student.hscDetails.subjects == 'PCMB'}">PCMB</option>
+              </select>
+              <label for="hscSubjects">Subjects</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="text"
+                     class="form-control student-details"
+                     id="hscRegNo"
+                     th:value="${student.hscDetails != null ? student.hscDetails.registrationNumber : ''}"
+                     placeholder=" ">
+              <label for="hscRegNo">HSC Registration No.</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="number"
+                     class="form-control student-details"
+                     id="hscPassingYear"
+                     th:value="${student.hscDetails != null ? student.hscDetails.passingYear : ''}"
+                     placeholder=" ">
+              <label for="hscPassingYear">Passing Year</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="number"
+                     class="form-control student-details"
+                     id="hscPhysics"
+                     th:value="${student.hscDetails != null ? student.hscDetails.physicsMarks : ''}"
+                     placeholder=" ">
+              <label for="hscPhysics">Physics</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="number"
+                     class="form-control student-details"
+                     id="hscChemistry"
+                     th:value="${student.hscDetails != null ? student.hscDetails.chemistryMarks : ''}"
+                     placeholder=" ">
+              <label for="hscChemistry">Chemistry</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="number"
+                     class="form-control student-details"
+                     id="hscBiology"
+                     th:value="${student.hscDetails != null ? student.hscDetails.biologyMarks : ''}"
+                     placeholder=" ">
+              <label for="hscBiology">Biology</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-floating">
+              <input type="number"
+                     class="form-control student-details"
+                     id="hscPcb"
+                     th:value="${student.hscDetails != null ? student.hscDetails.pcbPercentage : ''}"
+                     placeholder=" "
+                     readonly>
+              <label for="hscPcb">PCB %</label>
             </div>
           </div>
         </div>
@@ -310,9 +541,111 @@
 	    </div>
 	  </div>
 
+      <!-- ============ FEES SUMMARY ============ -->
+      <div class="section px-2 mt-4" th:if="${admission != null}">
+        <div class="title mb-2">
+          <span class="dot"></span><h5 class="mb-0">Fees Summary</h5>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="form-floating">
+              <input type="number" class="form-control" id="totalFees"
+                     th:value="${totalFees}" readonly>
+              <label for="totalFees">Total Fees</label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-floating">
+              <input type="number" class="form-control" id="paidFees"
+                     th:value="${paidFees}" readonly>
+              <label for="paidFees">Paid Fees</label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-floating">
+              <input type="number" class="form-control" id="pendingFees"
+                     th:value="${pendingFees}" readonly>
+              <label for="pendingFees">Pending Fees</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <table class="table table-sm align-middle">
+            <thead class="table-light">
+            <tr>
+              <th>Year</th>
+              <th>Installment</th>
+              <th>Due Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Invoice</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${admission.installments == null or #lists.isEmpty(admission.installments)}">
+              <td colspan="6" class="text-center text-muted">No installments found.</td>
+            </tr>
+            <tr th:each="inst : ${admission.installments}">
+              <td th:text="${inst.studyYear}">1</td>
+              <td th:text="${inst.installmentNo}">1</td>
+              <td th:text="${inst.dueDate != null ? #temporals.format(inst.dueDate, 'dd-MM-yyyy') : '—'}">—</td>
+              <td th:text="${inst.amountDue}">0</td>
+              <td th:text="${inst.status}">Un Paid</td>
+              <td>
+                <a th:if="${invoices != null and invoices[inst.installmentId] != null}"
+                   th:href="${invoices[inst.installmentId].downloadUrl}"
+                   target="_blank"
+                   class="text-decoration-none">
+                  <i class="bi bi-receipt-cutoff me-1"></i>
+                  <span th:text="${invoices[inst.installmentId].invoiceNumber}">Invoice</span>
+                </a>
+                <span th:if="${invoices == null or invoices[inst.installmentId] == null}"
+                      class="text-muted small">—</span>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============ DOCUMENTS ============ -->
+      <div class="section px-2 mt-4">
+        <div class="title mb-2">
+          <span class="dot"></span><h5 class="mb-0">Documents</h5>
+        </div>
+        <div class="row g-2">
+          <div class="col-12" th:if="${docUploads == null or #lists.isEmpty(docUploads)}">
+            <div class="text-muted small">No documents uploaded for the latest admission.</div>
+          </div>
+          <div class="col-md-6" th:if="${docUploads != null}" th:each="entry : ${docUploads}">
+            <div class="d-flex align-items-center justify-content-between border rounded p-2">
+              <div class="d-flex flex-column">
+                <span class="text-muted small" th:text="${entry.key}">DOC</span>
+                <span class="text-muted small"
+                      th:if="${verificationMap != null and verificationMap[entry.key] != null and verificationMap[entry.key].receivedType != null}"
+                      th:text="${'Received: ' + verificationMap[entry.key].receivedType}">
+                  Received: —
+                </span>
+                <span class="text-muted small"
+                      th:if="${verificationMap == null or verificationMap[entry.key] == null or verificationMap[entry.key].receivedType == null}">
+                  Received: —
+                </span>
+              </div>
+              <a class="text-decoration-none"
+                 th:href="${entry.value.storageUrl}"
+                 target="_blank">
+                <i class="bi bi-paperclip me-1"></i>
+                <span th:text="${entry.value.filename}">file</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ============ FOOTER / SAVE BUTTON ============ -->
       <div class="submit-zone p-4 text-center">
-        <button class="btn btn-primary-theme" type="button" id="saveStudentBtn">
+        <button class="btn btn-primary-theme" type="button" id="saveStudentBtn" th:if="${canEditStudents}">
           <i class="bi bi-check2-circle me-1"></i> Save Changes
         </button>
       </div>
@@ -332,6 +665,52 @@
   // Reuse same pattern as admission.js – collect all .student-details
   var studentId = /*[[${student.studentId}]]*/ null;
   $(function () {
+    const calculateAgeFromDob = () => {
+      const dobVal = $("#dob").val();
+      const $age = $("#age");
+      if (!dobVal) {
+        $age.val("");
+        return;
+      }
+      const dob = new Date(dobVal);
+      if (Number.isNaN(dob.getTime())) {
+        $age.val("");
+        return;
+      }
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const monthDiff = today.getMonth() - dob.getMonth();
+      const dayDiff = today.getDate() - dob.getDate();
+      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        age--;
+      }
+      $age.val(age);
+    };
+
+    $("#dob").on("input change", calculateAgeFromDob);
+    calculateAgeFromDob();
+
+    const calculateHscPcb = () => {
+      const phy = Number($("#hscPhysics").val());
+      const chem = Number($("#hscChemistry").val());
+      const bio = Number($("#hscBiology").val());
+      const $pcb = $("#hscPcb");
+
+      if (!phy || !chem || !bio) {
+        $pcb.val("");
+        return;
+      }
+      if ([phy, chem, bio].some(m => m < 0 || m > 100)) {
+        $pcb.val("");
+        return;
+      }
+      const pcb = ((phy + chem + bio) / 300) * 100;
+      $pcb.val(pcb.toFixed(2));
+    };
+
+    $("#hscPhysics, #hscChemistry, #hscBiology").on("input change", calculateHscPcb);
+    calculateHscPcb();
+
     $("#saveStudentBtn").on("click", function () {
       const formData = {};
 
@@ -344,6 +723,24 @@
 
       // Optional: send studentId as well (if your CreateStudentRequest supports it)
       formData["studentId"] = studentId
+
+      formData.sscDetails = {
+        percentage: $("#sscPercentage").val(),
+        board: $("#sscBoard").val(),
+        passingYear: $("#sscPassingYear").val(),
+        registrationNumber: $("#sscRegNo").val()
+      };
+
+      formData.hscDetails = {
+        collegeName: $("#hscCollege").val(),
+        subjects: $("#hscSubjects").val(),
+        registrationNumber: $("#hscRegNo").val(),
+        passingYear: $("#hscPassingYear").val(),
+        physicsMarks: $("#hscPhysics").val(),
+        chemistryMarks: $("#hscChemistry").val(),
+        biologyMarks: $("#hscBiology").val(),
+        pcbPercentage: $("#hscPcb").val()
+      };
 
       console.log("Saving student:", formData);
 

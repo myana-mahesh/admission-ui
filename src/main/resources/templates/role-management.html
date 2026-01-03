@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar"
+      th:with="canEditUserMgmt=${isSuperAdmin or #sets.contains(permissionSet,'user-management:EDIT')}">
+
+  <div th:replace="fragments/sidebar :: app_sidebar(active='role-management')"></div>
+
+  <div class="app-main-wrap">
+    <div class="container-xl py-3 max-width-100">
+
+      <div class="hero-card mb-4 p-4">
+        <div class="hero-content">
+          <div>
+            <div class="eyebrow mb-0">Admin</div>
+            <h2 class="hero-title">Role Management</h2>
+            <div class="hero-subtitle mt-0">Create client roles and assign predefined permissions.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-card p-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+          <div>
+            <h5 class="mb-1">Roles</h5>
+            <div class="text-muted small">Create, edit, or remove roles and assign permissions.</div>
+          </div>
+          <div class="d-flex gap-2">
+            <input class="form-control" id="roleSearchInput" placeholder="Search roles">
+            <button class="btn btn-primary-theme" id="openCreateRoleBtn" th:if="${canEditUserMgmt}">Create Role</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 modern-table">
+            <thead class="table-light">
+              <tr>
+                <th class="table_header_theme">Role</th>
+                <th class="table_header_theme">Description</th>
+                <th class="table_header_theme text-end" th:if="${canEditUserMgmt}">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="roleTableBody">
+              <tr>
+                <td th:attr="colspan=${canEditUserMgmt} ? 3 : 2"
+                    class="text-center py-4 text-muted">Loading roles…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="app-modal" id="roleCreateModal" aria-hidden="true">
+    <div class="app-modal-card">
+      <div class="app-modal-header">
+        <h5 class="mb-0">Create Role</h5>
+        <button type="button" class="btn-close" id="closeCreateRoleModal"></button>
+      </div>
+      <div class="app-modal-body">
+        <div class="mb-3">
+          <label class="form-label">Role name</label>
+          <input class="form-control" id="roleNameInput" placeholder="e.g. FINANCE_USER">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" id="roleDescInput" rows="2" placeholder="Optional"></textarea>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Assign Permissions</label>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0 modern-table">
+              <thead class="table-light">
+                <tr>
+                  <th class="table_header_theme">Select</th>
+                <th class="table_header_theme">Label</th>
+                <th class="table_header_theme">Module</th>
+                <th class="table_header_theme">Action</th>
+                </tr>
+              </thead>
+              <tbody id="createPermissionTableBody">
+                <tr th:each="p : ${permissions}">
+                  <td>
+                    <input type="checkbox" class="form-check-input perm-checkbox" th:attr="data-id=${p.id}">
+                  </td>
+                  <td th:text="${p.label}">Label</td>
+                  <td th:text="${p.resource}">module</td>
+                  <td th:text="${p.action}">VIEW</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="app-modal-footer">
+        <button class="btn btn-outline-secondary" id="cancelCreateRoleBtn">Cancel</button>
+        <button class="btn btn-primary-theme" id="createRoleBtn">Create Role</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-modal" id="roleEditModal" aria-hidden="true">
+    <div class="app-modal-card">
+      <div class="app-modal-header">
+        <h5 class="mb-0">Edit Role</h5>
+        <button type="button" class="btn-close" id="closeEditRoleModal"></button>
+      </div>
+      <div class="app-modal-body">
+        <div class="mb-3">
+          <label class="form-label">Role name</label>
+          <input class="form-control" id="editRoleName" disabled>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" id="editRoleDesc" rows="2"></textarea>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Assign Permissions</label>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0 modern-table">
+              <thead class="table-light">
+                <tr>
+                  <th class="table_header_theme">Select</th>
+                  <th class="table_header_theme">Label</th>
+                  <th class="table_header_theme">Module</th>
+                  <th class="table_header_theme">Action</th>
+                </tr>
+              </thead>
+              <tbody id="editPermissionTableBody">
+                <tr th:each="p : ${permissions}">
+                  <td>
+                    <input type="checkbox" class="form-check-input perm-checkbox" th:attr="data-id=${p.id}">
+                  </td>
+                  <td th:text="${p.label}">Label</td>
+                  <td th:text="${p.resource}">module</td>
+                  <td th:text="${p.action}">VIEW</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="app-modal-footer">
+        <button class="btn btn-outline-secondary" id="cancelEditRoleBtn">Cancel</button>
+        <button class="btn btn-primary-theme" id="saveRoleBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-modal" id="roleDeleteModal" aria-hidden="true">
+    <div class="app-modal-card">
+      <div class="app-modal-header">
+        <h5 class="mb-0">Delete Role</h5>
+        <button type="button" class="btn-close" id="closeDeleteRoleModal"></button>
+      </div>
+      <div class="app-modal-body">
+        <div class="text-muted">Delete this role? This cannot be undone.</div>
+        <input type="hidden" id="deleteRoleName">
+      </div>
+      <div class="app-modal-footer">
+        <button class="btn btn-outline-secondary" id="cancelDeleteRoleBtn">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteRoleBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%, 0% 0%; }
+      50% { background-position: 100% 50%, 0% 0%; }
+      100% { background-position: 0% 50%, 0% 0%; }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.1) inset; }
+      50% { box-shadow: 0 20px 40px rgba(15,23,42,.35), 0 0 0 1px rgba(255,255,255,0.16) inset; }
+    }
+
+    @keyframes orbitFloat {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+      50% { transform: translate(-40px, 30px) scale(1.05); opacity: 0.85; }
+      100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+    }
+
+    @keyframes orbitFloatReverse {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+      50% { transform: translate(30px, -20px) scale(1.06); opacity: 0.85; }
+      100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+    }
+
+    @keyframes shimmerLine {
+      0%, 100% { opacity: 0.7; transform: scaleX(0.9); }
+      50% { opacity: 1; transform: scaleX(1.1); }
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, #3b3070 0%, #7a6cb0 100%);
+      background-size: 400% 400%, 100% 100%;
+      color: #ffffff;
+      border-radius: var(--radius-xl);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      animation: gradientFlow 15s ease-in-out infinite, pulseGlow 6s ease-in-out infinite;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.1) inset;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #221b44 0%, #7a6cb0 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      top: -200px;
+      right: -200px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 30%, transparent 70%);
+      border-radius: 50%;
+      animation: orbitFloat 20s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hero-content::before {
+      content: "";
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      bottom: -250px;
+      left: -150px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.12) 35%, transparent 65%);
+      border-radius: 50%;
+      animation: orbitFloatReverse 25s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hero-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 2;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 32px;
+      height: 3px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.4));
+      border-radius: 2px;
+      animation: shimmerLine 2.5s ease-in-out infinite;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      transform-origin: left;
+    }
+
+    .eyebrow::after {
+      content: "●";
+      font-size: 0.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      animation: shimmerLine 2.5s ease-in-out infinite reverse;
+    }
+
+    .hero-title {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      margin: 0;
+      position: relative;
+      z-index: 1;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: white;
+      background-clip: text;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+    }
+
+    .hero-subtitle {
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 0.98rem;
+      position: relative;
+      z-index: 1;
+      margin-top: 8px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      line-height: 1.6;
+    }
+
+    .app-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 1200;
+      padding: 24px;
+    }
+    .app-modal.show { display: flex; }
+    .app-modal-card {
+      background: #fff;
+      border-radius: 16px;
+      width: min(780px, 92vw);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22);
+      overflow: hidden;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .app-modal-header,
+    .app-modal-footer {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e7e9f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .app-modal-footer {
+      border-top: 1px solid #e7e9f0;
+      border-bottom: none;
+      justify-content: flex-end;
+    }
+    .app-modal-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+  </style>
+
+  <script th:inline="javascript">
+    const canEditUserMgmt = /*[[${canEditUserMgmt}]]*/ false;
+    const roleTableBody = document.getElementById('roleTableBody');
+    const moduleLabelMap = {
+      "dashboard": 'Dashboard',
+      "admission-list": 'All Admission Page',
+      admissionlist: 'All Admission Page',
+      newadmission: 'New Admission Page',
+      'fees-ledger': 'Fees Module',
+    };
+
+    const getModuleLabel = (moduleName) => {
+      if (!moduleName) return '-';
+      if (moduleLabelMap[moduleName]) return moduleLabelMap[moduleName];
+      return moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
+    };
+
+    function updatePermissionModuleLabels() {
+      ['createPermissionTableBody', 'editPermissionTableBody'].forEach((tableId) => {
+        document.querySelectorAll(`#${tableId} tr`).forEach((row) => {
+          const moduleCell = row.querySelector('td:nth-child(3)');
+          if (!moduleCell) return;
+          moduleCell.textContent = getModuleLabel(moduleCell.textContent.trim());
+        });
+      });
+    }
+
+    function fetchRoles() {
+      fetch('/api/user-management/roles')
+        .then(r => r.ok ? r.json() : [])
+        .then(data => renderRoleTable(data || []));
+    }
+
+    function renderRoleTable(list) {
+      const search = document.getElementById('roleSearchInput')?.value?.trim().toLowerCase() || '';
+      const filtered = list.filter(r => {
+        if (!search) return true;
+        return (r.name || '').toLowerCase().includes(search)
+          || (r.description || '').toLowerCase().includes(search);
+      });
+
+      if (!roleTableBody) return;
+      if (!filtered.length) {
+        const colspan = canEditUserMgmt ? 3 : 2;
+        roleTableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4 text-muted">No roles found.</td></tr>`;
+        return;
+      }
+
+      roleTableBody.innerHTML = filtered.map(r => `
+        <tr>
+          <td>${r.name || '-'}</td>
+          <td>${r.description || '-'}</td>
+          ${canEditUserMgmt ? `<td class="text-end">
+            <button class="btn btn-outline-secondary btn-sm me-2" data-edit-role="${r.name}">Edit</button>
+            <button class="btn btn-outline-danger btn-sm" data-delete-role="${r.name}">Delete</button>
+          </td>` : ''}
+        </tr>
+      `).join('');
+    }
+
+    function getSelectedPermissionIds(containerId) {
+      const ids = [];
+      document.querySelectorAll(`#${containerId} .perm-checkbox`).forEach(cb => {
+        if (cb.checked) ids.push(Number(cb.dataset.id));
+      });
+      return ids;
+    }
+
+    function setPermissionCheckboxes(containerId, selectedIds) {
+      document.querySelectorAll(`#${containerId} .perm-checkbox`).forEach(cb => {
+        cb.checked = selectedIds.includes(Number(cb.dataset.id));
+      });
+    }
+
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('show');
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.remove('show');
+    }
+
+    document.getElementById('openCreateRoleBtn')?.addEventListener('click', () => {
+      document.getElementById('roleNameInput').value = '';
+      document.getElementById('roleDescInput').value = '';
+      setPermissionCheckboxes('createPermissionTableBody', []);
+      openModal('roleCreateModal');
+    });
+
+    document.getElementById('closeCreateRoleModal')?.addEventListener('click', () => closeModal('roleCreateModal'));
+    document.getElementById('cancelCreateRoleBtn')?.addEventListener('click', () => closeModal('roleCreateModal'));
+    document.getElementById('closeEditRoleModal')?.addEventListener('click', () => closeModal('roleEditModal'));
+    document.getElementById('cancelEditRoleBtn')?.addEventListener('click', () => closeModal('roleEditModal'));
+    document.getElementById('closeDeleteRoleModal')?.addEventListener('click', () => closeModal('roleDeleteModal'));
+    document.getElementById('cancelDeleteRoleBtn')?.addEventListener('click', () => closeModal('roleDeleteModal'));
+
+    document.getElementById('createRoleBtn')?.addEventListener('click', () => {
+      const name = document.getElementById('roleNameInput')?.value?.trim();
+      const description = document.getElementById('roleDescInput')?.value?.trim();
+      if (!name) return alert('Role name required.');
+      const permissionIds = getSelectedPermissionIds('createPermissionTableBody');
+      fetch('/api/user-management/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description })
+      }).then(r => {
+        if (!r.ok) return r.text().then(t => alert(t));
+        if (!permissionIds.length) {
+          closeModal('roleCreateModal');
+          return fetchRoles();
+        }
+        return fetch(`/api/user-management/role-permissions/${name}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(permissionIds)
+        }).then(res => {
+          if (!res.ok) return res.text().then(t => alert(t));
+          closeModal('roleCreateModal');
+          fetchRoles();
+        });
+      });
+    });
+
+    roleTableBody?.addEventListener('click', (event) => {
+      if (!canEditUserMgmt) return;
+      const editRole = event.target?.getAttribute('data-edit-role');
+      const deleteRole = event.target?.getAttribute('data-delete-role');
+
+      if (editRole) {
+        document.getElementById('editRoleName').value = editRole;
+        fetch('/api/user-management/roles')
+          .then(r => r.ok ? r.json() : [])
+          .then(list => {
+            const role = list.find(r => r.name === editRole);
+            document.getElementById('editRoleDesc').value = role?.description || '';
+          });
+        fetch(`/api/user-management/role-permissions/${editRole}`)
+          .then(r => r.ok ? r.json() : [])
+          .then(ids => setPermissionCheckboxes('editPermissionTableBody', ids || []));
+        openModal('roleEditModal');
+      }
+
+      if (deleteRole) {
+        document.getElementById('deleteRoleName').value = deleteRole;
+        openModal('roleDeleteModal');
+      }
+    });
+
+    document.getElementById('saveRoleBtn')?.addEventListener('click', () => {
+      const roleName = document.getElementById('editRoleName')?.value;
+      if (!roleName) return;
+      const description = document.getElementById('editRoleDesc')?.value?.trim();
+      const permissionIds = getSelectedPermissionIds('editPermissionTableBody');
+      fetch(`/api/user-management/roles/${roleName}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description })
+      }).then(r => {
+        if (!r.ok) return r.text().then(t => alert(t));
+        return fetch(`/api/user-management/role-permissions/${roleName}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(permissionIds)
+        }).then(res => {
+          if (!res.ok) return res.text().then(t => alert(t));
+          closeModal('roleEditModal');
+          fetchRoles();
+        });
+      });
+    });
+
+    document.getElementById('confirmDeleteRoleBtn')?.addEventListener('click', () => {
+      const roleName = document.getElementById('deleteRoleName')?.value;
+      if (!roleName) return;
+      fetch(`/api/user-management/roles/${roleName}`, { method: 'DELETE' })
+        .then(r => r.ok ? (closeModal('roleDeleteModal'), fetchRoles()) : r.text().then(t => alert(t)));
+    });
+
+    document.getElementById('roleSearchInput')?.addEventListener('input', () => {
+      fetch('/api/user-management/roles')
+        .then(r => r.ok ? r.json() : [])
+        .then(data => renderRoleTable(data || []));
+    });
+
+    updatePermissionModuleLabels();
+    fetchRoles();
+  </script>
+</body>
+</html>

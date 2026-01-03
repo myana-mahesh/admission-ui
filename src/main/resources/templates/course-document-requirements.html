@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar"
+      th:with="canEditCourseDocuments=${isSuperAdmin} or ${#lists.contains(permissionSet,'course-documents:EDIT')}">
+<div th:replace="fragments/sidebar :: app_sidebar(active=${active})"></div>
+<div class="app-main-wrap">
+  <div class="container-xl py-3 max-width-100">
+    <div class="hero-card mb-4">
+      <div class="hero-content">
+        <div>
+          <div class="eyebrow">COURSE DOCUMENTS</div>
+          <h2 class="hero-title">Course Document Requirements</h2>
+          <div class="hero-subtitle">Define mandatory and optional documents by course.</div>
+        </div>
+        <div class="hero-actions" th:if="${canEditCourseDocuments}">
+          <button class="btn btn-primary-theme btn-sm" type="button" id="openCreateBtn">
+            Add Requirement
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+          <tr>
+            <th class="table_header_theme" style="width: 70px;">#</th>
+            <th class="table_header_theme">Course</th>
+            <th class="table_header_theme">Document Type</th>
+            <th class="table_header_theme" style="width: 140px;">Requirement</th>
+            <th class="table_header_theme" style="width: 180px;" th:if="${canEditCourseDocuments}">Actions</th>
+          </tr>
+          </thead>
+          <tbody id="requirementTableBody">
+          <tr>
+            <td th:attr="colspan=${canEditCourseDocuments} ? 5 : 4"
+                class="text-center text-muted py-4">Loading requirements...</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="requirementModal" tabindex="-1" aria-labelledby="requirementModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="requirementModalTitle">Add Requirement</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editingId" value="">
+        <div class="mb-3">
+          <label class="form-label">Course</label>
+          <select class="form-select" id="courseSelect">
+            <option value="">Select course</option>
+            <option th:each="c : ${courses}" th:value="${c.courseId}" th:text="${c.name}">Course</option>
+          </select>
+          <div class="invalid-feedback">Course is required.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Document Type</label>
+          <div class="modern-multiselect" id="docTypeMultiSelect">
+            <div class="multiselect-trigger">
+              <div class="multiselect-tags" id="docTypeTags">
+                <span class="multiselect-placeholder">Select document types...</span>
+              </div>
+              <i class="bi bi-chevron-down multiselect-arrow"></i>
+            </div>
+            <div class="multiselect-dropdown">
+              <div class="multiselect-option" th:each="d : ${docTypes}"
+                   th:attr="data-value=${d.id},data-label=${d.name}">
+                <input type="checkbox" th:id="${'docType-' + d.id}">
+                <label th:for="${'docType-' + d.id}" th:text="${d.name + ' (' + d.code + ')'}">Document</label>
+              </div>
+            </div>
+          </div>
+          <select class="form-select d-none" id="docTypeSelect" multiple>
+            <option th:each="d : ${docTypes}" th:value="${d.id}" th:text="${d.name}">Document</option>
+          </select>
+          <div class="invalid-feedback d-block" id="docTypeValidation" style="display:none;">Document type is required.</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <input class="form-check-input mt-0" type="checkbox" id="optionalToggle">
+          <label class="form-check-label" for="optionalToggle">Optional document</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary-theme" id="saveBtn" th:if="${canEditCourseDocuments}">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .hero-card {
+    background: linear-gradient(135deg, #3b3070 0%, #7a6cb0 100%);
+    color: #f8fafc;
+    border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 16px 30px rgba(15,23,42,.25);
+  }
+  .hero-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    font-size: .7rem;
+    color: rgba(248,250,252,.7);
+    margin-bottom: 6px;
+  }
+  .hero-title {
+    font-family: "Space Grotesk", "Segoe UI", sans-serif;
+    font-weight: 600;
+    margin: 0;
+  }
+  .hero-subtitle { color: rgba(226,232,240,.8); }
+
+  .modern-multiselect {
+    position: relative;
+    width: 100%;
+  }
+  .multiselect-trigger {
+    background: var(--surface, #fff);
+    border: 2px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    padding: 8px 14px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 8px;
+  }
+  .multiselect-trigger:hover {
+    border-color: #3b3070;
+  }
+  .modern-multiselect.active .multiselect-trigger {
+    border-color: #3b3070;
+    box-shadow: 0 0 0 4px rgba(59, 48, 112, 0.12);
+  }
+  .multiselect-tags {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .multiselect-placeholder {
+    color: #64748b;
+    font-size: 0.9rem;
+  }
+  .multiselect-tag {
+    background: linear-gradient(135deg, #3b3070 0%, #7a6cb0 100%);
+    color: white;
+    padding: 4px 8px 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .multiselect-tag-remove {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    font-size: 0.7rem;
+  }
+  .multiselect-arrow {
+    color: #64748b;
+    font-size: 0.9rem;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+  .modern-multiselect.active .multiselect-arrow {
+    transform: rotate(180deg);
+  }
+  .multiselect-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 18px 30px rgba(15, 23, 42, 0.15);
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+  }
+  .modern-multiselect.active .multiselect-dropdown {
+    display: block;
+  }
+  .multiselect-option {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .multiselect-option:last-child {
+    border-bottom: none;
+  }
+  .multiselect-option:hover {
+    background: #f8fafc;
+  }
+  .multiselect-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 0;
+    accent-color: #3b3070;
+  }
+  .multiselect-option label {
+    flex: 1;
+    cursor: pointer;
+    margin: 0;
+    font-size: 0.9rem;
+    color: #0f172a;
+    font-weight: 500;
+  }
+  .multiselect-option input[type="checkbox"]:checked + label {
+    color: #3b3070;
+    font-weight: 600;
+  }
+</style>
+
+<script th:inline="javascript">
+  const canEditCourseDocuments = /*[[${canEditCourseDocuments}]]*/ false;
+  const API_BASE = '/course-documents/master';
+  let editingId = null;
+  let editingContext = null;
+
+  const modalEl = document.getElementById('requirementModal');
+  const modal = new bootstrap.Modal(modalEl);
+  const courseSelect = document.getElementById('courseSelect');
+  const docTypeSelect = document.getElementById('docTypeSelect');
+  const docTypeMultiSelect = document.getElementById('docTypeMultiSelect');
+  const docTypeTags = document.getElementById('docTypeTags');
+  const docTypeValidation = document.getElementById('docTypeValidation');
+  const optionalToggle = document.getElementById('optionalToggle');
+  const modalTitle = document.getElementById('requirementModalTitle');
+
+  function resetForm() {
+    editingId = null;
+    editingContext = null;
+    document.getElementById('editingId').value = '';
+    courseSelect.value = '';
+    docTypeSelect.value = '';
+    optionalToggle.checked = false;
+    courseSelect.classList.remove('is-invalid');
+    docTypeSelect.classList.remove('is-invalid');
+    docTypeValidation.style.display = 'none';
+    modalTitle.textContent = 'Add Requirement';
+    setDocTypeSelections([]);
+  }
+
+  function openCreate() {
+    if (!canEditCourseDocuments) {
+      return;
+    }
+    resetForm();
+    modal.show();
+  }
+
+  function openEdit(item) {
+    if (!canEditCourseDocuments) {
+      return;
+    }
+    editingId = item.editId;
+    editingContext = item;
+    document.getElementById('editingId').value = item.editId || '';
+    courseSelect.value = item.courseId || '';
+    docTypeSelect.value = '';
+    optionalToggle.checked = !!item.optional;
+    courseSelect.classList.remove('is-invalid');
+    docTypeSelect.classList.remove('is-invalid');
+    docTypeValidation.style.display = 'none';
+    modalTitle.textContent = 'Edit Requirement';
+    setDocTypeSelections(item.docTypeIds || []);
+    modal.show();
+  }
+
+  function renderTable(items) {
+    const tbody = document.getElementById('requirementTableBody');
+    tbody.innerHTML = '';
+    if (!items.length) {
+      const colspan = canEditCourseDocuments ? 5 : 4;
+      tbody.innerHTML = `<tr><td colspan="${colspan}" class="text-center text-muted py-4">No requirements found.</td></tr>`;
+      return;
+    }
+    const grouped = new Map();
+    items.forEach(item => {
+      const courseId = item.courseId;
+      if (!grouped.has(courseId)) {
+        grouped.set(courseId, {
+          courseId,
+          courseName: item.courseName || '',
+          docTypeIds: [],
+          docTypeLabels: [],
+          optionalFlags: [],
+          editId: item.id,
+          requirementIds: [],
+          requirementByDocType: {}
+        });
+      }
+      const entry = grouped.get(courseId);
+      entry.docTypeIds.push(String(item.docTypeId));
+      entry.docTypeLabels.push({
+        name: item.docTypeName || '',
+        optional: !!item.optional
+      });
+      entry.optionalFlags.push(!!item.optional);
+      entry.requirementIds.push(item.id);
+      entry.requirementByDocType[String(item.docTypeId)] = item.id;
+      if (!entry.editId) {
+        entry.editId = item.id;
+      }
+    });
+    const rows = Array.from(grouped.values());
+    rows.forEach((item, idx) => {
+      const allOptional = item.optionalFlags.every(Boolean);
+      const anyOptional = item.optionalFlags.some(Boolean);
+      item.optional = allOptional;
+      const requirementLabel = allOptional ? 'Optional' : anyOptional ? 'Mixed' : 'Mandatory';
+      const docList = item.docTypeLabels.map(doc => {
+        const suffix = doc.optional ? ' (Optional)' : '';
+        return `${doc.name}${suffix}`;
+      }).join(', ');
+      const actionsCell = canEditCourseDocuments ? `
+        <td>
+          <button class="btn btn-sm btn-outline-primary btn-edit" data-id="${item.editId || ''}">Edit</button>
+          <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${item.editId || ''}">Delete</button>
+        </td>
+      ` : '';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${item.courseName || ''}</td>
+        <td>${docList}</td>
+        <td>${requirementLabel}</td>
+        ${actionsCell}
+      `;
+      if (canEditCourseDocuments) {
+        tr.querySelector('.btn-edit').addEventListener('click', () => openEdit(item));
+        tr.querySelector('.btn-delete').addEventListener('click', () => deleteItem(item.requirementIds));
+      }
+      tbody.appendChild(tr);
+    });
+  }
+
+  function loadItems() {
+    fetch(API_BASE)
+      .then(r => r.json())
+      .then(data => renderTable(data || []))
+      .catch(() => {
+        const tbody = document.getElementById('requirementTableBody');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Failed to load requirements.</td></tr>';
+      });
+  }
+
+  function saveItem() {
+    if (!canEditCourseDocuments) {
+      return;
+    }
+    const courseId = courseSelect.value ? Number(courseSelect.value) : null;
+    const selectedDocTypeIds = getSelectedDocTypeIds();
+    const optional = optionalToggle.checked;
+    const hasCourse = !!courseId;
+    const hasDocType = selectedDocTypeIds.length > 0;
+    courseSelect.classList.toggle('is-invalid', !hasCourse);
+    docTypeSelect.classList.toggle('is-invalid', !hasDocType);
+    docTypeValidation.style.display = hasDocType ? 'none' : 'block';
+    if (!hasCourse || !hasDocType) {
+      return;
+    }
+
+    if (editingId) {
+      const existingMap = (editingContext && editingContext.requirementByDocType) ? editingContext.requirementByDocType : {};
+      const existingDocTypeIds = Object.keys(existingMap);
+      const toCreate = selectedDocTypeIds.filter(id => !existingDocTypeIds.includes(id));
+      const toDelete = existingDocTypeIds.filter(id => !selectedDocTypeIds.includes(id));
+      const toUpdate = selectedDocTypeIds.filter(id => existingDocTypeIds.includes(id));
+
+      const updatePromises = toUpdate.map((id) => {
+        const reqId = existingMap[id];
+        return fetch(`${API_BASE}/${reqId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ courseId, docTypeId: Number(id), optional })
+        });
+      });
+      const createPromises = toCreate.map((id) => fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId, docTypeId: Number(id), optional })
+      }));
+      const deletePromises = toDelete.map((id) => {
+        const reqId = existingMap[id];
+        return fetch(`${API_BASE}/${reqId}`, { method: 'DELETE' });
+      });
+
+      Promise.allSettled([...updatePromises, ...createPromises, ...deletePromises])
+        .then((results) => {
+          const hasErrors = results.some(r => r.status === 'rejected' || (r.value && !r.value.ok));
+          modal.hide();
+          loadItems();
+          if (hasErrors) {
+            alert('Some requirements could not be saved.');
+          }
+        });
+      return;
+    }
+
+    const createPromises = selectedDocTypeIds.map((id) => fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courseId, docTypeId: Number(id), optional })
+    }));
+    Promise.allSettled(createPromises)
+      .then((results) => {
+        const hasErrors = results.some(r => r.status === 'rejected' || (r.value && !r.value.ok));
+        modal.hide();
+        loadItems();
+        if (hasErrors) {
+          alert('Some requirements could not be saved (duplicates may exist).');
+        }
+      });
+  }
+
+  function deleteItem(ids) {
+    if (!canEditCourseDocuments) {
+      return;
+    }
+    if (!confirm('Delete this requirement?')) {
+      return;
+    }
+    const idList = Array.isArray(ids) ? ids : [ids];
+    const deletePromises = idList.map((id) => fetch(`${API_BASE}/${id}`, { method: 'DELETE' }));
+    Promise.allSettled(deletePromises)
+      .then((results) => {
+        const hasErrors = results.some(r => r.status === 'rejected' || (r.value && !r.value.ok));
+        loadItems();
+        if (hasErrors) {
+          alert('Some requirements could not be deleted.');
+        }
+      });
+  }
+
+  if (canEditCourseDocuments) {
+    document.getElementById('openCreateBtn').addEventListener('click', openCreate);
+    document.getElementById('saveBtn').addEventListener('click', saveItem);
+  }
+  document.addEventListener('DOMContentLoaded', loadItems);
+
+  function initDocTypeMultiSelect() {
+    if (!docTypeMultiSelect) {
+      return;
+    }
+    const trigger = docTypeMultiSelect.querySelector('.multiselect-trigger');
+    const options = docTypeMultiSelect.querySelectorAll('.multiselect-option');
+    const optionMeta = new Map();
+    let selectedValues = [];
+
+    options.forEach(option => {
+      optionMeta.set(option.dataset.value, option.dataset.label || option.textContent.trim());
+    });
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      docTypeMultiSelect.classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!docTypeMultiSelect.contains(e.target)) {
+        docTypeMultiSelect.classList.remove('active');
+      }
+    });
+
+    options.forEach(option => {
+      const checkbox = option.querySelector('input[type="checkbox"]');
+      const value = option.dataset.value;
+
+      option.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'INPUT') {
+          checkbox.checked = !checkbox.checked;
+        }
+        updateSelection(value, checkbox.checked);
+      });
+
+      checkbox.addEventListener('change', (e) => {
+        updateSelection(value, e.target.checked);
+      });
+    });
+
+    function updateSelection(value, isChecked) {
+      if (isChecked && !selectedValues.includes(value)) {
+        selectedValues.push(value);
+      } else if (!isChecked && selectedValues.includes(value)) {
+        selectedValues = selectedValues.filter(v => v !== value);
+      }
+      renderTags();
+      updateHiddenSelect();
+    }
+
+    function renderTags() {
+      docTypeTags.innerHTML = '';
+      if (selectedValues.length === 0) {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'multiselect-placeholder';
+        placeholder.textContent = 'Select document types...';
+        docTypeTags.appendChild(placeholder);
+        return;
+      }
+      selectedValues.forEach(value => {
+        const tag = document.createElement('span');
+        tag.className = 'multiselect-tag';
+        const label = optionMeta.get(value) || value;
+        tag.innerHTML = `
+          ${label}
+          <span class="multiselect-tag-remove" data-value="${value}">×</span>
+        `;
+        tag.querySelector('.multiselect-tag-remove').addEventListener('click', (e) => {
+          e.stopPropagation();
+          const valueToRemove = e.target.dataset.value;
+          const checkbox = docTypeMultiSelect.querySelector(`[data-value="${valueToRemove}"] input`);
+          if (checkbox) checkbox.checked = false;
+          updateSelection(valueToRemove, false);
+        });
+        docTypeTags.appendChild(tag);
+      });
+    }
+
+    function updateHiddenSelect() {
+      Array.from(docTypeSelect.options).forEach(opt => opt.selected = false);
+      selectedValues.forEach(value => {
+        const option = Array.from(docTypeSelect.options).find(opt => opt.value === value);
+        if (option) option.selected = true;
+      });
+    }
+
+    window.getSelectedDocTypeIds = function () {
+      return selectedValues.slice();
+    };
+
+    window.setDocTypeSelections = function (values) {
+      selectedValues = [];
+      options.forEach(option => {
+        const checkbox = option.querySelector('input[type="checkbox"]');
+        const value = option.dataset.value;
+        checkbox.checked = values.includes(value);
+        if (values.includes(value)) {
+          selectedValues.push(value);
+        }
+      });
+      renderTags();
+      updateHiddenSelect();
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', initDocTypeMultiSelect);
+</script>
+</body>
+</html>

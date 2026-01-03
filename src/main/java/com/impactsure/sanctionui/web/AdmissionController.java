@@ -17,18 +17,25 @@ import org.springframework.web.bind.annotation.*;
 import com.impactsure.sanctionui.entities.Admission2;
 import com.impactsure.sanctionui.entities.Student;
 import com.impactsure.sanctionui.service.impl.AdmissionApiClientService;
+import com.impactsure.sanctionui.service.impl.FileStorageService;
 import com.impactsure.sanctionui.service.impl.StudentApiClientService;
+import com.impactsure.sanctionui.utils.HashUtil;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -48,6 +55,9 @@ public class AdmissionController {
 
 	@Autowired
 	private  StudentDocumentVerificationService documentService;
+
+	@Autowired
+	private FileStorageService fileStorageService;
 
 	@Value("${upload.base-dir}")
 	private String uploadBaseDir;
@@ -87,6 +97,7 @@ public class AdmissionController {
 				    .mobile(admissionReq.getMobile())
 				    .absId(admissionReq.getAbsId())
 				    .addressLine1(admissionReq.getAddressLine1())
+				    .area(admissionReq.getArea())
 				    .city(admissionReq.getCity())
 				    .state(admissionReq.getState())
 				    .pincode(admissionReq.getPincode())
@@ -95,6 +106,7 @@ public class AdmissionController {
 				    .motherName(admissionReq.getMotherName())
 				    .motherMobile(admissionReq.getMotherMobile())
 				    .course(admissionReq.getCourse())
+				    .courseCode(admissionReq.getCourse())
 					.bloodGroup(admissionReq.getBloodGroup())
 				    .studendId(studenId)
 					.sscDetails(admissionReq.getSscDetails())
@@ -102,6 +114,7 @@ public class AdmissionController {
 					.batch(admissionReq.getBatch())
 					.registrationNumber(admissionReq.getRegistrationNumber())
 					.age(admissionReq.getAge())
+					.otherPayments(admissionReq.getOtherPayments())
 					//.courseCode(admissionReq.getCourse())
 					///.academicYearLabel("2025-2026")
 				    .build();
@@ -140,18 +153,62 @@ public class AdmissionController {
 						.build();
 				
 				Admission2 result = admissionApiClientService.createAdmission(createAdmissionReq,accessToken);
-		        return ResponseEntity.ok(result);
+		        return ResponseEntity.ok(Map.of(
+		        		"admissionId", result != null ? result.getAdmissionId() : null,
+		        		"studentId", student != null ? student.getStudentId() : null
+		        ));
 			} catch (Exception e) {
-				// TODO: handle exception
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+						.body(Map.of("message", toUserMessage(e, admissionReq)));
 			}
 			
 		}catch (Exception e) {
 			log.error("error calling student create API");
 			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Map.of("message", toUserMessage(e, admissionReq)));
 		}
 		
 
-		return new ResponseEntity<Student>(student,HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
+	private String toUserMessage(Exception e, AdmissionRequestFromUI admissionReq) {
+		String msg = e != null && e.getMessage() != null ? e.getMessage() : "Unable to save student data.";
+		String lower = msg.toLowerCase();
+		if (lower.contains("duplicate entry")) {
+			String dupValue = extractDuplicateValue(msg);
+			String reg = admissionReq != null ? admissionReq.getRegistrationNumber() : null;
+			String aadhaar = admissionReq != null ? admissionReq.getAadhaar() : null;
+			if (dupValue != null) {
+				if (reg != null && reg.equals(dupValue)) {
+					return "This registration number is already used.";
+				}
+				if (aadhaar != null && aadhaar.equals(dupValue)) {
+					return "Invalid Aadhaar number.";
+				}
+			}
+		}
+		if (lower.contains("aadhaar") || lower.contains("aadhar")) {
+			return "Invalid Aadhaar number.";
+		}
+		if (lower.contains("registration_number") || lower.contains("registration number")) {
+			return "This registration number is already used.";
+		}
+		if (lower.contains("blood_group")) {
+			return "Invalid blood group.";
+		}
+		if (lower.contains("data truncation") || lower.contains("data too long")) {
+			return "Some fields are too long. Please shorten the input.";
+		}
+		return msg;
+	}
+
+	private String extractDuplicateValue(String message) {
+		if (message == null) {
+			return null;
+		}
+		Matcher matcher = Pattern.compile("Duplicate entry '([^']+)'").matcher(message);
+		return matcher.find() ? matcher.group(1) : null;
 	}
 	
 	
@@ -168,6 +225,102 @@ public class AdmissionController {
 		}
 
 		return new ResponseEntity<Admission2>(admisison, HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
+	@PostMapping("/branch-approve")
+	public ResponseEntity<Admission2> approveByBranch(
+			@RequestParam Long id,
+			@AuthenticationPrincipal OidcUser oidcUser
+	) {
+		String actor = oidcUser != null ? oidcUser.getFullName() : null;
+		try {
+			Admission2 admission = admissionApiClientService.approveByBranch(id, actor);
+			return new ResponseEntity<>(admission, HttpStatus.OK);
+		} catch (Exception e) {
+			log.error("Failed to approve admission {} by branch", id, e);
+			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	@PostMapping(
+			value = "/installments/partial-payment",
+			consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+	)
+	@ResponseBody
+	public ResponseEntity<?> applyPartialPayment(
+			@RequestParam Long admissionId,
+			@RequestParam BigDecimal amount,
+			@RequestParam String mode,
+			@RequestParam(required = false) String txnRef,
+			@RequestParam(required = false) String role,
+			@RequestPart(required = false) MultipartFile receipt,
+			@RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
+			@AuthenticationPrincipal OidcUser oidcUser
+	) {
+		String accessToken = client.getAccessToken().getTokenValue();
+		String receivedBy = oidcUser != null ? oidcUser.getFullName() : null;
+
+		UploadRequest receiptMeta = null;
+		if (receipt != null && !receipt.isEmpty()) {
+			try {
+				var stored = fileStorageService.store(admissionId, receipt);
+				String sha256;
+				try (InputStream in = Files.newInputStream(stored.path())) {
+					sha256 = HashUtil.sha256Hex(in);
+				}
+				receiptMeta = UploadRequest.builder()
+						.docTypeCode("RECEIPT")
+						.filename(receipt.getOriginalFilename())
+						.mimeType(receipt.getContentType())
+						.sizeBytes(Math.toIntExact(receipt.getSize()))
+						.storageUrl(stored.url())
+						.sha256(sha256)
+						.label("PARTIAL_RECEIPT")
+						.build();
+			} catch (Exception e) {
+				log.error("Failed to store partial payment receipt for admission {}", admissionId, e);
+				return new ResponseEntity<>("Receipt upload failed", HttpStatus.INTERNAL_SERVER_ERROR);
+			}
+		}
+
+		PartialPaymentRequest request = new PartialPaymentRequest();
+		request.setAmount(amount);
+		request.setMode(mode);
+		request.setTxnRef(txnRef);
+		request.setReceivedBy(receivedBy);
+		request.setReceipt(receiptMeta);
+
+		boolean ok = admissionApiClientService.applyPartialPayment(admissionId, request, role, accessToken);
+		if (!ok) {
+			return new ResponseEntity<>("Failed to apply payment", HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		return ResponseEntity.ok("Payment saved");
+	}
+
+	@GetMapping("/installments/{installmentId}/payments")
+	@ResponseBody
+	public ResponseEntity<?> getInstallmentPayments(
+			@PathVariable Long installmentId,
+			@RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client
+	) {
+		String accessToken = client.getAccessToken().getTokenValue();
+		return ResponseEntity.ok(admissionApiClientService.getInstallmentPayments(installmentId, accessToken));
+	}
+
+	@PostMapping("/installments/payments/{paymentId}/verify")
+	@ResponseBody
+	public ResponseEntity<?> verifyInstallmentPayment(
+			@PathVariable Long paymentId,
+			@RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
+			@AuthenticationPrincipal OidcUser oidcUser
+	) {
+		String accessToken = client.getAccessToken().getTokenValue();
+		String actor = oidcUser != null ? oidcUser.getFullName() : null;
+		boolean ok = admissionApiClientService.verifyInstallmentPayment(paymentId, actor, accessToken);
+		if (!ok) {
+			return new ResponseEntity<>("Failed to verify payment", HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		return ResponseEntity.ok("Verified");
 	}
 
 	@PostMapping("/cancel-admission")
@@ -297,6 +450,28 @@ public class AdmissionController {
 	) {
 		documentService.verifyDocument(admissionId, documentCode, user.getFullName());
 		return ResponseEntity.ok("Verified");
+	}
+
+	@PostMapping("/college-verification-verify")
+	public ResponseEntity<?> verifyCollege(
+			@RequestParam Long admissionId,
+			@RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
+			@AuthenticationPrincipal OidcUser user
+	) {
+		String accessToken = client.getAccessToken().getTokenValue();
+		admissionApiClientService.updateCollegeVerification(admissionId, "VERIFIED", user.getFullName(), accessToken);
+		return ResponseEntity.ok("Verified");
+	}
+
+	@PostMapping("/college-verification-reject")
+	public ResponseEntity<?> rejectCollege(
+			@RequestParam Long admissionId,
+			@RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient client,
+			@AuthenticationPrincipal OidcUser user
+	) {
+		String accessToken = client.getAccessToken().getTokenValue();
+		admissionApiClientService.updateCollegeVerification(admissionId, "REJECTED", user.getFullName(), accessToken);
+		return ResponseEntity.ok("Rejected");
 	}
 
 }

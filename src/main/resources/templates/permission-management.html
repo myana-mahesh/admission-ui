@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar"
+      th:with="canEditUserMgmt=${isSuperAdmin or #sets.contains(permissionSet,'user-management:EDIT')}">
+
+  <div th:replace="fragments/sidebar :: app_sidebar(active='permission-management')"></div>
+
+  <div class="app-main-wrap">
+    <div class="container-xl py-3 max-width-100">
+
+      <div class="hero-card mb-4 p-4">
+        <div class="hero-content">
+          <div>
+            <div class="eyebrow mb-0">Admin</div>
+            <h2 class="hero-title">Permission Management</h2>
+            <div class="hero-subtitle mt-0">Define permissions by module and action.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-card p-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+          <div>
+            <h5 class="mb-1">Permissions</h5>
+            <div class="text-muted small">Edit or remove existing permissions.</div>
+          </div>
+          <div class="d-flex gap-2">
+            <input class="form-control" id="permSearchInput" placeholder="Search permissions">
+            <button class="btn btn-primary-theme" id="openCreatePermissionBtn" th:if="${canEditUserMgmt}">Create Permission</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 modern-table">
+            <thead class="table-light">
+              <tr>
+                <th class="table_header_theme">Label</th>
+                <th class="table_header_theme">Module</th>
+                <th class="table_header_theme">Access</th>
+                <th class="table_header_theme" th:if="${canEditUserMgmt}">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="permissionTableBody">
+              <tr>
+                <td th:attr="colspan=${canEditUserMgmt} ? 4 : 3"
+                    class="text-center py-4 text-muted">Loading permissions…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="app-modal" id="permissionCreateModal" aria-hidden="true">
+    <div class="app-modal-card">
+      <div class="app-modal-header">
+        <h5 class="mb-0">Create Permission</h5>
+        <button type="button" class="btn-close" id="closeCreateModal"></button>
+      </div>
+      <div class="app-modal-body">
+        <div class="mb-3">
+          <label class="form-label">Permission name</label>
+          <input class="form-control" id="permNameInput" placeholder="e.g. Fee Ledger">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Module</label>
+          <select class="form-select" id="permModuleInput">
+            <option value="">Select module</option>
+            <option th:each="m : ${permissionModules}" th:value="${m}" th:text="${m}">module</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label d-block">Actions</label>
+          <div class="d-flex flex-wrap gap-3 pt-1">
+            <label class="form-check">
+              <input class="form-check-input" type="checkbox" id="permViewInput" checked>
+              <span class="form-check-label">View</span>
+            </label>
+            <label class="form-check">
+              <input class="form-check-input" type="checkbox" id="permEditInput">
+              <span class="form-check-label">Edit</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="app-modal-footer">
+        <button class="btn btn-outline-secondary" id="cancelCreateBtn">Cancel</button>
+        <button class="btn btn-primary-theme" id="createPermissionBtn">Create Permission</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-modal" id="permissionEditModal" aria-hidden="true">
+    <div class="app-modal-card">
+      <div class="app-modal-header">
+        <h5 class="mb-0">Edit Permission</h5>
+        <button type="button" class="btn-close" id="closeEditModal"></button>
+      </div>
+      <div class="app-modal-body">
+        <input type="hidden" id="editPermId">
+        <div class="mb-3">
+          <label class="form-label">Label</label>
+          <input class="form-control" id="editPermLabel">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Module</label>
+          <select class="form-select" id="editPermModule">
+            <option th:each="m : ${permissionModules}" th:value="${m}" th:text="${m}">module</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Action</label>
+          <select class="form-select" id="editPermAction">
+            <option value="VIEW">VIEW</option>
+            <option value="EDIT">EDIT</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" id="editPermDesc" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="app-modal-footer">
+        <button class="btn btn-outline-secondary" id="cancelEditBtn">Cancel</button>
+        <button class="btn btn-primary-theme" id="saveEditBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-modal" id="permissionDeleteModal" aria-hidden="true">
+    <div class="app-modal-card">
+      <div class="app-modal-header">
+        <h5 class="mb-0">Delete Permission</h5>
+        <button type="button" class="btn-close" id="closeDeleteModal"></button>
+      </div>
+      <div class="app-modal-body">
+        <div class="text-muted">Delete this permission? This cannot be undone.</div>
+        <input type="hidden" id="deletePermId">
+      </div>
+      <div class="app-modal-footer">
+        <button class="btn btn-outline-secondary" id="cancelDeleteBtn">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%, 0% 0%; }
+      50% { background-position: 100% 50%, 0% 0%; }
+      100% { background-position: 0% 50%, 0% 0%; }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.1) inset; }
+      50% { box-shadow: 0 20px 40px rgba(15,23,42,.35), 0 0 0 1px rgba(255,255,255,0.16) inset; }
+    }
+
+    @keyframes orbitFloat {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+      50% { transform: translate(-40px, 30px) scale(1.05); opacity: 0.85; }
+      100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+    }
+
+    @keyframes orbitFloatReverse {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+      50% { transform: translate(30px, -20px) scale(1.06); opacity: 0.85; }
+      100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+    }
+
+    @keyframes shimmerLine {
+      0%, 100% { opacity: 0.7; transform: scaleX(0.9); }
+      50% { opacity: 1; transform: scaleX(1.1); }
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, #3b3070 0%, #7a6cb0 100%);
+      background-size: 400% 400%, 100% 100%;
+      color: #ffffff;
+      border-radius: var(--radius-xl);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      animation: gradientFlow 15s ease-in-out infinite, pulseGlow 6s ease-in-out infinite;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.1) inset;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #221b44 0%, #7a6cb0 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      top: -200px;
+      right: -200px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 30%, transparent 70%);
+      border-radius: 50%;
+      animation: orbitFloat 20s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hero-content::before {
+      content: "";
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      bottom: -250px;
+      left: -150px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.12) 35%, transparent 65%);
+      border-radius: 50%;
+      animation: orbitFloatReverse 25s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hero-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 2;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 32px;
+      height: 3px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.4));
+      border-radius: 2px;
+      animation: shimmerLine 2.5s ease-in-out infinite;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      transform-origin: left;
+    }
+
+    .eyebrow::after {
+      content: "●";
+      font-size: 0.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      animation: shimmerLine 2.5s ease-in-out infinite reverse;
+    }
+
+    .hero-title {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      margin: 0;
+      position: relative;
+      z-index: 1;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: white;
+      background-clip: text;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+    }
+
+    .hero-subtitle {
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 0.98rem;
+      position: relative;
+      z-index: 1;
+      margin-top: 8px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      line-height: 1.6;
+    }
+
+    .app-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 1200;
+      padding: 24px;
+    }
+    .app-modal.show { display: flex; }
+    .app-modal-card {
+      background: #fff;
+      border-radius: 16px;
+      width: min(520px, 92vw);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22);
+      overflow: hidden;
+    }
+    .app-modal-header,
+    .app-modal-footer {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e7e9f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .app-modal-footer {
+      border-top: 1px solid #e7e9f0;
+      border-bottom: none;
+      justify-content: flex-end;
+    }
+    .app-modal-body { padding: 18px 20px; }
+  </style>
+
+  <script th:inline="javascript">
+    const canEditUserMgmt = /*[[${canEditUserMgmt}]]*/ false;
+    const permissionTableBody = document.getElementById('permissionTableBody');
+    const moduleLabelMap = {
+      "dashboard": 'Dashboard',
+      "admission-list": 'All Admission Page',
+      "newadmission": 'New Admission Page',
+      'fees-ledger': 'Fees Module',
+    };
+
+    const getModuleLabel = (moduleName) => {
+      if (!moduleName) return '-';
+      if (moduleLabelMap[moduleName]) return moduleLabelMap[moduleName];
+      return moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
+    };
+
+    function updateModuleSelectLabels(selectEl) {
+      if (!selectEl) return;
+      Array.from(selectEl.options).forEach(optionEl => {
+        optionEl.textContent = getModuleLabel(optionEl.value);
+      });
+    }
+
+    function fetchPermissions() {
+      fetch('/api/user-management/permissions')
+        .then(r => r.ok ? r.json() : [])
+        .then(data => renderPermissionTable(data || []));
+    }
+
+    function renderPermissionTable(list) {
+      const search = document.getElementById('permSearchInput')?.value?.trim().toLowerCase() || '';
+      const filtered = list.filter(p => {
+        if (!search) return true;
+        return (p.code || '').toLowerCase().includes(search)
+          || (p.label || '').toLowerCase().includes(search)
+          || (p.resource || '').toLowerCase().includes(search)
+          || (p.action || '').toLowerCase().includes(search);
+      });
+
+      if (!permissionTableBody) return;
+      if (!filtered.length) {
+          const colspan = canEditUserMgmt ? 4 : 3;
+          permissionTableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4 text-muted">No permissions found.</td></tr>`;
+        return;
+      }
+      permissionTableBody.innerHTML = filtered.map(p => {
+        const actionsCell = canEditUserMgmt
+          ? `<td class="text-end">
+              <button class="btn btn-outline-secondary btn-sm me-2" data-edit-id="${p.id}">Edit</button>
+              <button class="btn btn-outline-danger btn-sm" data-delete-id="${p.id}">Delete</button>
+             </td>`
+          : '';
+
+        return `
+          <tr>
+            <td>${p.label || '-'}</td>
+            <td>${getModuleLabel(p.resource)}</td>
+            <td>${p.action || '-'}</td>
+            ${actionsCell}
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('show');
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.remove('show');
+    }
+
+    document.getElementById('openCreatePermissionBtn')?.addEventListener('click', () => {
+      openModal('permissionCreateModal');
+    });
+
+    document.getElementById('closeCreateModal')?.addEventListener('click', () => closeModal('permissionCreateModal'));
+    document.getElementById('cancelCreateBtn')?.addEventListener('click', () => closeModal('permissionCreateModal'));
+
+    document.getElementById('createPermissionBtn')?.addEventListener('click', () => {
+      const payload = {
+        name: document.getElementById('permNameInput')?.value?.trim(),
+        module: document.getElementById('permModuleInput')?.value,
+        view: document.getElementById('permViewInput')?.checked,
+        edit: document.getElementById('permEditInput')?.checked
+      };
+      if (!payload.name) return alert('Permission name required.');
+      if (!payload.module) return alert('Select a module.');
+      if (!payload.view && !payload.edit) return alert('Select at least one action.');
+
+      fetch('/api/user-management/permissions/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(r => r.ok ? (closeModal('permissionCreateModal'), fetchPermissions()) : r.text().then(t => alert(t)));
+    });
+
+    document.getElementById('permSearchInput')?.addEventListener('input', () => {
+      fetch('/api/user-management/permissions')
+        .then(r => r.ok ? r.json() : [])
+        .then(data => renderPermissionTable(data || []));
+    });
+
+    permissionTableBody?.addEventListener('click', (event) => {
+      if (!canEditUserMgmt) {
+        return;
+      }
+      const editId = event.target?.getAttribute('data-edit-id');
+      const deleteId = event.target?.getAttribute('data-delete-id');
+
+      if (editId) {
+        fetch('/api/user-management/permissions')
+          .then(r => r.ok ? r.json() : [])
+          .then(list => {
+            const perm = list.find(p => String(p.id) === String(editId));
+            if (!perm) return;
+            document.getElementById('editPermId').value = perm.id;
+            document.getElementById('editPermLabel').value = perm.label || '';
+            document.getElementById('editPermModule').value = perm.resource || '';
+            document.getElementById('editPermAction').value = perm.action || 'VIEW';
+            document.getElementById('editPermDesc').value = perm.description || '';
+            openModal('permissionEditModal');
+          });
+      }
+
+      if (deleteId) {
+        document.getElementById('deletePermId').value = deleteId;
+        openModal('permissionDeleteModal');
+      }
+    });
+
+    document.getElementById('closeEditModal')?.addEventListener('click', () => closeModal('permissionEditModal'));
+    document.getElementById('cancelEditBtn')?.addEventListener('click', () => closeModal('permissionEditModal'));
+    document.getElementById('closeDeleteModal')?.addEventListener('click', () => closeModal('permissionDeleteModal'));
+    document.getElementById('cancelDeleteBtn')?.addEventListener('click', () => closeModal('permissionDeleteModal'));
+
+    document.getElementById('saveEditBtn')?.addEventListener('click', () => {
+      const id = document.getElementById('editPermId')?.value;
+      if (!id) return;
+      const payload = {
+        label: document.getElementById('editPermLabel')?.value?.trim(),
+        resource: document.getElementById('editPermModule')?.value,
+        action: document.getElementById('editPermAction')?.value,
+        description: document.getElementById('editPermDesc')?.value?.trim()
+      };
+      fetch(`/api/user-management/permissions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(r => r.ok ? (closeModal('permissionEditModal'), fetchPermissions()) : r.text().then(t => alert(t)));
+    });
+
+    document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => {
+      const id = document.getElementById('deletePermId')?.value;
+      if (!id) return;
+      fetch(`/api/user-management/permissions/${id}`, { method: 'DELETE' })
+        .then(r => r.ok ? (closeModal('permissionDeleteModal'), fetchPermissions()) : r.text().then(t => alert(t)));
+    });
+
+    updateModuleSelectLabels(document.getElementById('permModuleInput'));
+    updateModuleSelectLabels(document.getElementById('editPermModule'));
+    fetchPermissions();
+  </script>
+</body>
+</html>

@@ -21,7 +21,9 @@
     </div>
 
     <div class="container-xl my-4 max-width-100">
-      <form id="admissionForm" class="app-card">
+      <form id="admissionForm" class="app-card"
+            th:with="canEditNewAdmission=${isSuperAdmin or #sets.contains(permissionSet,'newadmission:EDIT')}"
+            th:attr="data-readonly=${!canEditNewAdmission}">
 
         <!-- Header -->
         <div class="glass-header p-4">
@@ -46,21 +48,21 @@
           <div class="row g-3 mt-2">
             <div class="col-md-4 d-none">
               <div class="form-floating">
-                <input type="text" class="form-control student-details" id="formNo" placeholder=" ">
+                <input type="text" class="form-control student-details" id="formNo" placeholder=" " readonly disabled>
                 <label for="formNo">Form No.</label>
                 <div class="invalid-feedback small"></div>
               </div>
             </div>
             <div class="col-md-4 d-none">
               <div class="form-floating">
-                <input type="date" class="form-control student-details" id="formDate" placeholder=" ">
+                <input type="date" class="form-control student-details" id="formDate" placeholder=" " readonly disabled>
                 <label for="formDate">Date</label>
                 <div class="invalid-feedback small"></div>
               </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 d-none">
               <div class="form-floating">
-                <input type="text" class="form-control student-details" id="absId" placeholder="">
+                <input type="text" class="form-control student-details" id="absId" placeholder="" readonly disabled>
                 <label for="absId">ABS ID</label>
                 <div class="invalid-feedback small"></div>
               </div>
@@ -158,14 +160,24 @@
 
             <div class="col-md-3">
               <div class="form-floating">
-                <input type="text" class="form-control student-details" id="nationality" placeholder=" ">
+                <select class="form-select student-details" id="nationality">
+                  <option value="" selected></option>
+                  <option th:each="n : ${nationalities}"
+                          th:value="${n.name}"
+                          th:text="${n.name}"></option>
+                </select>
                 <label for="nationality">Nationality</label>
                 <div class="invalid-feedback small"></div>
               </div>
             </div>
             <div class="col-md-3">
               <div class="form-floating">
-                <input type="text" class="form-control student-details" id="religion" placeholder=" ">
+                <select class="form-select student-details" id="religion">
+                  <option value="" selected></option>
+                  <option th:each="r : ${religions}"
+                          th:value="${r.name}"
+                          th:text="${r.name}"></option>
+                </select>
                 <label for="religion">Religion</label>
                 <div class="invalid-feedback small"></div>
               </div>
@@ -192,11 +204,15 @@
 
             <div class="col-md-3">
               <div class="form-floating">
-                <input type="text"
-                       class="form-control student-details"
-                       name="batch"
-                       id="batch"
-                       placeholder=" ">
+                <select class="form-select student-details"
+                        name="batch"
+                        id="batch">
+                  <option value="" selected></option>
+                  <option th:each="b : ${batches}"
+                          th:value="${b.code}"
+                          th:text="${b.label != null ? b.label : b.code}">
+                  </option>
+                </select>
                 <label for="batch">Batch</label>
                 <div class="invalid-feedback small">
                   Batch is required.
@@ -223,6 +239,14 @@
               <div class="form-floating">
                 <textarea class="form-control student-details" id="addressLine1" style="height:100px" placeholder=" "></textarea>
                 <label for="addressLine1">Residential Address</label>
+                <div class="invalid-feedback small"></div>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-floating">
+                <input type="text" class="form-control student-details" id="area" placeholder=" ">
+                <label for="area">Area</label>
                 <div class="invalid-feedback small"></div>
               </div>
             </div>
@@ -324,7 +348,7 @@
               <div class="row g-3">
 
                 <!-- College -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <label class="form-label">College Name</label>
                   <input type="text"
                          id="hscCollege"
@@ -333,17 +357,28 @@
                 </div>
 
                 <!-- Subjects -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <label class="form-label">Subjects</label>
+                  <select id="hscSubjects"
+                          name="hscDetails.subjects"
+                          class="form-select">
+                    <option value="" selected></option>
+                    <option value="PCB">PCB</option>
+                    <option value="PCM">PCM</option>
+                  </select>
+                </div>
+
+                <!-- Registration Number -->
+                <div class="col-md-3">
+                  <label class="form-label">HSC Registration No.</label>
                   <input type="text"
-                         id="hscSubjects"
-                         name="hscDetails.subjects"
-                         class="form-control"
-                         placeholder="Physics, Chemistry, Biology">
+                         id="hscRegNo"
+                         name="hscDetails.registrationNumber"
+                         class="form-control">
                 </div>
 
                 <!-- Passing Year -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <label class="form-label">Passing Year</label>
                   <input type="number"
                          id="hscYear"
@@ -401,9 +436,50 @@
                          readonly>
                 </div>
 
+                <!-- HSC Percentage -->
+                <div class="col-md-3">
+                  <label class="form-label">HSC Percentage</label>
+                  <input type="number"
+                         id="hscPercentage"
+                         name="hscDetails.percentage"
+                         class="form-control"
+                         min="0" max="100" step="0.01"
+                         placeholder="0 - 100">
+                </div>
+
               </div>
             </div>
 
+          </div>
+        </div>
+
+        <!-- ============ STUDENT PERKS ============ -->
+        <div class="section px-2 mt-4">
+          <div class="title mb-2">
+            <span class="dot"></span><h5 class="mb-0">Student Perks</h5>
+          </div>
+
+          <p class="help mb-2">
+            Tick the perks applicable to this student
+          </p>
+
+          <div class="row g-2" th:if="${perksList != null}">
+            <div class="col-md-3 col-sm-4 col-6"
+                 th:each="perk : ${perksList}">
+              <div class="form-check">
+                <input class="form-check-input student-perk-checkbox"
+                       type="checkbox"
+                       th:id="${'perk_' + perk.id}"
+                       th:value="${perk.id}">
+                <label class="form-check-label"
+                       th:for="${'perk_' + perk.id}"
+                       th:text="${perk.name}">Perk Name</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-muted small" th:if="${perksList == null or #lists.isEmpty(perksList)}">
+            No perks configured yet. Please add perks in Student Perks Master.
           </div>
         </div>
 
@@ -420,6 +496,7 @@
                 </select>
                 <label for="collegeId">Selected College</label>
                 <div class="invalid-feedback small"></div>
+                <div class="form-text text-muted">College selection will be under verification until HO approves.</div>
               </div>
             </div>
 
@@ -431,6 +508,7 @@
                 </select>
                 <label for="course">Selected Course</label>
                 <div class="invalid-feedback small"></div>
+                <div class="form-text text-muted" id="seatInfo"></div>
               </div>
             </div>
 
@@ -617,7 +695,7 @@
 
             <div class="col-md-8 d-flex gap-2">
               <button class="btn btn-primary-theme" type="button" id="evenSplitBtn">Evenly split</button>
-              <button class="btn btn-primary-theme" type="button" id="addInstallmentBtn">Add New Installment</button>
+              <button class="btn btn-primary-theme" type="button" id="addInstallmentBtn" th:if="${canEditNewAdmission}">Add New Installment</button>
             </div>
           </div>
 
@@ -703,9 +781,193 @@
             <div class="row g-3" id="otherDocsContainer"></div>
 
             <div class="mt-3">
-              <button type="button" class="btn btn-outline-secondary btn-sm" id="addOtherDocBtn">
-                <i class="bi bi-plus-circle"></i> Add Other Document
-              </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="addOtherDocBtn" th:if="${canEditNewAdmission}">
+                  <i class="bi bi-plus-circle"></i> Add Other Document
+                </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hidden Admission Id -->
+        <input type="hidden" id="admissionId" value="" />
+
+        <!-- =================== DOCUMENT CHECKLIST =================== -->
+        <div class="section px-2 mt-4">
+          <div class="title mb-2">
+            <span class="dot bg-warning"></span>
+            <h5 class="mb-0">Document Checklist</h5>
+          </div>
+          <div class="text-muted small mb-2">Save the admission to enable verification.</div>
+
+          <div class="row g-3">
+
+            <!-- ================= 10th Marksheet ================= -->
+            <div class="col-md-6 checklist-item pending">
+              <label class="form-label fw-semibold">10th Marksheet</label>
+              <div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[SSC10]" value="XEROX">
+                  <label class="form-check-label text-danger">Xerox</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[SSC10]" value="ORIGINAL">
+                  <label class="form-check-label text-danger">Original</label>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO'}" data-doc="SSC10">Verify</button>
+              </div>
+            </div>
+
+            <!-- ================= 12th Marksheet ================= -->
+            <div class="col-md-6 checklist-item pending">
+              <label class="form-label fw-semibold">12th Marksheet</label>
+              <div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[HSC12]" value="XEROX">
+                  <label class="form-check-label text-danger">Xerox</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[HSC12]" value="ORIGINAL">
+                  <label class="form-check-label text-danger">Original</label>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO'}" data-doc="HSC12">Verify</button>
+              </div>
+            </div>
+
+            <!-- ================= Leaving Certificate ================= -->
+            <div class="col-md-6 checklist-item pending">
+              <label class="form-label fw-semibold">Leaving Certificate / Transfer Certificate</label>
+              <div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[LC]" value="XEROX">
+                  <label class="form-check-label text-danger">Xerox</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[LC]" value="ORIGINAL">
+                  <label class="form-check-label text-danger">Original</label>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO'}" data-doc="LC">Verify</button>
+              </div>
+            </div>
+
+            <!-- ================= Migration Certificate ================= -->
+            <div class="col-md-6 checklist-item pending">
+              <label class="form-label fw-semibold">Migration Certificate</label>
+              <div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[MIG]" value="XEROX">
+                  <label class="form-check-label text-danger">Xerox</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[MIG]" value="ORIGINAL">
+                  <label class="form-check-label text-danger">Original</label>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO'}" data-doc="MIG">Verify</button>
+              </div>
+            </div>
+
+            <!-- ================= Aadhaar ================= -->
+            <div class="col-md-6 checklist-item pending">
+              <label class="form-label fw-semibold">Aadhaar Card</label>
+              <div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[AADHAAR]" value="XEROX">
+                  <label class="form-check-label text-danger">Xerox</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[AADHAAR]" value="ORIGINAL">
+                  <label class="form-check-label text-danger">Original</label>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO'}" data-doc="AADHAAR">Verify</button>
+              </div>
+            </div>
+
+            <!-- ================= Photo ================= -->
+            <div class="col-md-6 checklist-item pending">
+              <label class="form-label fw-semibold">Passport Size Photo</label>
+              <div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input doc-radio"
+                         type="radio" name="docType[PHOTO]" value="ORIGINAL">
+                  <label class="form-check-label text-danger">Original</label>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                        th:if="${role == 'HO'}" data-doc="PHOTO">Verify</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- =================== OTHER PAYMENTS =================== -->
+        <div class="section px-2 mt-4" th:if="${otherPaymentFields != null}">
+          <div class="title mb-2">
+            <span class="dot"></span>
+            <h5 class="mb-0">Other Payments</h5>
+          </div>
+          <div class="row g-3">
+            <div th:each="field : ${otherPaymentFields}"
+                 th:classappend="${field.inputType == 'textarea'} ? ' col-12' : ' col-md-4'"
+                 class="other-payment-field"
+                 th:attr="data-other-payment-field=true,data-field-id=${field.id},data-input-type=${field.inputType},data-required=${field.required}">
+              <label class="form-label fw-semibold">
+                <span th:text="${field.label}">Field</span>
+                <span th:if="${field.required}" class="text-danger">*</span>
+              </label>
+              <div th:switch="${field.inputType}">
+                <input th:case="'text'" type="text" class="form-control other-payment-input"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+                <input th:case="'number'" type="number" class="form-control other-payment-input"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+                <input th:case="'date'" type="date" class="form-control other-payment-input"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+                <input th:case="'email'" type="email" class="form-control other-payment-input"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+                <input th:case="'tel'" type="tel" class="form-control other-payment-input"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+                <textarea th:case="'textarea'" class="form-control other-payment-input" rows="3"
+                          th:attr="data-field-id=${field.id},data-input-type=${field.inputType}"></textarea>
+                <select th:case="'select'" class="form-select other-payment-input"
+                        th:attr="data-field-id=${field.id},data-input-type=${field.inputType}">
+                  <option value="">Select</option>
+                  <option th:each="opt : ${field.options}"
+                          th:value="${opt.id}"
+                          th:attr="data-option-value=${opt.value}"
+                          th:text="${opt.label}">
+                    Option
+                  </option>
+                </select>
+                <div th:case="'checkbox'" class="d-flex flex-wrap gap-2">
+                  <div class="form-check" th:each="opt : ${field.options}">
+                    <input class="form-check-input other-payment-input" type="checkbox"
+                           th:attr="data-field-id=${field.id},data-input-type=${field.inputType},data-option-id=${opt.id},data-option-value=${opt.value}">
+                    <label class="form-check-label" th:text="${opt.label}">Option</label>
+                  </div>
+                </div>
+                <div th:case="'radio'" class="d-flex flex-wrap gap-2">
+                  <div class="form-check" th:each="opt : ${field.options}">
+                    <input class="form-check-input other-payment-input" type="radio"
+                           th:attr="name=${'other_payment_' + field.id},data-field-id=${field.id},data-input-type=${field.inputType},data-option-id=${opt.id},data-option-value=${opt.value}">
+                    <label class="form-check-label" th:text="${opt.label}">Option</label>
+                  </div>
+                </div>
+                <input th:case="*" type="text" class="form-control other-payment-input"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+              </div>
             </div>
           </div>
         </div>
@@ -747,12 +1009,46 @@
 
         <!-- Submit -->
         <div class="submit-zone p-4 text-center">
-          <button class="btn btn-primary-theme" type="button" id="submit_admission_form">
+          <button class="btn btn-primary-theme" type="button" id="submit_admission_form" th:if="${canEditNewAdmission}">
             <i class="bi bi-check2-circle me-1"></i> Submit
           </button>
         </div>
 
       </form>
+
+      <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          const form = document.getElementById('admissionForm');
+          if (!form || form.dataset.readonly !== 'true') {
+            return;
+          }
+          form.querySelectorAll('input, select, textarea').forEach((field) => {
+            if (field.type === 'hidden') {
+              return;
+            }
+            field.setAttribute('disabled', 'disabled');
+          });
+        });
+      </script>
+    </div>
+  </div>
+
+  <!-- Save status modal -->
+  <div class="modal fade save-status-modal" id="admissionSaveStatusModal" tabindex="-1" aria-labelledby="admissionSaveStatusTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="admissionSaveStatusTitle">Save Status</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert mb-3" id="admissionSaveStatusAlert" role="alert"></div>
+          <p class="mb-0 text-muted" id="admissionSaveStatusDesc"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary-theme" data-bs-dismiss="modal" id="admissionSaveStatusClose">OK</button>
+        </div>
+      </div>
     </div>
   </div>
 

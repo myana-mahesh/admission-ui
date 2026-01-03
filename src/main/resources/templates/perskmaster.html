@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="fragments/html-header :: common_head"></head>
-<body class="theme-light has-sidebar">
+<body class="theme-light has-sidebar" th:with="canEditPerks=${isSuperAdmin or #sets.contains(permissionSet,'student-perks:EDIT')}">
 
 <!-- Sidebar -->
 <div th:replace="fragments/sidebar :: app_sidebar('perks-master')"></div>
@@ -53,11 +53,11 @@
           </div>
 
           <div class="col-md-6 d-flex gap-2">
-            <button class="btn btn-primary-theme" type="button" id="savePerkBtn">
+            <button class="btn btn-primary-theme" type="button" id="savePerkBtn" th:if="${canEditPerks}">
               <i class="bi bi-check2-circle me-1"></i>
               <span id="savePerkBtnLabel">Add Perk</span>
             </button>
-            <button class="btn btn-outline-secondary d-none" type="button" id="cancelEditBtn">
+            <button class="btn btn-outline-secondary d-none" type="button" id="cancelEditBtn" th:if="${canEditPerks}">
               Cancel Edit
             </button>
           </div>
@@ -71,6 +71,28 @@
       <div class="section px-2 mt-4">
         <div class="title mb-2">
           <span class="dot"></span><h5 class="mb-0">All Perks</h5>
+        </div>
+
+        <div id="perkDeleteModal" class="status-modal" aria-hidden="true">
+          <div class="status-modal-card">
+            <div class="status-modal-icon" id="perkDeleteModalIcon">!</div>
+            <div class="status-modal-title" id="perkDeleteModalTitle">Status</div>
+            <div class="status-modal-message" id="perkDeleteModalMessage"></div>
+            <div class="status-modal-actions">
+              <button type="button" class="btn btn-primary-theme" id="perkDeleteModalClose">OK</button>
+            </div>
+          </div>
+        </div>
+        <div id="perkConfirmModal" class="status-modal" aria-hidden="true">
+          <div class="status-modal-card">
+            <div class="status-modal-icon" id="perkConfirmModalIcon">?</div>
+            <div class="status-modal-title" id="perkConfirmModalTitle">Confirm Delete</div>
+            <div class="status-modal-message" id="perkConfirmModalMessage"></div>
+            <div class="status-modal-actions">
+              <button type="button" class="btn btn-outline-secondary" id="perkConfirmCancel">Cancel</button>
+              <button type="button" class="btn btn-primary-theme" id="perkConfirmOk">Delete</button>
+            </div>
+          </div>
         </div>
 
         <div class="table-responsive mt-2">
@@ -101,6 +123,7 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 <script th:inline="javascript">
+  const canEditPerks = /*[[${canEditPerks}]]*/ false;
   // Base URL for your UI service that proxies to admission-service.
   // Adjust if needed.
   const PERKS_API_BASE = /*[[${perksApiBaseUrl}]]*/ '/perks/master';
@@ -140,9 +163,7 @@
     $("#perksTableBody").on("click", ".btn-delete-perk", function () {
       const id = $(this).data("id");
       const name = $(this).data("name");
-      if (confirm("Are you sure you want to delete perk: " + name + "?")) {
-        deletePerk(id);
-      }
+      openPerkConfirmModal(`Delete ${name}? This cannot be undone.`, () => deletePerk(id, name));
     });
   });
 
@@ -195,13 +216,7 @@
       const createdAt = perk.createdAt ? perk.createdAt.replace('T', ' ').substring(0, 19) : '';
       const updatedAt = perk.updatedAt ? perk.updatedAt.replace('T', ' ').substring(0, 19) : '';
 
-      const row = `
-        <tr>
-          <td>${index + 1}</td>
-          <td>${perk.name || ''}</td>
-          <td>${createdAt}</td>
-          <td>${updatedAt}</td>
-          <td class="text-center">
+      const actions = canEditPerks ? `
             <button type="button"
                     class="btn btn-sm btn-outline-primary me-1 btn-edit-perk"
                     data-id="${perk.id}"
@@ -214,6 +229,16 @@
                     data-name="${perk.name}">
               Delete
             </button>
+          ` : `<span class="text-muted small">View only</span>`;
+
+      const row = `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${perk.name || ''}</td>
+          <td>${createdAt}</td>
+          <td>${updatedAt}</td>
+          <td class="text-center">
+            ${actions}
           </td>
         </tr>
       `;
@@ -257,12 +282,12 @@
     });
   }
 
-  function deletePerk(id) {
+  function deletePerk(id, name) {
     $.ajax({
       url: PERKS_API_BASE + "/" + id,
       type: "DELETE",
       success: function () {
-        alert("Perk deleted successfully.");
+        showPerkModal(`Deleted ${name || 'perk'} successfully.`, false);
         // If we were editing this one, reset the form
         if (editingPerkId === id) {
           resetForm();
@@ -271,13 +296,129 @@
       },
       error: function (xhr) {
         console.error("Error deleting perk:", xhr);
-        alert("Error deleting perk.");
+        const message = xhr && xhr.responseText
+          ? xhr.responseText
+          : "Unable to delete the perk.";
+        showPerkModal(message, true);
       }
     });
+  }
+
+  function showPerkModal(message, isError) {
+    const modal = document.getElementById('perkDeleteModal');
+    const modalIcon = document.getElementById('perkDeleteModalIcon');
+    const modalTitle = document.getElementById('perkDeleteModalTitle');
+    const modalMessage = document.getElementById('perkDeleteModalMessage');
+    if (!modal || !modalIcon || !modalTitle || !modalMessage) return;
+    modalIcon.classList.toggle('is-success', !isError);
+    modalTitle.textContent = isError ? 'Unable to delete perk' : 'Perk deleted';
+    modalMessage.textContent = message;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  (function () {
+    const modal = document.getElementById('perkDeleteModal');
+    const closeBtn = document.getElementById('perkDeleteModalClose');
+    if (!modal || !closeBtn) return;
+    const close = () => {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    };
+    closeBtn.addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) close();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close();
+    });
+  })();
+
+  function openPerkConfirmModal(message, onConfirm) {
+    const modal = document.getElementById('perkConfirmModal');
+    const msg = document.getElementById('perkConfirmModalMessage');
+    const okBtn = document.getElementById('perkConfirmOk');
+    const cancelBtn = document.getElementById('perkConfirmCancel');
+    if (!modal || !msg || !okBtn || !cancelBtn) return;
+    msg.textContent = message;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+
+    const close = () => {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      okBtn.removeEventListener('click', onConfirmHandler);
+    };
+    const onConfirmHandler = () => {
+      close();
+      if (typeof onConfirm === 'function') onConfirm();
+    };
+    okBtn.addEventListener('click', onConfirmHandler);
+    cancelBtn.addEventListener('click', close, { once: true });
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) close();
+    }, { once: true });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close();
+    }, { once: true });
   }
 </script>
 
 <style>
+  .status-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 2000;
+    padding: 24px;
+  }
+  .status-modal.is-open {
+    display: flex;
+  }
+  .status-modal-card {
+    width: min(420px, 92vw);
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+    text-align: center;
+  }
+  .status-modal-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+  .status-modal-icon.is-success {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .status-modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #0f172a;
+  }
+  .status-modal-message {
+    font-size: 0.92rem;
+    color: #475569;
+    margin-bottom: 16px;
+  }
+  .status-modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
   .app-card {
     background: #fff;
     border: 1px solid #e5e7eb;

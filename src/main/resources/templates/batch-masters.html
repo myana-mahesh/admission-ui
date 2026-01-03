@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar">
+
+<div th:replace="fragments/sidebar :: app_sidebar(active='batches')"></div>
+
+<div class="app-main-wrap" th:with="canEditBatches=${isSuperAdmin or #sets.contains(permissionSet,'batches:EDIT')}">
+    <div class="container-xl py-3 max-width-100">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h3 class="mb-0">Batch Master</h3>
+                <small class="text-muted">Create, edit and delete batches.</small>
+            </div>
+
+            <div>
+                <a class="btn btn-sm btn-primary-theme" href="javascript:void(0);" onclick="openCreateBatchModal()" th:if="${canEditBatches}">
+                    + Add New
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                <div id="batchDeleteModal" class="status-modal" aria-hidden="true">
+                    <div class="status-modal-card">
+                        <div class="status-modal-icon" id="batchDeleteModalIcon">!</div>
+                        <div class="status-modal-title" id="batchDeleteModalTitle">Status</div>
+                        <div class="status-modal-message" id="batchDeleteModalMessage"></div>
+                        <div class="status-modal-actions">
+                            <button type="button" class="btn btn-primary-theme" id="batchDeleteModalClose">OK</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="batchConfirmModal" class="status-modal" aria-hidden="true">
+                    <div class="status-modal-card">
+                        <div class="status-modal-icon" id="batchConfirmModalIcon">?</div>
+                        <div class="status-modal-title" id="batchConfirmModalTitle">Confirm Delete</div>
+                        <div class="status-modal-message" id="batchConfirmModalMessage"></div>
+                        <div class="status-modal-actions">
+                            <button type="button" class="btn btn-outline-secondary" id="batchConfirmCancel">Cancel</button>
+                            <button type="button" class="btn btn-primary-theme" id="batchConfirmOk">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="table_header_theme" style="width: 80px;">ID</th>
+                        <th class="table_header_theme">Code</th>
+                        <th class="table_header_theme">Label</th>
+                        <th class="table_header_theme" style="width: 120px;">Active</th>
+                        <th class="table_header_theme" style="width: 160px;" th:if="${canEditBatches}">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(batches)}">
+                        <td th:attr="colspan=${canEditBatches} ? 5 : 4" class="text-center text-muted py-3">
+                            No batches found.
+                        </td>
+                    </tr>
+                    <tr th:each="b : ${batches}">
+                        <td th:text="${b.batchId}">1</td>
+                        <td th:text="${b.code}">2025</td>
+                        <td th:text="${b.label}">2025-26</td>
+                        <td>
+                            <span th:if="${b.active}" class="badge bg-success">Yes</span>
+                            <span th:if="${!b.active}" class="badge bg-secondary">No</span>
+                        </td>
+                        <td th:if="${canEditBatches}">
+                            <div class="d-flex gap-1" th:if="${canEditBatches}">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary-theme"
+                                        th:attr="data-id=${b.batchId},
+                                                 data-code=${b.code},
+                                                 data-label=${b.label},
+                                                 data-active=${b.active}"
+                                        onclick="openEditBatchModal(this)">
+                                    Edit
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger batch-delete-btn"
+                                        th:attr="data-batch-id=${b.batchId},
+                                                 data-batch-label=${b.label}">
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="batchModal" tabindex="-1" aria-labelledby="batchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="batchModalTitle">Add New Batch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="batchForm" th:action="@{/batches/save}" th:object="${batch}" method="post">
+                    <input type="hidden" id="batchId" th:field="*{batchId}"/>
+
+                    <div class="mb-3">
+                        <label class="form-label">Code <span class="text-danger">*</span></label>
+                        <input type="text" id="batchCode" th:field="*{code}" class="form-control"
+                               placeholder="e.g. 2024, B1" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Label</label>
+                        <input type="text" id="batchLabel" th:field="*{label}" class="form-control"
+                               placeholder="e.g. 2024-25">
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox"
+                               id="batchActive" th:field="*{active}">
+                        <label class="form-check-label" for="batchActive">Active</label>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary-theme" >
+                            <span id="batchSubmitLabel">Save</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .status-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 2000;
+        padding: 24px;
+    }
+    .status-modal.is-open {
+        display: flex;
+    }
+    .status-modal-card {
+        width: min(420px, 92vw);
+        background: #fff;
+        border-radius: 18px;
+        padding: 22px 24px;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+        text-align: center;
+    }
+    .status-modal-icon {
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 12px;
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+    .status-modal-icon.is-success {
+        background: #dcfce7;
+        color: #166534;
+    }
+    .status-modal-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: #0f172a;
+    }
+    .status-modal-message {
+        font-size: 0.92rem;
+        color: #475569;
+        margin-bottom: 16px;
+    }
+    .status-modal-actions {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+</style>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+    function getBatchModalInstance() {
+        const modalEl = document.getElementById('batchModal');
+        return bootstrap.Modal.getOrCreateInstance(modalEl);
+    }
+
+    function openCreateBatchModal() {
+        const form = document.getElementById('batchForm');
+        if (form) {
+            form.reset();
+        }
+
+        const idField = document.getElementById('batchId');
+        const activeCheck = document.getElementById('batchActive');
+        const titleEl = document.getElementById('batchModalTitle');
+        const submitLabel = document.getElementById('batchSubmitLabel');
+
+        if (idField) idField.value = '';
+        if (activeCheck) activeCheck.checked = true;
+        if (titleEl) titleEl.textContent = 'Add New Batch';
+        if (submitLabel) submitLabel.textContent = 'Save';
+
+        getBatchModalInstance().show();
+    }
+
+    function openEditBatchModal(button) {
+        const id = button.getAttribute('data-id');
+        const code = button.getAttribute('data-code');
+        const label = button.getAttribute('data-label');
+        const activeStr = button.getAttribute('data-active');
+
+        const idField = document.getElementById('batchId');
+        const codeField = document.getElementById('batchCode');
+        const labelField = document.getElementById('batchLabel');
+        const activeCheck = document.getElementById('batchActive');
+        const titleEl = document.getElementById('batchModalTitle');
+        const submitLabel = document.getElementById('batchSubmitLabel');
+
+        if (idField) idField.value = id || '';
+        if (codeField) codeField.value = code || '';
+        if (labelField) labelField.value = label || '';
+        if (activeCheck) activeCheck.checked = (activeStr === 'true' || activeStr === 'TRUE');
+        if (titleEl) titleEl.textContent = 'Edit Batch';
+        if (submitLabel) submitLabel.textContent = 'Update';
+
+        getBatchModalInstance().show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var isEdit = /*[[${batch.batchId} != null]]*/ false;
+        if (isEdit) {
+            const titleEl = document.getElementById('batchModalTitle');
+            const submitLabel = document.getElementById('batchSubmitLabel');
+            if (titleEl) titleEl.textContent = 'Edit Batch';
+            if (submitLabel) submitLabel.textContent = 'Update';
+            getBatchModalInstance().show();
+        }
+    });
+
+    function showBatchModal(message, isError) {
+        const modal = document.getElementById('batchDeleteModal');
+        const modalIcon = document.getElementById('batchDeleteModalIcon');
+        const modalTitle = document.getElementById('batchDeleteModalTitle');
+        const modalMessage = document.getElementById('batchDeleteModalMessage');
+        if (!modal || !modalIcon || !modalTitle || !modalMessage) return;
+        modalIcon.classList.toggle('is-success', !isError);
+        modalTitle.textContent = isError ? 'Unable to delete batch' : 'Batch deleted';
+        modalMessage.textContent = message;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    (function () {
+        const modal = document.getElementById('batchDeleteModal');
+        const closeBtn = document.getElementById('batchDeleteModalClose');
+        if (!modal || !closeBtn) return;
+        const close = () => {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+        };
+        closeBtn.addEventListener('click', close);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') close();
+        });
+    })();
+
+    function openBatchConfirmModal(message, onConfirm) {
+        const modal = document.getElementById('batchConfirmModal');
+        const msg = document.getElementById('batchConfirmModalMessage');
+        const okBtn = document.getElementById('batchConfirmOk');
+        const cancelBtn = document.getElementById('batchConfirmCancel');
+        if (!modal || !msg || !okBtn || !cancelBtn) return;
+        msg.textContent = message;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+
+        const close = () => {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+            okBtn.removeEventListener('click', onConfirmHandler);
+        };
+        const onConfirmHandler = () => {
+            close();
+            if (typeof onConfirm === 'function') onConfirm();
+        };
+        okBtn.addEventListener('click', onConfirmHandler);
+        cancelBtn.addEventListener('click', close, { once: true });
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close();
+        }, { once: true });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') close();
+        }, { once: true });
+    }
+
+    function wireBatchDeleteButtons() {
+        document.querySelectorAll('.batch-delete-btn').forEach(btn => {
+            if (btn.dataset.bound) return;
+            btn.dataset.bound = 'true';
+            btn.addEventListener('click', () => {
+                const batchId = btn.getAttribute('data-batch-id');
+                const batchLabel = btn.getAttribute('data-batch-label') || 'this batch';
+                if (!batchId) return;
+                openBatchConfirmModal(`Delete ${batchLabel}? This cannot be undone.`, () => {
+                    fetch(`/batches/${batchId}`, { method: 'DELETE' })
+                        .then(async response => {
+                            if (response.ok) {
+                                const row = btn.closest('tr');
+                                if (row) row.remove();
+                                showBatchModal(`Deleted ${batchLabel} successfully.`, false);
+                                return;
+                            }
+                            const message = await response.text();
+                            const fallback = response.status === 409
+                                ? 'Cannot delete this batch because admissions already exist for it.'
+                                : 'Unable to delete the batch.';
+                            showBatchModal(message || fallback, true);
+                        })
+                        .catch(() => showBatchModal('Unable to delete the batch.', true));
+                });
+            });
+        });
+    }
+
+    wireBatchDeleteButtons();
+/*]]>*/
+</script>
+
+</body>
+</html>

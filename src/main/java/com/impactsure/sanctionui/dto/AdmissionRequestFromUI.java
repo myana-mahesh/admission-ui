@@ -1,6 +1,7 @@
 package com.impactsure.sanctionui.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import com.impactsure.sanctionui.entities.HscDetails;
 import com.impactsure.sanctionui.entities.SscDetailsRequest;
@@ -33,6 +34,7 @@ public class AdmissionRequestFromUI {
 	private String absId;
 	// Optional simple address fields for quick create
 	private String addressLine1;
+	private String area;
 	private String city;
 	private String state;
 	private String pincode;
@@ -69,6 +71,7 @@ public class AdmissionRequestFromUI {
 	private Long lectureBranchId;
 	private Long  admissionBranchId;
 	private Integer age;
+    private List<OtherPaymentFieldValueRequest> otherPayments;
 /*	private Long courseCode; // e.g., DPHARM
 	private String academicYearLabel; // e.g., 2025-26*/
 

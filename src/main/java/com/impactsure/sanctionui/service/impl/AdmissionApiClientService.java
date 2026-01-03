@@ -3,9 +3,13 @@ package com.impactsure.sanctionui.service.impl;
 import com.impactsure.sanctionui.dto.CancelAdmissionDTO;
 import com.impactsure.sanctionui.dto.CreateAdmissionRequest;
 import com.impactsure.sanctionui.dto.OfficeUpdateRequest;
+import com.impactsure.sanctionui.dto.PartialPaymentRequest;
+import com.impactsure.sanctionui.dto.FeeInstallmentPaymentDto;
 import com.impactsure.sanctionui.entities.Admission2;
 import com.impactsure.sanctionui.entities.FileUpload;
 import com.impactsure.sanctionui.enums.AdmissionStatus;
+import com.impactsure.sanctionui.enums.Gender;
+import com.impactsure.sanctionui.dto.OtherPaymentFilterDto;
 import com.impactsure.sanctionui.repository.Admission2Repository;
 import com.impactsure.sanctionui.repository.FileUploadRepository;
 
@@ -28,8 +32,17 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.batchEquals;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.admissionBranchIdIn;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.branchApproved;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.collegeIdEquals;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.courseIdIn;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.documentsReceived;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.genderEquals;
 import static com.impactsure.sanctionui.repository.AdmissionSpecifications.keywordLike;
 import static com.impactsure.sanctionui.repository.AdmissionSpecifications.statusIn;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.studentIdIn;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.yearIdEquals;
 
 @Service
 public class AdmissionApiClientService {
@@ -74,6 +87,28 @@ public class AdmissionApiClientService {
         // 5️⃣ Return response body
         return null;
     }
+
+    public Admission2 updateCollegeVerification(Long admissionId, String status, String actor, String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+        String url = admissionApiUrl + "/api/admissions/" + admissionId
+                + "/college-verification?status=" + status
+                + "&actor=" + java.net.URLEncoder.encode(actor, java.nio.charset.StandardCharsets.UTF_8);
+        try {
+            ResponseEntity<Admission2> response = restTemplate.postForEntity(
+                    url,
+                    requestEntity,
+                    Admission2.class
+            );
+            return response.getBody();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
     
     public Admission2 acknowledgeAdmission( Long id, String accessToken ) {
 
@@ -98,6 +133,68 @@ public class AdmissionApiClientService {
   
         return null;
     }
+
+    public boolean applyPartialPayment(Long admissionId, PartialPaymentRequest request, String role, String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<PartialPaymentRequest> requestEntity = new HttpEntity<>(request, headers);
+        String url = admissionApiUrl + "/api/admissions/" + admissionId + "/payments?role=" + role;
+        try {
+            ResponseEntity<Void> response = restTemplate.postForEntity(url, requestEntity, Void.class);
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public List<FeeInstallmentPaymentDto> getInstallmentPayments(Long installmentId, String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+        String url = admissionApiUrl + "/api/fee-installments/" + installmentId + "/payments";
+        try {
+            ResponseEntity<FeeInstallmentPaymentDto[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    requestEntity,
+                    FeeInstallmentPaymentDto[].class
+            );
+            FeeInstallmentPaymentDto[] body = response.getBody();
+            return body == null ? List.of() : Arrays.asList(body);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return List.of();
+        }
+    }
+
+    public boolean verifyInstallmentPayment(Long paymentId, String actor, String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+        String url = admissionApiUrl + "/api/fee-installments/payments/" + paymentId + "/verify";
+        if (actor != null && !actor.isBlank()) {
+            url += "?actor=" + java.net.URLEncoder.encode(actor, java.nio.charset.StandardCharsets.UTF_8);
+        }
+        try {
+            ResponseEntity<Void> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    requestEntity,
+                    Void.class
+            );
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
     
    
     public Page<Admission2> searchAdmissions(String q, String statusCsv, int page, int size) {
@@ -114,6 +211,67 @@ public class AdmissionApiClientService {
         Pageable pageable = PageRequest.of(pg, sz, sort);
 
         return admission2Repository.findAll(spec, pageable);
+    }
+
+    public Page<Admission2> searchAdmissionsFiltered(
+            String q,
+            String statusCsv,
+            int page,
+            int size,
+            Long collegeId,
+            List<Long> courseIds,
+            String batch,
+            Long yearId,
+            Gender gender,
+            List<Long> studentIds,
+            List<Long> admissionBranchIds,
+            Boolean branchApproved,
+            List<Long> docTypeIds,
+            Boolean docReceived,
+            List<OtherPaymentFilterDto> otherPaymentFilterList
+    ) {
+        int pg = Math.max(0, page);
+        int sz = Math.min(Math.max(1, size), 100);
+
+        List<AdmissionStatus> statuses = parseStatusesOrDefault(statusCsv);
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt", "admissionId");
+        Pageable pageable = PageRequest.of(pg, sz, sort);
+
+        if (studentIds != null && studentIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        Specification<Admission2> spec = Specification
+                .where(statusIn(statuses))
+                .and(keywordLike(q))
+                .and(collegeIdEquals(collegeId))
+                .and(courseIdIn(courseIds))
+                .and(batchEquals(batch))
+                .and(yearIdEquals(yearId))
+                .and(genderEquals(gender))
+                .and(studentIdIn(studentIds))
+                .and(admissionBranchIdIn(admissionBranchIds))
+                .and(branchApproved(branchApproved))
+                .and(documentsReceived(docTypeIds, docReceived))
+                .and(otherPaymentFiltersSpec(otherPaymentFilterList));
+
+        return admission2Repository.findAll(spec, pageable);
+    }
+
+    public Admission2 approveByBranch(Long id, String actor) {
+        Admission2 admission = getAdmissionById(id);
+        if (Boolean.TRUE.equals(admission.getBranchApproved())) {
+            return admission;
+        }
+        admission.setBranchApproved(true);
+        admission.setBranchApprovedBy(actor);
+        admission.setBranchApprovedAt(java.time.LocalDateTime.now());
+        return admission2Repository.save(admission);
+    }
+
+    private Specification<Admission2> otherPaymentFiltersSpec(List<OtherPaymentFilterDto> otherPaymentFilterList) {
+        return com.impactsure.sanctionui.repository.AdmissionSpecifications.otherPaymentFilters(otherPaymentFilterList);
     }
 
     private List<AdmissionStatus> parseStatusesOrDefault(String statusCsv) {

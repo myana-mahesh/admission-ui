@@ -5,7 +5,7 @@
 
 <div th:replace="fragments/sidebar :: app_sidebar(active='colleges')"></div>
 
-<div class="app-main-wrap">
+<div class="app-main-wrap" th:with="canEditColleges=${isSuperAdmin or #sets.contains(permissionSet,'colleges:EDIT')}">
     <div class="container-xl py-3 max-width-100">
 
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -43,7 +43,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h5 class="mb-0">Courses and Seat Capacity</h5>
                         <button type="button" class="btn btn-sm btn-outline-primary-theme"
-                                onclick="addCourseRow()">
+                                onclick="addCourseRow()" th:if="${canEditColleges}">
                             + Add Course
                         </button>
                     </div>
@@ -52,14 +52,15 @@
                         <table id="courseTable" class="table table-sm align-middle">
                             <thead class="table-light">
                             <tr>
-                                <th style="width: 55%;">Course</th>
-                                <th style="width: 25%;">Total Seats</th>
-                                <th style="width: 20%;">Action</th>
+                                <th style="width: 32%;">Course</th>
+                                <th style="width: 18%;">Total Seats</th>
+                                <th>Seat Layout</th>
+                                <th style="width: 10%;">Action</th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr th:each="cid, stat : ${collegeForm.courseIds}">
-                                <td>
+                                <td class="seat-layout-cell">
                                     <select class="form-select"
                                             th:name="'courseIds[' + ${stat.index} + ']'">
                                         <option value="">Select course</option>
@@ -76,8 +77,35 @@
                                            th:value="${collegeForm.totalSeats[stat.index]}"/>
                                 </td>
                                 <td>
+                                    <input type="number" class="form-control form-control-sm seat-remaining d-none" readonly
+                                           th:each="seat : ${collegeSeatMap}"
+                                           th:if="${seat.courseId == cid}"
+                                           th:value="${seat.remainingSeats}"/>
+                                    <input type="number" class="form-control form-control-sm seat-onhold d-none" readonly
+                                           th:each="seat : ${collegeSeatMap}"
+                                           th:if="${seat.courseId == cid}"
+                                           th:value="${seat.onHoldSeats}"/>
+                                    <input type="number" class="form-control form-control-sm seat-allocated d-none" readonly
+                                           th:each="seat : ${collegeSeatMap}"
+                                           th:if="${seat.courseId == cid}"
+                                           th:value="${seat.utilizedSeats}"/>
+                                    <input type="number" class="form-control form-control-sm seat-total d-none" readonly
+                                           th:each="seat : ${collegeSeatMap}"
+                                           th:if="${seat.courseId == cid}"
+                                           th:value="${seat.totalSeats}"/>
+                                    <div class="seat-grid" data-total="0" data-utilized="0" data-onhold="0">
+                                        <!-- JS renders seats -->
+                                    </div>
+                                    <div class="seat-legend">
+                                        <span class="seat-pill utilized">Utilized: <strong>0</strong></span>
+                                        <span class="seat-pill onhold">On Hold: <strong>0</strong></span>
+                                        <span class="seat-pill available">Available: <strong>0</strong></span>
+                                        <span class="seat-pill total">Total: <strong>0</strong></span>
+                                    </div>
+                                </td>
+                                <td>
                                     <button type="button" class="btn btn-sm btn-outline-danger"
-                                            onclick="removeRow(this)">
+                                            onclick="removeRow(this)" th:if="${canEditColleges}">
                                         Remove
                                     </button>
                                 </td>
@@ -87,7 +115,7 @@
                     </div>
 
                     <div class="d-flex justify-content-end gap-2">
-                        <button type="submit" class="btn btn-primary-theme">Save</button>
+                        <button type="submit" class="btn btn-primary-theme" th:if="${canEditColleges}">Save</button>
                         <a class="btn btn-outline-secondary" th:href="@{/colleges}">Cancel</a>
                     </div>
                 </form>
@@ -99,7 +127,7 @@
 
 <template id="courseRowTemplate">
     <tr>
-        <td>
+        <td class="seat-layout-cell">
             <select class="form-select" name="courseIds[__INDEX__]">
                 <option value="">Select course</option>
                 <option th:each="opt : ${courseOptions}"
@@ -111,6 +139,21 @@
         <td>
             <input type="number" class="form-control" min="0" name="totalSeats[__INDEX__]" value="0"/>
         </td>
+        <td class="seat-layout-cell">
+            <input type="number" class="form-control form-control-sm seat-remaining d-none" readonly value=""/>
+            <input type="number" class="form-control form-control-sm seat-onhold d-none" readonly value=""/>
+            <input type="number" class="form-control form-control-sm seat-allocated d-none" readonly value=""/>
+            <input type="number" class="form-control form-control-sm seat-total d-none" readonly value=""/>
+            <div class="seat-grid" data-total="0" data-utilized="0" data-onhold="0">
+                <!-- JS renders seats -->
+            </div>
+            <div class="seat-legend">
+                <span class="seat-pill utilized">Utilized: <strong>0</strong></span>
+                <span class="seat-pill onhold">On Hold: <strong>0</strong></span>
+                <span class="seat-pill available">Available: <strong>0</strong></span>
+                <span class="seat-pill total">Total: <strong>0</strong></span>
+            </div>
+        </td>
         <td>
             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)">
                 Remove
@@ -119,7 +162,71 @@
     </tr>
 </template>
 
-<script>
+<script th:inline="javascript">
+    const seatSummaryList = /*[[${collegeSeatMap}]]*/ [];
+    const seatSummaryMap = new Map();
+    (seatSummaryList || []).forEach(item => {
+        if (item && item.courseId != null) {
+            seatSummaryMap.set(String(item.courseId), item);
+        }
+    });
+
+    function renderSeatGrid(row, total, utilized, onHold, remaining) {
+        const grid = row.querySelector('.seat-grid');
+        const legend = row.querySelector('.seat-legend');
+        if (!grid || !legend) return;
+        const count = Math.max(0, total || 0);
+        grid.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const seat = document.createElement('span');
+            seat.className = 'seat available';
+            if (i < utilized) {
+                seat.className = 'seat utilized';
+            } else if (i < utilized + onHold) {
+                seat.className = 'seat onhold';
+            }
+            grid.appendChild(seat);
+        }
+        const pills = legend.querySelectorAll('.seat-pill strong');
+        if (pills.length >= 4) {
+            pills[0].textContent = utilized || 0;
+            pills[1].textContent = onHold || 0;
+            pills[2].textContent = remaining || 0;
+            pills[3].textContent = total || 0;
+        }
+    }
+
+    function updateSeatSummaryForRow(row) {
+        const select = row.querySelector('select');
+        const remainingEl = row.querySelector('.seat-remaining');
+        const onHoldEl = row.querySelector('.seat-onhold');
+        const allocatedEl = row.querySelector('.seat-allocated');
+        const totalEl = row.querySelector('.seat-total');
+        if (!select || !remainingEl || !onHoldEl || !allocatedEl || !totalEl) return;
+        const info = seatSummaryMap.get(String(select.value || ''));
+        if (!info) {
+            remainingEl.value = '';
+            onHoldEl.value = '';
+            allocatedEl.value = '';
+            totalEl.value = '';
+            renderSeatGrid(row, 0, 0, 0, 0);
+            return;
+        }
+        const remaining = info.remainingSeats ?? 0;
+        const onHold = info.onHoldSeats ?? 0;
+        const utilized = info.utilizedSeats ?? 0;
+        const total = info.totalSeats ?? 0;
+        remainingEl.value = remaining;
+        onHoldEl.value = onHold;
+        allocatedEl.value = utilized;
+        totalEl.value = total;
+        renderSeatGrid(row, total, utilized, onHold, remaining);
+    }
+
+    function refreshAllSeatSummaries() {
+        document.querySelectorAll('#courseTable tbody tr').forEach(updateSeatSummaryForRow);
+    }
+
     function addCourseRow() {
         const tbody = document.querySelector('#courseTable tbody');
         const index = tbody.querySelectorAll('tr').length;
@@ -127,7 +234,13 @@
         const html = template.innerHTML.replace(/__INDEX__/g, index);
         const wrapper = document.createElement('tbody');
         wrapper.innerHTML = html.trim();
-        tbody.appendChild(wrapper.firstElementChild);
+        const row = wrapper.firstElementChild;
+        tbody.appendChild(row);
+        const select = row.querySelector('select');
+        if (select) {
+            select.addEventListener('change', () => updateSeatSummaryForRow(row));
+        }
+        updateSeatSummaryForRow(row);
     }
 
     function removeRow(button) {
@@ -136,7 +249,69 @@
             row.remove();
         }
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('#courseTable tbody select').forEach(select => {
+            select.addEventListener('change', () => {
+                const row = select.closest('tr');
+                if (row) updateSeatSummaryForRow(row);
+            });
+        });
+        refreshAllSeatSummaries();
+    });
 </script>
 
+<style>
+  .seat-grid {
+    display: grid;
+    grid-template-columns: repeat(20, 12px);
+    gap: 4px;
+    padding: 8px 0 6px;
+    max-width: 340px;
+    max-height: 92px;
+    overflow: auto;
+  }
+  .seat {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    border: 1px solid #cbd5f5;
+    background: #eef2ff;
+  }
+  .seat.utilized {
+    background: #7c9cff;
+    border-color: #7c9cff;
+  }
+  .seat.onhold {
+    background: #f3b46b;
+    border-color: #f3b46b;
+  }
+  .seat.available {
+    background: #8bd9c7;
+    border-color: #8bd9c7;
+  }
+  .seat-legend {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .seat-layout-cell { min-width: 260px; }
+  .seat-pill {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #475569;
+  }
+  .seat-pill strong { color: #0f172a; }
+  .seat-pill.utilized { border-color: rgba(124,156,255,.5); }
+  .seat-pill.onhold { border-color: rgba(243,180,107,.6); }
+  .seat-pill.available { border-color: rgba(139,217,199,.6); }
+  .seat-pill.total { border-color: rgba(148,163,184,.5); }
+  @media (max-width: 767px) {
+    .seat-grid { grid-template-columns: repeat(15, 12px); }
+  }
+</style>
 </body>
 </html>

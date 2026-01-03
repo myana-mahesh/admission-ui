@@ -23,25 +23,26 @@ $(document).ready(function () {
 			      contentType: "application/json",
 			      data: JSON.stringify({ status: "Paid" }),
 			      success: function (res) {
-			        if (res && res.downloadUrl) {
-			          let $invoiceCell = $row.find(".invoice-cell");
-			          if ($invoiceCell.length === 0) {
-			            // fallback: use receipt column (index adjust if needed)
-			            $invoiceCell = $row.find("td").eq(4);
-			          }
-			          $invoiceCell.append(
-			            `<div class="mt-1">
-			               <a href="${res.downloadUrl}"
-			                  target="_blank"
-			                  class="text-decoration-none invoice-link">
-			                 <i class="bi bi-file-earmark-pdf me-1"></i>
-			                 Invoice
-			               </a>
-			             </div>`
-			          );
-			        } else {
-			          console.warn("Installment marked as Paid, but invoice info missing.");
+			        const resolvedStatus = res && res.status ? res.status : "Paid";
+			        const $statusSelect = $row.find("select[data-field='status']");
+			        const $statusHidden = $row.find("input[data-field='status']");
+			        if ($statusSelect.length) {
+			          $statusSelect.val(resolvedStatus).prop("disabled", true);
 			        }
+			        if ($statusHidden.length) {
+			          $statusHidden.val(resolvedStatus);
+			          const $statusCell = $statusHidden.closest("td");
+			          if ($statusCell.length) {
+			            $statusCell.text(resolvedStatus).removeClass("text-warning text-info text-success fw-semibold");
+			            if (resolvedStatus === "Paid") {
+			              $statusCell.addClass("text-success fw-semibold");
+			            } else if (resolvedStatus === "Partial Received") {
+			              $statusCell.addClass("text-info fw-semibold");
+			            }
+			          }
+			        }
+			        $row.find(".installment_apporval_btn").remove();
+			        $row.find(".installment_delete_btn").prop("disabled", true);
 			      },
 			      error: function (xhr) {
 			        console.error("Error marking installment paid:", xhr);
@@ -55,7 +56,6 @@ $(document).ready(function () {
 		
 		installmentId = installmentId.split("_")[2]
 		let currentTr = $(this).closest('tr')
-		alert(installmentId)
 		generateInvoiceForRow(currentTr)
 	})
 })

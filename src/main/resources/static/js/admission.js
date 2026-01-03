@@ -57,9 +57,79 @@ $(document).ready(function () {
 			$("#discountRemarkOtherDiv").addClass("d-none")
 		}
 	})
-	$("#discountRemark").trigger("change")
-	
-	
+  $("#discountRemark").trigger("change")
+
+  // ================== COLLEGE -> COURSE FILTER + SEAT INFO ==================
+  const collegeSelect = document.getElementById('collegeId');
+  const courseSelect = document.getElementById('course');
+  const seatInfo = document.getElementById('seatInfo');
+  let courseSeatMap = new Map();
+
+  function renderSeatInfo(courseId) {
+    if (!seatInfo) return;
+    const info = courseSeatMap.get(String(courseId || ''));
+    if (!info) {
+      seatInfo.textContent = '';
+      return;
+    }
+    seatInfo.textContent =
+      `Remaining: ${info.remainingSeats} · On Hold: ${info.onHoldSeats} · Utilized: ${info.utilizedSeats} · Total: ${info.totalSeats}`;
+  }
+
+  function setCourseOptions(items, selectedId) {
+    if (!courseSelect) return;
+    courseSelect.innerHTML = '<option value=""></option>';
+    items.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item.courseId;
+      const label = item.courseCode ? `${item.courseCode} - ${item.courseName}` : item.courseName;
+      opt.textContent = label || '';
+      courseSelect.appendChild(opt);
+    });
+    if (selectedId) {
+      courseSelect.value = String(selectedId);
+    }
+    renderSeatInfo(courseSelect.value);
+  }
+
+  function loadCollegeCourses(collegeId, selectedCourseId) {
+    if (!collegeId) {
+      courseSeatMap = new Map();
+      setCourseOptions([], null);
+      return;
+    }
+    fetch(`/college-courses?collegeId=${encodeURIComponent(collegeId)}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(items => {
+        courseSeatMap = new Map();
+        (items || []).forEach(item => {
+          courseSeatMap.set(String(item.courseId), item);
+        });
+        setCourseOptions(items || [], selectedCourseId);
+      })
+      .catch(() => {
+        courseSeatMap = new Map();
+        setCourseOptions([], null);
+      });
+  }
+
+  if (collegeSelect) {
+    const initialCourseId = courseSelect ? courseSelect.value : null;
+    if (collegeSelect.value) {
+      loadCollegeCourses(collegeSelect.value, initialCourseId);
+    }
+    collegeSelect.addEventListener('change', () => {
+      loadCollegeCourses(collegeSelect.value, null);
+    });
+  }
+
+  if (courseSelect) {
+    courseSelect.addEventListener('change', () => {
+      renderSeatInfo(courseSelect.value);
+    });
+  }
+
+
   // ================== OTHER DOCUMENTS DYNAMIC ADD ==================
   let otherDocCounter = document.querySelectorAll('#otherDocsContainer .other-doc').length || 0;
 
@@ -87,6 +157,190 @@ $(document).ready(function () {
   document.getElementById('addInstallmentBtn')
     ?.addEventListener('click', () => window.addInstallment());
 
+  const togglePartialBtn = document.getElementById('togglePartialPaymentBtn');
+  const partialForm = document.getElementById('partialPaymentForm');
+  const partialSubmit = document.getElementById('partialPaymentSubmit');
+  const partialError = document.getElementById('partialPaymentError');
+  const partialModalEl = document.getElementById('partialPaymentModal');
+  const partialModal = partialModalEl && window.bootstrap ? new bootstrap.Modal(partialModalEl) : null;
+  const historyModalEl = document.getElementById('installmentHistoryModal');
+  const historyModal = historyModalEl && window.bootstrap ? new bootstrap.Modal(historyModalEl) : null;
+  const historyBody = document.getElementById('installmentHistoryBody');
+  const roleInput = document.getElementById('role');
+  const currentRole = roleInput ? roleInput.value : null;
+  let activeInstallmentId = null;
+
+  function setPartialError(message) {
+    if (!partialError) return;
+    partialError.textContent = message || '';
+    partialError.classList.toggle('d-none', !message);
+  }
+
+  if (togglePartialBtn) {
+    togglePartialBtn.addEventListener('click', () => {
+      setPartialError('');
+      if (partialModal) {
+        partialModal.show();
+      }
+    });
+  }
+
+  if (partialForm && partialSubmit) {
+    partialSubmit.addEventListener('click', async () => {
+      setPartialError('');
+
+      const amount = document.getElementById('partialAmount')?.value;
+      const mode = document.getElementById('partialMode')?.value;
+      if (!amount || Number(amount) <= 0) {
+        setPartialError('Enter a valid payment amount.');
+        return;
+      }
+      if (!mode) {
+        setPartialError('Select a payment mode.');
+        return;
+      }
+
+      const formData = new FormData();
+      const admissionId = partialForm.querySelector('input[name="admissionId"]')?.value;
+      const role = partialForm.querySelector('input[name="role"]')?.value;
+      const txnRef = document.getElementById('partialTxnRef')?.value || '';
+      const receiptInput = document.getElementById('partialReceipt');
+      const receiptFile = receiptInput?.files?.[0];
+
+      if (admissionId) formData.append('admissionId', admissionId);
+      if (role) formData.append('role', role);
+      formData.append('amount', amount);
+      formData.append('mode', mode);
+      formData.append('txnRef', txnRef);
+      if (receiptFile) {
+        formData.append('receipt', receiptFile);
+      }
+      try {
+        const res = await fetch('/admission/installments/partial-payment', {
+          method: 'POST',
+          body: formData
+        });
+        if (!res.ok) {
+          const msg = await res.text();
+          setPartialError(msg || 'Failed to save payment.');
+          return;
+        }
+        if (partialModal) {
+          partialModal.hide();
+        }
+        window.location.reload();
+      } catch (err) {
+        setPartialError('Failed to save payment.');
+      }
+    });
+  }
+
+  function renderHistoryRows(rows) {
+    if (!historyBody) return;
+    const showVerify = currentRole === 'HO';
+    const emptyColspan = showVerify ? 11 : 10;
+    if (!rows || rows.length === 0) {
+      historyBody.innerHTML = `<tr><td colspan="${emptyColspan}" class="text-center text-muted py-3">No payments found.</td></tr>`;
+      return;
+    }
+    const dtFormatter = new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    historyBody.innerHTML = rows.map(row => {
+      const receipt = row.receiptUrl
+        ? `<a href="${row.receiptUrl}" target="_blank" class="text-decoration-none">${row.receiptName || 'Receipt'}</a>`
+        : '<span class="text-muted">-</span>';
+      const invoice = row.invoiceUrl
+        ? `<a href="${row.invoiceUrl}" target="_blank" class="text-decoration-none">${row.invoiceNumber || 'Invoice'}</a>`
+        : '<span class="text-muted">-</span>';
+      const paidOn = row.paidOn || '-';
+      const status = row.status || '-';
+      const verifiedBy = row.verifiedBy || '-';
+      let verifiedAt = '-';
+      if (row.verifiedAt) {
+        const parsed = new Date(row.verifiedAt);
+        if (!Number.isNaN(parsed.getTime())) {
+          verifiedAt = dtFormatter.format(parsed);
+        }
+      }
+      const canVerify = showVerify && row.verified === false;
+      const verifyBtn = canVerify
+        ? `<button type="button" class="btn btn-sm btn-primary-theme verify-payment-btn" data-payment-id="${row.paymentId}">Verify</button>`
+        : '<span class="text-muted">-</span>';
+      return `
+        <tr>
+          <td>${paidOn}</td>
+          <td>${row.amount ?? '-'}</td>
+          <td>${row.paymentMode || '-'}</td>
+          <td>${row.txnRef || '-'}</td>
+          <td>${row.receivedBy || '-'}</td>
+          <td>${status}</td>
+          <td>${verifiedBy}</td>
+          <td>${verifiedAt}</td>
+          <td>${receipt}</td>
+          <td>${invoice}</td>
+          ${showVerify ? `<td>${verifyBtn}</td>` : ''}
+        </tr>
+      `;
+    }).join('');
+  }
+
+  document.body.addEventListener('click', async (event) => {
+    const btn = event.target.closest('.installment-history-btn');
+    if (!btn) return;
+    const installmentId = btn.getAttribute('data-installment-id');
+    if (!installmentId) return;
+    activeInstallmentId = installmentId;
+    if (historyBody) {
+      const showVerify = currentRole === 'HO';
+      const loadingColspan = showVerify ? 11 : 10;
+      historyBody.innerHTML = `<tr><td colspan="${loadingColspan}" class="text-center text-muted py-3">Loading...</td></tr>`;
+    }
+    if (historyModal) {
+      historyModal.show();
+    }
+    try {
+        const res = await fetch(`/admission/installments/${installmentId}/payments`);
+        if (!res.ok) {
+          renderHistoryRows([]);
+          return;
+        }
+        const data = await res.json();
+        renderHistoryRows(Array.isArray(data) ? data : []);
+    } catch (err) {
+      renderHistoryRows([]);
+    }
+  });
+
+  document.body.addEventListener('click', async (event) => {
+    const btn = event.target.closest('.verify-payment-btn');
+    if (!btn) return;
+    const paymentId = btn.getAttribute('data-payment-id');
+    if (!paymentId) return;
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/admission/installments/payments/${paymentId}/verify`, { method: 'POST' });
+      if (res.ok) {
+        if (activeInstallmentId) {
+          const refreshed = await fetch(`/admission/installments/${activeInstallmentId}/payments`);
+          if (refreshed.ok) {
+            const data = await refreshed.json();
+            renderHistoryRows(Array.isArray(data) ? data : []);
+          }
+        }
+        window.location.reload();
+      } else {
+        btn.disabled = false;
+      }
+    } catch (err) {
+      btn.disabled = false;
+    }
+  });
+
   // ================== DOC TYPE MAP ==================
   const DOC_TYPE_MAP = {
     "10th marksheet": "SSC10",
@@ -105,7 +359,6 @@ $(document).ready(function () {
 
   const fieldConfigs = [
     
-    { id: 'absId',          required: true, message: 'ABS ID is required.' },
     { id: 'fullName',       required: true, message: 'Student name is required.' },
     { id: 'dob',            required: true, message: 'Date of birth is required.' },
     { id: 'nationality',    required: true, message: 'Nationality is required.' },
@@ -115,10 +368,18 @@ $(document).ready(function () {
     { id: 'pincode',        required: true, pattern: '^[0-9]{6}$', patternMessage: 'Enter a valid 6 digit PIN code.' },
     { id: 'mobile',         required: true, pattern: '^[6-9][0-9]{9}$', patternMessage: 'Enter a valid 10 digit mobile number.' },
     { id: 'email',          required: true, message: 'Enter a valid email address.' },
+    { id: 'batch',          required: true, message: 'Batch is required.' },
     { id: 'collegeId',      required: true, message: 'Please select a college.' },
     { id: 'course',         required: true, message: 'Please select a course.' },
     { id: 'dateOfAdmission',required: true, message: 'Date of admission is required.' },
-    { id: 'totalFees',      required: true, message: 'Total fees is required.' }
+    { id: 'totalFees',      required: true, message: 'Total fees is required.' },
+    { id: 'hscCollege',     required: true, message: 'HSC college name is required.' },
+    { id: 'hscSubjects',    required: true, message: 'HSC subjects are required.' },
+    { id: 'hscYear',        required: true, message: 'HSC passing year is required.' },
+    { id: 'phyMarks',       required: true, message: 'Physics marks are required.' },
+    { id: 'chemMarks',      required: true, message: 'Chemistry marks are required.' },
+    { id: 'bioMarks',       required: true, message: 'Biology marks are required.' },
+    { id: 'hscPercentage',  required: true, message: 'HSC percentage is required.' }
   ];
 
   function setInvalid(el, msg) {
@@ -168,6 +429,14 @@ $(document).ready(function () {
         }
       }
 
+      if (['phyMarks', 'chemMarks', 'bioMarks', 'hscPercentage'].includes(cfg.id) && value) {
+        const num = parseFloat(value);
+        if (isNaN(num) || num < 0 || num > 100) {
+          setInvalid(el, 'Value must be between 0 and 100.');
+          isValid = false;
+        }
+      }
+
       // additional numeric check for courseYears
       if (cfg.id === 'courseYears' && value) {
         const num = parseInt(value, 10);
@@ -191,7 +460,82 @@ $(document).ready(function () {
       }
     }
 
+    const otherPaymentFields = document.querySelectorAll('[data-other-payment-field="true"]');
+    otherPaymentFields.forEach(group => {
+      const required = group.dataset.required === 'true';
+      if (!required) return;
+      const inputType = group.dataset.inputType;
+      const inputs = group.querySelectorAll('.other-payment-input');
+      let hasValue = false;
+
+      if (inputType === 'checkbox') {
+        hasValue = Array.from(inputs).some(input => input.checked);
+      } else if (inputType === 'radio') {
+        hasValue = Array.from(inputs).some(input => input.checked);
+      } else if (inputType === 'select') {
+        const select = inputs[0];
+        hasValue = !!(select && select.value);
+      } else {
+        const input = inputs[0];
+        hasValue = !!(input && (input.value || '').trim());
+      }
+
+      const firstInput = inputs[0];
+      if (firstInput) {
+        clearInvalid(firstInput);
+      }
+      if (!hasValue && firstInput) {
+        setInvalid(firstInput, 'This field is required.');
+        isValid = false;
+      }
+    });
+
     return isValid;
+  }
+
+  function buildOtherPaymentsPayload() {
+    const payload = [];
+    const groups = document.querySelectorAll('[data-other-payment-field="true"]');
+    groups.forEach(group => {
+      const fieldId = Number(group.dataset.fieldId);
+      if (!fieldId) return;
+      const inputType = group.dataset.inputType;
+      const inputs = group.querySelectorAll('.other-payment-input');
+      const entries = [];
+
+      if (inputType === 'checkbox') {
+        inputs.forEach(input => {
+          if (!input.checked) return;
+          const optionId = Number(input.dataset.optionId || '');
+          const value = input.dataset.optionValue || input.value || '';
+          entries.push({ optionId: optionId || null, value });
+        });
+      } else if (inputType === 'radio') {
+        const selected = Array.from(inputs).find(input => input.checked);
+        if (selected) {
+          const optionId = Number(selected.dataset.optionId || '');
+          const value = selected.dataset.optionValue || selected.value || '';
+          entries.push({ optionId: optionId || null, value });
+        }
+      } else if (inputType === 'select') {
+        const select = inputs[0];
+        if (select && select.value) {
+          const optionId = Number(select.value || '');
+          const selectedOption = select.options[select.selectedIndex];
+          const value = selectedOption?.dataset?.optionValue || selectedOption?.text || '';
+          entries.push({ optionId: optionId || null, value });
+        }
+      } else {
+        const input = inputs[0];
+        if (input && (input.value || '').trim()) {
+          entries.push({ optionId: null, value: input.value.trim() });
+        }
+      }
+
+      payload.push({ fieldId, entries });
+    });
+
+    return payload;
   }
 
   // ===================================================
@@ -381,6 +725,77 @@ $(document).ready(function () {
   //              SAVE ADMISSION (CREATE/UPDATE)
   // ===================================================
 
+  function showAdmissionSaveModal(status, title, message, onClose) {
+    const modalEl = document.getElementById('admissionSaveStatusModal');
+    const titleEl = document.getElementById('admissionSaveStatusTitle');
+    const alertEl = document.getElementById('admissionSaveStatusAlert');
+    const descEl = document.getElementById('admissionSaveStatusDesc');
+
+    if (!modalEl || !titleEl || !alertEl || !descEl || !window.bootstrap) {
+      if (status === 'success') {
+        alert(title + (message ? `\n${message}` : ''));
+      } else {
+        alert((title || 'Error') + (message ? `\n${message}` : ''));
+      }
+      if (typeof onClose === 'function') onClose();
+      return;
+    }
+
+    titleEl.textContent = title || 'Save Status';
+    alertEl.className = `alert mb-3 ${status === 'success' ? 'alert-success' : 'alert-danger'}`;
+    alertEl.textContent = status === 'success' ? 'Saved successfully.' : 'Save failed.';
+    descEl.textContent = message || '';
+
+    if (modalEl.parentElement !== document.body) {
+      document.body.appendChild(modalEl);
+    }
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    const handleHidden = () => {
+      modalEl.removeEventListener('hidden.bs.modal', handleHidden);
+      document.body.classList.remove('modal-open');
+      document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove());
+      if (typeof onClose === 'function') onClose();
+    };
+    modalEl.addEventListener('hidden.bs.modal', handleHidden);
+    modal.show();
+  }
+
+  function formatBackendError(raw) {
+    const text = (raw || '').toString();
+    if (!text) return null;
+    if (/blood_group/i.test(text)) {
+      return 'Invalid blood group.';
+    }
+    if (/aadhaar|aadhar/i.test(text)) {
+      return 'Invalid Aadhaar number.';
+    }
+    if (/data truncation/i.test(text)) {
+      return 'Some fields are too long. Please shorten the input.';
+    }
+    return null;
+  }
+
+  function getSelectedPerkIds() {
+    return $(".student-perk-checkbox:checked")
+      .map(function () { return parseInt($(this).val(), 10); })
+      .get();
+  }
+
+  function saveStudentPerks(studentId) {
+    debugger
+    const perkIds = getSelectedPerkIds();
+    if (!studentId || !$(".student-perk-checkbox").length) {
+      return Promise.resolve();
+    }
+    return $.ajax({
+      url: "/student/" + studentId + "/perks",
+      type: "PUT",
+      data: JSON.stringify(perkIds),
+      contentType: "application/json"
+    });
+  }
+
   $("body").on("click", "#submit_admission_form", function () {
     // 1) run front-end validations
     if (!validateAdmissionForm()) {
@@ -423,12 +838,15 @@ $(document).ready(function () {
       formData.hscDetails = {
         collegeName: $('#hscCollege').val(),
         subjects: $('#hscSubjects').val(),
+        registrationNumber: $('#hscRegNo').val(),
         passingYear: $('#hscYear').val(),
         physicsMarks: $('#phyMarks').val(),
         chemistryMarks: $('#chemMarks').val(),
         biologyMarks: $('#bioMarks').val(),
-        pcbPercentage: $('#pcbPercentage').val()
+        pcbPercentage: $('#pcbPercentage').val(),
+        percentage: $('#hscPercentage').val()
       };
+      formData.otherPayments = buildOtherPaymentsPayload();
 
       $.ajax({
         url: '/admission/student/create',
@@ -437,27 +855,42 @@ $(document).ready(function () {
         contentType: 'application/json',
         success: async function (response) {
           try {
+            const studentId = $("#studentId").val()
+              || response?.student?.studentId
+              || response?.studentId;
+            try {
+              await saveStudentPerks(studentId);
+            } catch (e) {
+              console.warn("Failed to save perks:", e);
+            }
             const result = await postUploads(response.admissionId);
             console.log("✅ Uploaded metadata:", result);
-			$("#installmentsBody tr").each(function () {
-				
-		        const $row = $(this);
-		        const status = $row.find("select[data-field='status']").val();
-		        const installmentId = $row.find("input[name$='.installmentId']").val();
+            $("#installmentsBody tr").each(function () {
+              const $row = $(this);
+              const status = $row.find("select[data-field='status']").val();
+              const installmentId = $row.find("input[name$='.installmentId']").val();
 
-		        if (status === "Paid" && installmentId) {
-		         // generateInvoiceForRow($row);
-		        }
-		      });
-			location.reload();
+              if (status === "Paid" && installmentId) {
+                // generateInvoiceForRow($row);
+              }
+            });
+            showAdmissionSaveModal('success', 'Admission Saved', 'Your changes were saved successfully.', function () {
+              window.location.href = `/admissions?id=${response.admissionId}`;
+            });
           } catch (e) {
             console.error(e);
-            alert(`Erorr saving data`);
+            const msg = e && e.message ? e.message : 'Upload failed. Please try again.';
+            showAdmissionSaveModal('error', 'Save Failed', msg);
           }
         },
         error: function (xhr, status, error) {
-          console.error(error);
-          alert('Error: Unable to save student data.');
+          const rawMsg = (xhr && xhr.responseJSON && xhr.responseJSON.message)
+            ? xhr.responseJSON.message
+            : (xhr && xhr.responseText ? xhr.responseText : 'Unable to save student data.');
+          const friendly = formatBackendError(rawMsg);
+          const msg = (friendly || rawMsg || '').toString().trim() || 'Unable to save student data.';
+          console.error(error || msg);
+          showAdmissionSaveModal('error', 'Save Failed', msg);
         }
       });
     } else if (!actualFees || actualFees === 0) {
@@ -486,7 +919,7 @@ $(document).ready(function () {
     const $btn = $(this);
     const id = $btn.data('id');
     if (!id) {
-      alert('Missing admission id');
+      showResponseModal('error', 'Missing admission id.');
       return;
     }
 
@@ -495,12 +928,12 @@ $(document).ready(function () {
     sendAcknowledgementAjax(id)
       .done(function (admission) {
         console.log('Acknowledged:', admission);
-        alert('Acknowledgement sent successfully.');
-		location.reload();
+        showResponseModal('success', 'Acknowledgement sent successfully.', window.location.href);
       })
       .fail(function (xhr) {
         console.error('Error:', xhr.responseText || xhr.statusText);
-        alert('Failed to send acknowledgement.');
+        const msg = xhr?.responseText || 'Failed to send acknowledgement.';
+        showResponseModal('error', msg);
       })
       .always(function () {
         $btn.prop('disabled', false).text('Send Acknowledgement');
@@ -515,6 +948,36 @@ $(document).ready(function () {
       dataType: 'json'
     });
   }
+
+  // ===================================================
+  //              BRANCH APPROVE FOR HO
+  // ===================================================
+  $("body").on("click", "#branchApproveBtn", function () {
+    const $btn = $(this);
+    const id = $btn.data('id');
+    if (!id) {
+      showResponseModal('error', 'Missing admission id.');
+      return;
+    }
+    const originalHtml = $btn.html();
+    $btn.prop('disabled', true).text('Approving...');
+    $.ajax({
+      url: '/admission/branch-approve',
+      method: 'POST',
+      data: { id: id }
+    })
+      .done(function () {
+        showResponseModal('success', 'Admission approved for HO.', window.location.href);
+      })
+      .fail(function (xhr) {
+        console.error('Branch approval failed:', xhr.responseText || xhr.statusText);
+        const msg = xhr?.responseText || 'Failed to approve admission.';
+        showResponseModal('error', msg);
+      })
+      .always(function () {
+        $btn.prop('disabled', false).html(originalHtml);
+      });
+  });
 
 });
 
@@ -700,6 +1163,10 @@ $("body").on("change", "input[type='file'][name='docFiles']", function () {
 $("body").on("change", ".doc-radio", function () {
 debugger
   const admissionId = $("#admissionId").val();
+  if (!admissionId) {
+    alert("Please save the admission before verifying documents.");
+    return;
+  }
   const documentCode = $(this).attr("name")
       .replace("docType[", "")
       .replace("]", "");
@@ -717,6 +1184,10 @@ debugger
 $("body").on("click", ".verify-btn", function () {
 
   const admissionId = $("#admissionId").val();
+  if (!admissionId) {
+    alert("Please save the admission before verifying documents.");
+    return;
+  }
   const documentCode = $(this).data("doc");
   const card = $(this).closest(".checklist-item");
 
@@ -727,6 +1198,28 @@ $("body").on("click", ".verify-btn", function () {
     card.removeClass("pending").addClass("verified");
     card.find(".form-check-label").removeClass("text-danger")
         .addClass("text-success");
+  });
+});
+
+$("body").on("click", "#collegeVerifyBtn", function () {
+  const admissionId = $("#admissionId").val();
+  if (!admissionId) {
+    alert("Missing admission id");
+    return;
+  }
+  $.post("/admission/college-verification-verify", { admissionId: admissionId }, function () {
+    location.reload();
+  });
+});
+
+$("body").on("click", "#collegeRejectBtn", function () {
+  const admissionId = $("#admissionId").val();
+  if (!admissionId) {
+    alert("Missing admission id");
+    return;
+  }
+  $.post("/admission/college-verification-reject", { admissionId: admissionId }, function () {
+    location.reload();
   });
 });
 
@@ -806,6 +1299,17 @@ function calculateAge() {
   ageInput.value = age;
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+  const dobInput = document.getElementById('dob');
+  const ageInput = document.getElementById('age');
+  if (!dobInput || !ageInput) {
+    return;
+  }
+  dobInput.addEventListener('input', calculateAge);
+  dobInput.addEventListener('change', calculateAge);
+  calculateAge();
+});
+
 
 function applyFilters() {
 
@@ -825,6 +1329,26 @@ function applyFilters() {
   const batch = document.getElementById("batch")?.value;
   if (batch && batch !== "") {
     params.append("batch", batch);
+  }
+
+  const collegeId = document.getElementById("collegeId")?.value;
+  if (collegeId && collegeId !== "") {
+    params.append("collegeId", collegeId);
+  }
+
+  const courseId = document.getElementById("courseId")?.value;
+  if (courseId && courseId !== "") {
+    params.append("courseId", courseId);
+  }
+
+  const admissionYearId = document.getElementById("admissionYearId")?.value;
+  if (admissionYearId && admissionYearId !== "") {
+    params.append("admissionYearId", admissionYearId);
+  }
+
+  const perkId = document.getElementById("perkId")?.value;
+  if (perkId && perkId !== "") {
+    params.append("perkId", perkId);
   }
 
   // gender (🔥 SINGLE VALUE ONLY)

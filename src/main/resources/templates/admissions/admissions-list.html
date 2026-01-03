@@ -11,48 +11,176 @@
     <div class="container-xl py-3 max-width-100">
 
       <!-- Header -->
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div>
-          <h3 class="mb-0">Admissions</h3>
+      <div class="hero-card mb-4 p-4">
+        <div class="hero-content">
+          <div>
+            <div class="eyebrow mb-0">Admissions</div>
+            <h2 class="hero-title">Admission Ledger</h2>
+            <div class="hero-subtitle mt-0">Track applicant flow, status, and course demand.</div>
+          </div>
         </div>
       </div>
 
-      <!-- Filters / Toolbar -->
-      <form class="row g-2 align-items-end justify-content-between mb-3" method="get" th:action="@{/admissionlist}">
-        <!-- keyword search -->
-        <div class="col-md-5">
-          <label class="form-label">Search</label>
-          <input type="text" class="form-control" name="q" placeholder="ABS ID / Student name / Mobile / Course / Year" th:value="${q}">
-        </div>
-
-        <!-- status fixed to Pending & Success -->
-        <div class="col-md-3">
-          <label class="form-label">Status</label>
-          <div class="d-flex gap-2">
-            <select class="form-select" name="status" th:value="${statusSelected}">
-				<option value=""> Select Status </option>
-              <option value="PENDING" th:selected="${statusSelected eq 'PENDING'}"> PENDING </option>
-              <option value="ADMITTED" th:selected="${statusSelected eq 'ADMITTED'}"> ADMITTED </option>
-              <option value="REJECTED" th:selected="${statusSelected eq 'REJECTED'}"> REJECTED </option>
-              <option value="UNDER_CANCELLATION" th:selected="${statusSelected eq 'UNDER_CANCELLATION'}"> UNDER CANCELLATION </option>
-            </select>
+      <form class="filter-card mb-3" id="filterForm">
+        <div class="filter-header" id="filterToggleHeader">
+          <div class="filter-header-content">
+            <div class="filter-icon">
+              <i class="bi bi-funnel-fill"></i>
+            </div>
+            <div>
+              <h6 class="filter-title">Advanced Filters</h6>
+              <p class="filter-subtitle">Refine admissions by course, batch, and status</p>
+            </div>
+          </div>
+          <div class="filter-toggle">
+            <i class="bi bi-chevron-down"></i>
           </div>
         </div>
 
-        <!-- page size -->
-        <div class="col-md-2">
-          <label class="form-label">Per page</label>
-          <select class="form-select"  name="size" id="paginationSize" th:value="${size}">
-            <option th:selected="${size== 10}" th:value="10">10</option>
-            <option th:selected="${size== 25}" th:value="25">25</option>
-            <option th:selected="${size== 50}" th:value="50">50</option>
-          </select>
-        </div>
+        <div class="filter-panel" id="filterPanel">
+          <div class="filter-content">
+            <div class="row g-3">
+              <div class="col-lg-4">
+                <label class="form-label">Search</label>
+                <div class="search-pill">
+                  <i class="bi bi-search"></i>
+                  <input type="text" class="form-control border-0 bg-transparent" id="searchInput"
+                         placeholder="ABS ID, student name, mobile, course, year" th:value="${q}">
+                </div>
+              </div>
+              <div class="col-lg-3">
+                <label class="form-label">Status</label>
+                <select class="form-select soft-select" id="statusSelect">
+                  <option value="">Select Status</option>
+                  <option value="PENDING" th:selected="${statusSelected eq 'PENDING'}">PENDING</option>
+                  <option value="ADMITTED" th:selected="${statusSelected eq 'ADMITTED'}">ADMITTED</option>
+                  <option value="REJECTED" th:selected="${statusSelected eq 'REJECTED'}">REJECTED</option>
+                  <option value="UNDER_CANCELLATION" th:selected="${statusSelected eq 'UNDER_CANCELLATION'}">UNDER CANCELLATION</option>
+                  <option value="CANCELLED" th:selected="${statusSelected eq 'CANCELLED'}">CANCELLED</option>
+                </select>
+              </div>
+              <div class="col-lg-2">
+                <label class="form-label">Per page</label>
+                <select class="form-select soft-select" id="paginationSize" th:value="${size}">
+                  <option th:selected="${size== 10}" th:value="10">10</option>
+                  <option th:selected="${size== 25}" th:value="25">25</option>
+                  <option th:selected="${size== 50}" th:value="50">50</option>
+                </select>
+              </div>
 
-        <div class="col-md-1">
-          <button class="btn btn-primary-theme w-100" type="submit">
-            <i class="bi bi-funnel me-1"></i> 
-          </button>
+              <div class="col-lg-3">
+                <label class="form-label">College</label>
+                <select class="form-select soft-select" id="collegeId">
+                  <option value="">All</option>
+                  <option th:each="c : ${colleges}"
+                          th:value="${c.collegeId}"
+                          th:text="${c.name}"
+                          th:selected="${collegeId != null and c.collegeId != null and c.collegeId.toString() == collegeId}">
+                  </option>
+                </select>
+              </div>
+              <div class="col-lg-3">
+                <label class="form-label">Course</label>
+                <div class="modern-multiselect" id="courseMultiSelect">
+                  <div class="multiselect-trigger">
+                    <div class="multiselect-tags" id="courseTags">
+                      <span class="multiselect-placeholder">All courses</span>
+                    </div>
+                    <i class="bi bi-chevron-down multiselect-arrow"></i>
+                  </div>
+                  <div class="multiselect-dropdown">
+                    <div class="multiselect-option" th:each="c : ${courses}" th:attr="data-value=${c.courseId}">
+                      <input type="checkbox" th:id="'course-' + ${c.courseId}">
+                      <label th:for="'course-' + ${c.courseId}" th:text="${c.name}">Course</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-3">
+                <label class="form-label">Batch</label>
+                <select class="form-select soft-select" id="batch">
+                  <option value="">All</option>
+                  <option th:each="b : ${batches}"
+                          th:value="${b.code}"
+                          th:text="${b.label != null ? b.label : b.code}"
+                          th:selected="${batch != null and b.code != null and b.code == batch}">
+                  </option>
+                </select>
+              </div>
+              <div class="col-lg-3">
+                <label class="form-label">Academic Year</label>
+                <select class="form-select soft-select" id="admissionYearId">
+                  <option value="">All</option>
+                  <option th:each="y : ${academicYears}"
+                          th:value="${y.yearId}"
+                          th:text="${y.label}"
+                          th:selected="${admissionYearId != null and y.yearId != null and y.yearId.toString() == admissionYearId}">
+                  </option>
+                </select>
+              </div>
+
+              <div class="col-lg-3">
+                <label class="form-label">Gender</label>
+                <select class="form-select soft-select" id="gender">
+                  <option value="">All</option>
+                  <option value="MALE" th:selected="${gender != null and gender == 'MALE'}">Male</option>
+                  <option value="FEMALE" th:selected="${gender != null and gender == 'FEMALE'}">Female</option>
+                </select>
+              </div>
+              <div class="col-lg-3">
+                <label class="form-label">Perks</label>
+                <select class="form-select soft-select" id="perkId">
+                  <option value="">All</option>
+                  <option th:each="p : ${perks}"
+                          th:value="${p.id}"
+                          th:text="${p.name}"
+                          th:selected="${perkId != null and p.id != null and p.id.toString() == perkId}">
+                  </option>
+                </select>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label">Documents</label>
+                <div class="modern-multiselect" id="docTypeMultiSelect">
+                  <div class="multiselect-trigger">
+                    <div class="multiselect-tags" id="docTypeTags">
+                      <span class="multiselect-placeholder">Select documents...</span>
+                    </div>
+                    <i class="bi bi-chevron-down multiselect-arrow"></i>
+                  </div>
+                  <div class="multiselect-dropdown" id="docTypeDropdown">
+                    <div class="multiselect-option" th:each="d : ${docTypeOptions}" th:attr="data-value=${d.id}">
+                      <input type="checkbox" th:id="'doc-' + ${d.id}">
+                      <label th:for="'doc-' + ${d.id}" th:text="${d.name}">Document</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-3">
+                <label class="form-label">Document Status</label>
+                <select class="form-select soft-select" id="docReceived">
+                  <option value="">All</option>
+                  <option value="RECEIVED" th:selected="${docReceived == 'RECEIVED'}">Received</option>
+                  <option value="NOT_RECEIVED" th:selected="${docReceived == 'NOT_RECEIVED'}">Not received</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Other Payment Filters</label>
+                <div id="otherPaymentFilterRows" class="d-flex flex-column gap-2"></div>
+                <button class="btn btn-outline-secondary btn-sm mt-2" type="button" id="addOtherPaymentFilterBtn">
+                  <i class="bi bi-plus-lg me-1"></i> Add filter
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex justify-content-end gap-2 mb-2 me-2">
+            <button class="btn btn-outline-secondary btn-sm" type="button" id="resetFiltersBtn">
+              <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+            </button>
+            <button class="btn btn-primary-theme btn-sm" type="submit">
+              <i class="bi bi-funnel me-1"></i> Apply Filters
+            </button>
+          </div>
         </div>
       </form>
 
@@ -60,21 +188,30 @@
       <div class="app-card p-0">
         <!-- Table -->
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover align-middle mb-0 modern-table">
             <thead class="table-light">
               <tr>
-                <th class="table_header_theme" style="width:140px;">ABS ID</th>
-                <th class="table_header_theme" >Student</th>
-                <th class="table_header_theme"  style="width:220px;">Course</th>
-                <th class="table_header_theme"  style="width:160px;">Date</th>
-                <th class="table_header_theme"  style="width:120px;">Status</th>
-                <th class="table_header_theme"  style="width:120px;">Actions</th>
+                <th class="table_header_theme">ABS ID</th>
+                <th class="table_header_theme">Student</th>
+                <th class="table_header_theme">Course</th>
+                <th class="table_header_theme">Date</th>
+                <th class="table_header_theme">Status</th>
+                <th class="table_header_theme">Actions</th>
               </tr>
             </thead>
             <tbody th:if="${page!=null}">
               <tr th:each="a,iStat: ${page.content}">
                 <td>
-                  <a th:href="@{|/admissions?id=${a.admissionId}|}" class="text-decoration-none fw-semibold" th:text="${iStat.index+1}">ABS-000000</a>
+                  <span class="d-inline-flex align-items-center gap-2">
+                    <span class="approval-pill"
+                          th:classappend="${a.branchApproved != null and a.branchApproved ? ' approved' : ' pending'}"
+                          th:title="${a.branchApproved != null and a.branchApproved ? 'Branch Approved' : 'Branch Approval Pending'}">
+                      <i class="bi" th:classappend="${a.branchApproved != null and a.branchApproved ? ' bi-check-circle-fill' : ' bi-hourglass-split'}"></i>
+                    </span>
+                    <a th:href="@{|/admissions?id=${a.admissionId}|}" class="text-decoration-none fw-semibold"
+                       th:text="${a.student != null ? a.student.absId : '-'}">ABS-000000</a>
+                  </span>
+                  <div class="text-muted small" th:text="${a.admissionId != null ? 'ADM-' + a.admissionId : ''}">ADM-0</div>
                 </td>
                 <td>
                   <div class="fw-semibold" th:text="${a.student.fullName}">Student Name</div>
@@ -84,12 +221,9 @@
                 <!-- Prefer Date of Admission; fallback to created date if you expose it -->
                 <td th:text="${a.createdAt != null ? #temporals.format(a.createdAt, 'dd MMM yyyy') : ''}">12 Oct 2025</td>
                 <td>
-                  <span th:switch="${a.status}">
-                    <span th:case="${T(com.impactsure.sanctionui.enums.AdmissionStatus).ADMITTED}" class="badge bg-success-subtle text-success-emphasis border border-success-subtle" th:text="${a.status}"></span>
-                    <span th:case="*{T(com.impactsure.sanctionui.enums.AdmissionStatus).PENDING}" class="badge pending bg-success-warning text-warning-emphasis border border-warning-subtle" th:text="${a.status}"></span>
-					<span th:case="*{T(com.impactsure.sanctionui.enums.AdmissionStatus).REJECTED}" class="badge pending bg-success-warning text-warning-emphasis border border-warning-subtle" th:text="${a.status}"></span>
-                    <span th:case="*" class="badge pending text-secondary-emphasis border border-secondary-subtle" th:if="${a.status!='ADMITTED'}" th:text="${a.status}">Other</span>
-                  </span>
+                  <span class="status-pill"
+                        th:classappend="${a.status != null ? ' status-' + a.status.name().toLowerCase() : ' status-other'}"
+                        th:text="${a.status}">STATUS</span>
                 </td>
                 <td>
                   <div class="btn-group btn-group-sm">
@@ -111,24 +245,24 @@
 
         <!-- Pagination -->
         <div class="d-flex align-items-center justify-content-between p-3 border-top" th:if="${page!=null}">
-          <div class="text-muted small">
-            <span th:text="${page.totalElements == 0 ? 0 : page.number * page.size + 1}"></span> – <span th:text="${page.number * page.size + page.numberOfElements}"></span> of <span th:text="${page.totalElements}">0</span>
-          </div>
+        <div class="text-muted small" id="admissionCountDisplay">
+          <span th:text="${page.totalElements == 0 ? 0 : page.number * page.size + 1}"></span> – <span th:text="${page.number * page.size + page.numberOfElements}"></span> of <span th:text="${page.totalElements}">0</span>
+        </div>
           <nav aria-label="Admissions pagination">
             <ul class="pagination mb-0">
               <!-- Prev -->
               <li class="page-item" th:classappend="${page.first} ? 'disabled'">
-                <a class="page-link" th:href="@{/admissionlist(q=${q}, status=${'PENDING,SUCCESS'}, size=${size}, page=${page.number-1})}" aria-label="Previous">
+                <a class="page-link" href="#" onclick="goToPage([[${page.number-1}]])" aria-label="Previous">
                   <span aria-hidden="true">&laquo;</span>
                 </a>
               </li>
               <!-- Page numbers -->
               <li class="page-item" th:each="p : ${#numbers.sequence(0, page.totalPages-1)}" th:classappend="${p}==${page.number} ? 'active'">
-                <a class="page-link" th:text="${p+1}" th:href="@{/admissionlist(q=${q}, status=${'PENDING,SUCCESS'}, size=${size}, page=${p})}">1</a>
+                <a class="page-link" th:text="${p+1}" href="#" th:onclick="|goToPage(${p}); return false;|">1</a>
               </li>
               <!-- Next -->
               <li class="page-item" th:classappend="${page.last} ? 'disabled'">
-                <a class="page-link" th:href="@{/admissionlist(q=${q}, status=${'PENDING,SUCCESS'}, size=${size}, page=${page.number+1})}" aria-label="Next">
+                <a class="page-link" href="#" onclick="goToPage([[${page.number+1}]])" aria-label="Next">
                   <span aria-hidden="true">&raquo;</span>
                 </a>
               </li>
@@ -146,7 +280,7 @@
   <!-- Sidebar mobile overlay (optional) -->
   <div id="sbOverlay" class="sb-overlay" hidden></div>
 
-  <script>
+  <script th:inline="javascript">
     // Drawer helper (works if you have a button#sbToggle somewhere)
     (function () {
       const sb = document.getElementById('appSidebar');
@@ -169,13 +303,1425 @@
     }());
   </script>
 
+  <script th:inline="javascript">
+    (function () {
+      const panel = document.getElementById("filterPanel");
+      const header = document.getElementById("filterToggleHeader");
+      if (!panel || !header) return;
+      header.addEventListener("click", function (event) {
+        event.preventDefault();
+        panel.classList.toggle("is-open");
+        header.classList.toggle("is-open", panel.classList.contains("is-open"));
+        header.setAttribute("aria-expanded", panel.classList.contains("is-open") ? "true" : "false");
+      });
+    })();
+
+    const courseDocRequirements = /*[[${courseDocRequirements}]]*/ [];
+    const mainDocTypes = /*[[${docTypeOptions}]]*/ [];
+    const otherPaymentFields = /*[[${otherPaymentFields}]]*/ [];
+
+    const courseMultiSelect = document.getElementById('courseMultiSelect');
+    const docTypeMultiSelect = document.getElementById('docTypeMultiSelect');
+
+    function getMultiSelectValues(multiSelectEl) {
+      if (!multiSelectEl) return [];
+      const values = [];
+      multiSelectEl.querySelectorAll('.multiselect-option').forEach(option => {
+        const checkbox = option.querySelector('input[type="checkbox"]');
+        if (checkbox && checkbox.checked) {
+          const value = option.getAttribute('data-value');
+          if (value !== null && value !== '') values.push(value);
+        }
+      });
+      return values;
+    }
+
+    function updateMultiSelectTags(multiSelectEl) {
+      if (!multiSelectEl) return;
+      const tagsContainer = multiSelectEl.querySelector('.multiselect-tags');
+      const options = multiSelectEl.querySelectorAll('.multiselect-option');
+      if (!tagsContainer) return;
+
+      const selected = [];
+      options.forEach(option => {
+        const checkbox = option.querySelector('input[type="checkbox"]');
+        const label = option.querySelector('label');
+        if (checkbox && checkbox.checked) {
+          selected.push({
+            value: option.getAttribute('data-value'),
+            label: label ? label.textContent.trim() : ''
+          });
+        }
+      });
+
+      tagsContainer.innerHTML = '';
+      if (!selected.length) {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'multiselect-placeholder';
+        placeholder.textContent = multiSelectEl.id === 'courseMultiSelect' ? 'All courses' : 'Select documents...';
+        tagsContainer.appendChild(placeholder);
+        return;
+      }
+
+      selected.forEach(item => {
+        const tag = document.createElement('span');
+        tag.className = 'multiselect-tag';
+        tag.innerHTML = `
+          ${item.label}
+          <span class="multiselect-tag-remove" data-value="${item.value}">×</span>
+        `;
+        tag.querySelector('.multiselect-tag-remove').addEventListener('click', (event) => {
+          event.stopPropagation();
+          const checkbox = multiSelectEl.querySelector(`.multiselect-option[data-value="${item.value}"] input`);
+          if (checkbox) {
+            checkbox.checked = false;
+            updateMultiSelectTags(multiSelectEl);
+          }
+        });
+        tagsContainer.appendChild(tag);
+      });
+    }
+
+    function wireMultiSelect(multiSelectEl, onChange) {
+      if (!multiSelectEl) return;
+      const trigger = multiSelectEl.querySelector('.multiselect-trigger');
+      if (!multiSelectEl.dataset.bound && trigger) {
+        trigger.addEventListener('click', () => {
+          multiSelectEl.classList.toggle('active');
+        });
+        document.addEventListener('click', (event) => {
+          if (!multiSelectEl.contains(event.target)) {
+            multiSelectEl.classList.remove('active');
+          }
+        });
+        multiSelectEl.dataset.bound = 'true';
+      }
+
+      multiSelectEl.querySelectorAll('.multiselect-option input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+          updateMultiSelectTags(multiSelectEl);
+          if (typeof onChange === 'function') {
+            onChange();
+          }
+        });
+      });
+
+      updateMultiSelectTags(multiSelectEl);
+    }
+
+    function renderDocTypeOptions(docTypes) {
+      if (!docTypeMultiSelect) return;
+      const dropdown = docTypeMultiSelect.querySelector('.multiselect-dropdown');
+      if (!dropdown) return;
+      const selectedValues = new Set(getMultiSelectValues(docTypeMultiSelect));
+
+      dropdown.innerHTML = docTypes.map(doc => `
+        <div class="multiselect-option" data-value="${doc.id}">
+          <input type="checkbox" id="doc-${doc.id}" ${selectedValues.has(String(doc.id)) ? 'checked' : ''}>
+          <label for="doc-${doc.id}">${doc.name || ''}</label>
+        </div>
+      `).join('');
+
+      wireMultiSelect(docTypeMultiSelect);
+    }
+
+    function updateDocTypesForCourses() {
+      const selectedCourseIds = getMultiSelectValues(courseMultiSelect);
+      const docMap = new Map();
+      if (selectedCourseIds.length) {
+        courseDocRequirements.forEach(req => {
+          if (req && selectedCourseIds.includes(String(req.courseId))) {
+            docMap.set(req.docTypeId, { id: req.docTypeId, name: req.docTypeName, code: req.docTypeCode });
+          }
+        });
+      } else {
+        mainDocTypes.forEach(doc => {
+          if (doc) {
+            docMap.set(doc.id, { id: doc.id, name: doc.name, code: doc.code });
+          }
+        });
+      }
+      renderDocTypeOptions(Array.from(docMap.values()));
+    }
+
+    let currentFilters = {
+      page: 0,
+      size: 25,
+      q: "",
+      status: "",
+      collegeId: "",
+      courseId: "",
+      batch: "",
+      admissionYearId: "",
+      gender: "",
+      perkId: "",
+      docTypeIds: "",
+      docReceived: "",
+      otherPaymentFilters: ""
+    };
+
+    const operatorOptionsByType = {
+      text: [
+        { value: "contains", label: "Contains" },
+        { value: "equals", label: "Equals" }
+      ],
+      textarea: [
+        { value: "contains", label: "Contains" },
+        { value: "equals", label: "Equals" }
+      ],
+      email: [
+        { value: "contains", label: "Contains" },
+        { value: "equals", label: "Equals" }
+      ],
+      tel: [
+        { value: "contains", label: "Contains" },
+        { value: "equals", label: "Equals" }
+      ],
+      number: [
+        { value: "gt", label: "Greater than" },
+        { value: "gte", label: "Greater than or equal" },
+        { value: "eq", label: "Equal" },
+        { value: "lte", label: "Less than or equal" },
+        { value: "lt", label: "Less than" }
+      ],
+      date: [
+        { value: "before", label: "Before" },
+        { value: "after", label: "After" },
+        { value: "eq", label: "On" }
+      ],
+      select: [
+        { value: "eq", label: "Equals" }
+      ],
+      radio: [
+        { value: "eq", label: "Equals" }
+      ],
+      checkbox: [
+        { value: "eq", label: "Equals" }
+      ]
+    };
+
+    function buildOtherPaymentFilterRow() {
+      const row = document.createElement("div");
+      row.className = "other-filter-row";
+      row.innerHTML = `
+        <div class="other-filter-field">
+          <select class="form-select soft-select other-filter-field-select">
+            <option value="">Select field</option>
+            ${otherPaymentFields.map(field => `<option value="${field.id}" data-input-type="${field.inputType || ''}">${field.label || ''}</option>`).join('')}
+          </select>
+        </div>
+        <div class="other-filter-operator">
+          <select class="form-select soft-select other-filter-operator-select" disabled>
+            <option value="">Select operator</option>
+          </select>
+        </div>
+        <div class="other-filter-value">
+          <input type="text" class="form-control other-filter-value-input" placeholder="Enter value" disabled>
+        </div>
+        <button type="button" class="btn btn-outline-danger btn-sm other-filter-remove">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      `;
+
+      const fieldSelect = row.querySelector(".other-filter-field-select");
+      const operatorSelect = row.querySelector(".other-filter-operator-select");
+      const valueContainer = row.querySelector(".other-filter-value");
+      const removeBtn = row.querySelector(".other-filter-remove");
+
+      fieldSelect.addEventListener("change", () => {
+        const selected = fieldSelect.options[fieldSelect.selectedIndex];
+        const inputType = selected?.dataset?.inputType || "";
+        const operators = operatorOptionsByType[inputType] || operatorOptionsByType.text;
+        operatorSelect.innerHTML = operators.map(op => `<option value="${op.value}">${op.label}</option>`).join("");
+        operatorSelect.disabled = !inputType;
+        renderOtherPaymentValueInput(valueContainer, inputType, selected?.value);
+      });
+
+      removeBtn.addEventListener("click", () => {
+        row.remove();
+      });
+
+      return row;
+    }
+
+    function renderOtherPaymentValueInput(container, inputType, fieldId) {
+      if (!container) return;
+      container.innerHTML = "";
+      const type = inputType || "text";
+
+      if (type === "select" || type === "radio") {
+        const field = otherPaymentFields.find(f => String(f.id) === String(fieldId));
+        const options = field?.options || [];
+        const select = document.createElement("select");
+        select.className = "form-select soft-select other-filter-value-select";
+        select.innerHTML = `<option value="">Select value</option>` + options.map(opt => `
+          <option value="${opt.id}">${opt.label || ''}</option>
+        `).join("");
+        container.appendChild(select);
+        return;
+      }
+
+      if (type === "checkbox") {
+        const field = otherPaymentFields.find(f => String(f.id) === String(fieldId));
+        const options = field?.options || [];
+        const multiSelect = document.createElement("div");
+        multiSelect.className = "modern-multiselect other-filter-multiselect";
+        multiSelect.innerHTML = `
+          <div class="multiselect-trigger">
+            <div class="multiselect-tags">
+              <span class="multiselect-placeholder">Select values...</span>
+            </div>
+            <i class="bi bi-chevron-down multiselect-arrow"></i>
+          </div>
+          <div class="multiselect-dropdown">
+            ${options.map(opt => `
+              <div class="multiselect-option" data-value="${opt.id}">
+                <input type="checkbox" id="other-filter-${fieldId}-${opt.id}">
+                <label for="other-filter-${fieldId}-${opt.id}">${opt.label || ''}</label>
+              </div>
+            `).join("")}
+          </div>
+        `;
+        container.appendChild(multiSelect);
+        wireMultiSelect(multiSelect);
+        return;
+      }
+
+      const input = document.createElement("input");
+      input.className = "form-control other-filter-value-input";
+      if (type === "number") {
+        input.type = "number";
+      } else if (type === "date") {
+        input.type = "date";
+      } else {
+        input.type = "text";
+      }
+      input.placeholder = "Enter value";
+      container.appendChild(input);
+    }
+
+    function collectOtherPaymentFilters() {
+      const rows = document.querySelectorAll("#otherPaymentFilterRows .other-filter-row");
+      const filters = [];
+      rows.forEach(row => {
+        const fieldSelect = row.querySelector(".other-filter-field-select");
+        const operatorSelect = row.querySelector(".other-filter-operator-select");
+        if (!fieldSelect || !fieldSelect.value) return;
+        const fieldId = fieldSelect.value;
+        const inputType = fieldSelect.options[fieldSelect.selectedIndex]?.dataset?.inputType || "";
+        const operator = operatorSelect?.value || "";
+
+        if (inputType === "checkbox") {
+          const multi = row.querySelector(".other-filter-multiselect");
+          const values = getMultiSelectValues(multi);
+          if (!values.length) return;
+          filters.push({ fieldId, inputType, operator, values });
+          return;
+        }
+
+        const valueInput = row.querySelector(".other-filter-value-input, .other-filter-value-select");
+        const value = valueInput?.value?.trim();
+        if (!value) return;
+        filters.push({ fieldId, inputType, operator, value });
+      });
+      return filters;
+    }
+
+    function applyAdmissionFilters() {
+      const collegeId = document.getElementById("collegeId")?.value || "";
+      const courseId = getMultiSelectValues(courseMultiSelect).join(",");
+      const batch = document.getElementById("batch")?.value || "";
+      const admissionYearId = document.getElementById("admissionYearId")?.value || "";
+      const gender = document.getElementById("gender")?.value || "";
+      const perkId = document.getElementById("perkId")?.value || "";
+      const docTypeIds = getMultiSelectValues(docTypeMultiSelect).join(",");
+      const docReceived = document.getElementById("docReceived")?.value || "";
+      const otherPaymentFiltersPayload = JSON.stringify(collectOtherPaymentFilters());
+
+      const q = document.getElementById("searchInput")?.value || "";
+      const size = document.getElementById("paginationSize")?.value || "25";
+      const status = document.getElementById("statusSelect")?.value || "";
+
+      currentFilters = {
+        page: 0,
+        size: parseInt(size, 10),
+        q,
+        status,
+        collegeId,
+        courseId,
+        batch,
+        admissionYearId,
+        gender,
+        perkId,
+        docTypeIds,
+        docReceived,
+        otherPaymentFilters: otherPaymentFiltersPayload === "[]" ? "" : otherPaymentFiltersPayload
+      };
+
+      fetchAdmissionList();
+      return false;
+    }
+
+    function fetchAdmissionList() {
+      const params = new URLSearchParams();
+      params.set("page", currentFilters.page);
+      params.set("size", currentFilters.size);
+      if (currentFilters.q) params.set("q", currentFilters.q);
+      if (currentFilters.status) params.set("status", currentFilters.status);
+      if (currentFilters.collegeId) params.set("collegeId", currentFilters.collegeId);
+      if (currentFilters.courseId) params.set("courseId", currentFilters.courseId);
+      if (currentFilters.batch) params.set("batch", currentFilters.batch);
+      if (currentFilters.admissionYearId) params.set("admissionYearId", currentFilters.admissionYearId);
+      if (currentFilters.gender) params.set("gender", currentFilters.gender);
+      if (currentFilters.perkId) params.set("perkId", currentFilters.perkId);
+      if (currentFilters.docTypeIds) params.set("docTypeIds", currentFilters.docTypeIds);
+      if (currentFilters.docReceived) params.set("docReceived", currentFilters.docReceived);
+      if (currentFilters.otherPaymentFilters) params.set("otherPaymentFilters", currentFilters.otherPaymentFilters);
+
+      const tbody = document.querySelector('.modern-table tbody');
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>';
+      }
+
+      fetch("/api/admissionlist?" + params.toString())
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.json();
+        })
+        .then(data => {
+          updateAdmissionTable(data);
+          updateAdmissionPagination(data.page);
+        })
+        .catch(error => {
+          console.error('Error fetching admission list:', error);
+          if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle fs-4 d-block mb-2"></i>Error loading data. Please try again.</td></tr>';
+          }
+        });
+    }
+
+    function formatDate(value) {
+      if (!value) return '';
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function updateAdmissionTable(data) {
+      const tbody = document.querySelector('.modern-table tbody');
+      if (!tbody) return;
+
+      const admissions = data.page?.content || [];
+
+      if (admissions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-4 d-block mb-2"></i>No admissions found for the applied filters.</td></tr>';
+        return;
+      }
+
+      let html = '';
+      admissions.forEach(adm => {
+        const absId = adm?.absId || '-';
+        const admissionId = adm?.admissionId || '';
+        const studentName = adm?.studentName || '-';
+        const mobile = adm?.studentMobile || '-';
+        const courseName = adm?.courseName || '-';
+        const createdAt = formatDate(adm?.createdAt);
+        const status = adm?.status || 'UNKNOWN';
+        const statusClass = adm?.status ? String(status).toLowerCase() : 'other';
+        const branchApproved = adm?.branchApproved === true;
+
+        html += `
+          <tr>
+            <td>
+              <span class="d-inline-flex align-items-center gap-2">
+                <span class="approval-pill ${branchApproved ? 'approved' : 'pending'}" title="${branchApproved ? 'Branch Approved' : 'Branch Approval Pending'}">
+                  <i class="bi ${branchApproved ? 'bi-check-circle-fill' : 'bi-hourglass-split'}"></i>
+                </span>
+                <a href="/admissions?id=${admissionId}" class="text-decoration-none fw-semibold">${absId}</a>
+              </span>
+              <div class="text-muted small">${admissionId ? `ADM-${admissionId}` : ''}</div>
+            </td>
+            <td>
+              <div class="fw-semibold">${studentName}</div>
+              <div class="text-muted small">${mobile}</div>
+            </td>
+            <td>${courseName}</td>
+            <td>${createdAt}</td>
+            <td>
+              <span class="status-pill status-${statusClass}">${status}</span>
+            </td>
+            <td>
+              <div class="btn-group btn-group-sm">
+                <a href="/admissions?id=${admissionId}" class="btn btn-outline-secondary" title="View">
+                  <i class="bi bi-eye"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function updateAdmissionPagination(pageData) {
+      if (!pageData) return;
+
+      const paginationContainer = document.querySelector('.pagination');
+      if (!paginationContainer) return;
+
+      const totalPages = pageData.totalPages || 1;
+      const currentPage = pageData.number || 0;
+      const totalElements = pageData.totalElements || 0;
+      const numberOfElements = pageData.numberOfElements || 0;
+      const startElement = totalElements === 0 ? 0 : currentPage * pageData.size + 1;
+      const endElement = currentPage * pageData.size + numberOfElements;
+
+      const countDisplay = document.getElementById('admissionCountDisplay');
+      if (countDisplay) {
+        countDisplay.innerHTML = `${startElement} – ${endElement} of ${totalElements}`;
+      }
+
+      let paginationHtml = '';
+      paginationHtml += `
+        <li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+          <a class="page-link" href="#" onclick="goToPage(${currentPage - 1}); return false;" aria-label="Previous">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+      `;
+
+      for (let i = 0; i < totalPages; i++) {
+        paginationHtml += `
+          <li class="page-item ${i === currentPage ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i + 1}</a>
+          </li>
+        `;
+      }
+
+      paginationHtml += `
+        <li class="page-item ${currentPage >= totalPages - 1 ? 'disabled' : ''}">
+          <a class="page-link" href="#" onclick="goToPage(${currentPage + 1}); return false;" aria-label="Next">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+      `;
+
+      paginationContainer.innerHTML = paginationHtml;
+    }
+
+    function goToPage(page) {
+      if (page < 0) return;
+      currentFilters.page = page;
+      fetchAdmissionList();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      wireMultiSelect(courseMultiSelect, updateDocTypesForCourses);
+      wireMultiSelect(docTypeMultiSelect);
+      updateDocTypesForCourses();
+
+      const sizeSelect = document.getElementById('paginationSize');
+      if (sizeSelect) {
+        sizeSelect.addEventListener('change', applyAdmissionFilters);
+      }
+      const filterForm = document.getElementById('filterForm');
+      if (filterForm) {
+        filterForm.addEventListener('submit', (event) => {
+          event.preventDefault();
+          applyAdmissionFilters();
+        });
+      }
+      const resetBtn = document.getElementById('resetFiltersBtn');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          const fields = ['searchInput', 'statusSelect', 'collegeId', 'batch', 'admissionYearId', 'gender', 'perkId', 'docReceived'];
+          fields.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+          });
+          if (courseMultiSelect) {
+            courseMultiSelect.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateMultiSelectTags(courseMultiSelect);
+          }
+          if (docTypeMultiSelect) {
+            docTypeMultiSelect.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateMultiSelectTags(docTypeMultiSelect);
+          }
+          if (sizeSelect) sizeSelect.value = '25';
+          updateDocTypesForCourses();
+          const otherFilterRows = document.getElementById('otherPaymentFilterRows');
+          if (otherFilterRows) {
+            otherFilterRows.innerHTML = '';
+            otherFilterRows.appendChild(buildOtherPaymentFilterRow());
+          }
+          applyAdmissionFilters();
+        });
+      }
+
+      const otherFilterRows = document.getElementById('otherPaymentFilterRows');
+      if (otherFilterRows) {
+        otherFilterRows.appendChild(buildOtherPaymentFilterRow());
+      }
+      const addOtherFilterBtn = document.getElementById('addOtherPaymentFilterBtn');
+      if (addOtherFilterBtn) {
+        addOtherFilterBtn.addEventListener('click', () => {
+          otherFilterRows.appendChild(buildOtherPaymentFilterRow());
+        });
+      }
+    });
+  </script>
+
   <!-- Reserve space for sidebar (same shim we used earlier) -->
   <style>
-    :root { --sbw: 260px; }
-    @media (max-width: 991.98px) { :root { --sbw: 0px; } }
-    body.has-sidebar .app-main-wrap { margin-left: var(--sbw); transition: margin-left .2s ease; }
-    @media (min-width: 992px) { .sb-spacer { display: none; } }
-    .app-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 6px 18px rgba(2,6,23,.06); }
+    :root {
+      --sbw: 260px;
+      --primary: #3b3070;
+      --primary-light: #7a6cb0;
+      --primary-soft: #f3f1fb;
+      --success: #10b981;
+      --success-light: #d1fae5;
+      --danger: #ef4444;
+      --danger-light: #fee2e2;
+      --warning: #f59e0b;
+      --warning-light: #fef3c7;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --surface: #ffffff;
+      --soft: #f8fafc;
+      --border: #e2e8f0;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+    }
+
+    @media (max-width: 991.98px) {
+      :root { --sbw: 0px; }
+    }
+
+    body.has-sidebar .app-main-wrap {
+      margin-left: var(--sbw);
+      transition: margin-left .2s ease;
+      background: #fafbfc;
+    }
+
+    @media (min-width: 992px) {
+      .sb-spacer { display: none; }
+    }
+
+    .app-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .filter-panel {
+      display: none;
+      animation: fadeInUp 0.3s ease forwards;
+    }
+
+    .filter-panel.is-open {
+      display: block;
+    }
+
+    .filter-title {
+      font-weight: 600;
+      color: var(--ink);
+      font-size: 0.95rem;
+    }
+
+    .other-filter-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 1.2fr) minmax(160px, 1fr) minmax(220px, 1.6fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+    @media (max-width: 991.98px) {
+      .other-filter-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Keyframe Animations - Define first */
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      25% { background-position: 50% 25%; }
+      50% { background-position: 100% 50%; }
+      75% { background-position: 50% 75%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes orbitFloat {
+      0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 0.6;
+      }
+      25% {
+        transform: translate(30px, -30px) rotate(90deg);
+        opacity: 0.8;
+      }
+      50% {
+        transform: translate(0, -50px) rotate(180deg);
+        opacity: 0.7;
+      }
+      75% {
+        transform: translate(-30px, -30px) rotate(270deg);
+        opacity: 0.9;
+      }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes orbitFloatReverse {
+      0%, 100% {
+        transform: translate(0, 0) rotate(360deg);
+        opacity: 0.5;
+      }
+      25% {
+        transform: translate(-40px, 40px) rotate(270deg);
+        opacity: 0.7;
+      }
+      50% {
+        transform: translate(0, 60px) rotate(180deg);
+        opacity: 0.6;
+      }
+      75% {
+        transform: translate(40px, 40px) rotate(90deg);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow:
+          var(--shadow-xl),
+          0 0 0 1px rgba(255,255,255,0.1) inset,
+          0 0 50px rgba(122, 108, 176, 0.4),
+          0 0 90px rgba(122, 108, 176, 0.2);
+      }
+      50% {
+        box-shadow:
+          var(--shadow-xl),
+          0 0 0 1px rgba(255,255,255,0.2) inset,
+          0 0 70px rgba(122, 108, 176, 0.6),
+          0 0 130px rgba(122, 108, 176, 0.3);
+      }
+    }
+
+    @keyframes shimmerLine {
+      0% {
+        opacity: 0.4;
+        transform: scaleX(0.8);
+      }
+      50% {
+        opacity: 1;
+        transform: scaleX(1.2);
+      }
+      100% {
+        opacity: 0.4;
+        transform: scaleX(0.8);
+      }
+    }
+
+    @keyframes particleFloat {
+      0%, 100% {
+        transform: translateY(0) translateX(0);
+        opacity: 0;
+      }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      50% {
+        transform: translateY(-100px) translateX(20px);
+      }
+    }
+
+    /* Hero Card - Stunning Glass Morphism Design */
+    .hero-card {
+      background:
+      linear-gradient(135deg, #3b3070 0%, #7a6cb0 100%);
+      background-size: 400% 400%, 100% 100%;
+      color: #ffffff;
+      border-radius: var(--radius-xl);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      animation: gradientFlow 15s ease-in-out infinite, pulseGlow 6s ease-in-out infinite;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.1) inset;
+    }
+
+    /* Particle System */
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+      linear-gradient(135deg, #221b44 0%, #7a6cb0 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Animated Orbs */
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      top: -200px;
+      right: -200px;
+      background:
+        radial-gradient(circle,
+          rgba(255, 255, 255, 0.25) 0%,
+          rgba(255, 255, 255, 0.15) 30%,
+          transparent 70%
+        );
+      border-radius: 50%;
+      animation: orbitFloat 20s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Additional Light Orb */
+    .hero-content::before {
+      content: "";
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      bottom: -250px;
+      left: -150px;
+      background:
+        radial-gradient(circle,
+          rgba(255, 255, 255, 0.2) 0%,
+          rgba(255, 255, 255, 0.12) 35%,
+          transparent 65%
+        );
+      border-radius: 50%;
+      animation: orbitFloatReverse 25s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hero-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 2;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 32px;
+      height: 3px;
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.9),
+        rgba(255, 255, 255, 0.4)
+      );
+      border-radius: 2px;
+      animation: shimmerLine 2.5s ease-in-out infinite;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      transform-origin: left;
+    }
+
+    .eyebrow::after {
+      content: "●";
+      font-size: 0.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      animation: shimmerLine 2.5s ease-in-out infinite reverse;
+    }
+
+    .hero-title {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      margin: 0;
+      position: relative;
+      z-index: 1;
+      letter-spacing: -0.03em;
+      background: linear-gradient(
+        135deg,
+        #ffffff 0%,
+        rgba(255, 255, 255, 0.9) 100%
+      );
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: white;
+      background-clip: text;
+      /*text-shadow: 0 2px 20px rgba(255, 255, 255, 0.27), 0 0 40px rgba(255, 255, 255, 0.14);
+      */filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+    }
+
+    .hero-subtitle {
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 0.98rem;
+      position: relative;
+      z-index: 1;
+      margin-top: 8px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      line-height: 1.6;
+    }
+
+    /* Filter Card - Modern Design */
+    .filter-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      box-shadow: var(--shadow-md);
+      transition: all 0.3s ease;
+    }
+    .filter-card:hover {
+      box-shadow: var(--shadow-lg);
+    }
+    .filter-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      cursor: pointer;
+    }
+    .filter-header-content {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .filter-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 1.1rem;
+    }
+    .filter-subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .filter-toggle {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--soft);
+      color: var(--muted);
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .filter-toggle i {
+      transition: transform 0.2s ease;
+    }
+    .filter-header.is-open .filter-toggle i {
+      transform: rotate(180deg);
+    }
+
+    /* Modern multi-select */
+    .modern-multiselect {
+      position: relative;
+      width: 100%;
+    }
+    .multiselect-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 42px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .multiselect-trigger:hover {
+      border-color: rgba(59, 48, 112, 0.35);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    }
+    .modern-multiselect.active .multiselect-trigger {
+      border-color: rgba(59, 48, 112, 0.6);
+      box-shadow: 0 0 0 3px rgba(59, 48, 112, 0.12);
+    }
+    .multiselect-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .multiselect-placeholder {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .multiselect-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .multiselect-tag-remove {
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--primary);
+    }
+    .multiselect-arrow {
+      color: var(--muted);
+      transition: transform 0.2s ease;
+    }
+    .modern-multiselect.active .multiselect-arrow {
+      transform: rotate(180deg);
+    }
+    .multiselect-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      width: 100%;
+      max-height: 240px;
+      overflow: auto;
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-6px);
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+      z-index: 20;
+      padding: 6px;
+    }
+    .modern-multiselect.active .multiselect-dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .multiselect-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .multiselect-option:hover {
+      background: rgba(59, 48, 112, 0.08);
+    }
+    .multiselect-option input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+    }
+    .multiselect-option label {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .multiselect-option input[type="checkbox"]:checked + label {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .form-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 8px;
+      letter-spacing: 0.01em;
+    }
+
+    .search-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 4px 14px;
+      transition: all 0.2s ease;
+    }
+    .search-pill:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-soft);
+    }
+    .search-pill .bi {
+      color: var(--muted);
+      font-size: 1.1rem;
+    }
+    .search-pill input:focus {
+      box-shadow: none;
+      outline: none;
+    }
+
+    .soft-select {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      color: var(--ink);
+      font-weight: 500;
+    }
+    .soft-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-soft);
+      outline: none;
+    }
+
+    .approval-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      background: #f1f5f9;
+      color: #94a3b8;
+    }
+    .approval-pill.approved {
+      background: #dcfce7;
+      color: #16a34a;
+    }
+    .approval-pill.pending {
+      background: #fee2e2;
+      color: #ef4444;
+    }
+
+    /* Table Container - Remove Horizontal Scroll */
+    .table-responsive {
+      overflow-x: visible !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Table - Modern Clean Design */
+    .modern-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+      table-layout: fixed;
+    }
+    .modern-table thead th {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--soft);
+      font-weight: 700;
+      padding: 14px 12px;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .modern-table thead th:first-child {
+      border-top-left-radius: var(--radius-md);
+      width: 130px;
+    }
+    .modern-table thead th:nth-child(2) {
+      width: auto;
+      min-width: 180px;
+    }
+    .modern-table thead th:nth-child(3) {
+      width: 200px;
+    }
+    .modern-table thead th:nth-child(4) {
+      width: 130px;
+    }
+    .modern-table thead th:nth-child(5) {
+      width: 140px;
+    }
+    .modern-table thead th:last-child {
+      border-top-right-radius: var(--radius-md);
+      width: 90px;
+    }
+    .modern-table tbody td {
+      border-bottom: 1px solid var(--border);
+      color: var(--ink);
+      vertical-align: middle;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .modern-table tbody td:nth-child(2),
+    .modern-table tbody td:nth-child(3) {
+      white-space: normal;
+      word-wrap: break-word;
+    }
+    .modern-table tbody tr {
+      transition: all 0.2s ease;
+    }
+    .modern-table tbody tr:hover {
+      background: var(--primary-soft);
+    }
+    .modern-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .modern-table tbody tr:last-child td:first-child {
+      border-bottom-left-radius: var(--radius-md);
+    }
+    .modern-table tbody tr:last-child td:last-child {
+      border-bottom-right-radius: var(--radius-md);
+    }
+
+    /* Status Pills - Enhanced Colors */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border: 1px solid;
+      transition: all 0.2s ease;
+    }
+    .status-admitted {
+      background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(34,197,94,0.18));
+      color: #15803d;
+      border-color: rgba(34,197,94,0.3);
+    }
+    .status-admitted:hover {
+      background: rgba(34,197,94,0.2);
+      border-color: rgba(34,197,94,0.5);
+    }
+    .status-pending {
+      background: linear-gradient(135deg, rgba(251,191,36,0.15), rgba(251,191,36,0.25));
+      color: #92400e;
+      border-color: rgba(251,191,36,0.4);
+    }
+    .status-pending:hover {
+      background: rgba(251,191,36,0.3);
+      border-color: rgba(251,191,36,0.6);
+    }
+    .status-rejected {
+      background: linear-gradient(135deg, rgba(248,113,113,0.15), rgba(248,113,113,0.25));
+      color: #b91c1c;
+      border-color: rgba(248,113,113,0.4);
+    }
+    .status-rejected:hover {
+      background: rgba(248,113,113,0.25);
+      border-color: rgba(248,113,113,0.6);
+    }
+    .status-other {
+      background: linear-gradient(135deg, rgba(148,163,184,0.15), rgba(148,163,184,0.25));
+      color: #475569;
+      border-color: rgba(148,163,184,0.4);
+    }
+    .status-under_cancellation {
+      background: linear-gradient(135deg, rgba(14,116,144,0.12), rgba(14,116,144,0.2));
+      color: #0e7490;
+      border-color: rgba(14,116,144,0.35);
+    }
+
+    /* Action Buttons - Modern Icon Buttons */
+    .btn-group-sm .btn {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .btn-group-sm .btn:hover {
+      background: var(--primary-soft);
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-group-sm .btn i {
+      font-size: 1rem;
+    }
+
+    /* Pagination - Modern Style */
+    .pagination {
+      gap: 6px;
+    }
+    .page-item .page-link {
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      color: var(--ink);
+      font-weight: 600;
+      padding: 8px 14px;
+      transition: all 0.2s ease;
+      margin: 0;
+    }
+    .page-item .page-link:hover {
+      background: var(--primary-soft);
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+    .page-item.active .page-link {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      border-color: var(--primary);
+      color: white;
+      box-shadow: var(--shadow-sm);
+    }
+    .page-item.disabled .page-link {
+      background: var(--soft);
+      border-color: var(--border);
+      color: var(--muted);
+      opacity: 0.5;
+    }
+
+    /* Link Styles */
+    .modern-table a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+    .modern-table a:hover {
+      color: var(--primary-light);
+      text-decoration: underline;
+    }
+
+    /* Empty State */
+    .modern-table tbody td[colspan] {
+      background: var(--soft);
+      border-radius: var(--radius-md);
+    }
+    .modern-table tbody td[colspan] .bi {
+      color: var(--muted);
+      opacity: 0.5;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 1200px) {
+      .modern-table {
+        table-layout: auto;
+      }
+      .modern-table thead th,
+      .modern-table tbody td {
+        white-space: nowrap;
+      }
+      .table-responsive {
+        overflow-x: auto !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .hero-card {
+        padding: 20px 24px;
+        border-radius: var(--radius-lg);
+      }
+      .hero-card::after {
+        width: 400px;
+        height: 400px;
+        top: -150px;
+        right: -150px;
+      }
+      .hero-content::before {
+        width: 350px;
+        height: 350px;
+        bottom: -180px;
+        left: -100px;
+      }
+      .hero-title {
+        font-size: 1.5rem;
+      }
+      .eyebrow {
+        font-size: 0.6rem;
+        letter-spacing: 0.25em;
+      }
+      .eyebrow::before {
+        width: 24px;
+      }
+      .filter-card {
+        padding: 16px 18px;
+      }
+      .modern-table {
+        font-size: 0.85rem;
+      }
+      .modern-table thead th,
+      .modern-table tbody td {
+        padding: 10px 8px;
+      }
+      .modern-table thead th:first-child {
+        width: 110px;
+      }
+      .modern-table thead th:nth-child(3) {
+        width: 150px;
+      }
+      .status-pill {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .hero-card {
+        padding: 20px 22px;
+        border-radius: var(--radius-md);
+      }
+      .hero-card::after {
+        width: 300px;
+        height: 300px;
+      }
+      .hero-content::before {
+        width: 250px;
+        height: 250px;
+      }
+      .hero-title {
+        font-size: 1.45rem;
+      }
+      .hero-subtitle {
+        font-size: 0.9rem;
+      }
+      .eyebrow::before {
+        width: 20px;
+        height: 2px;
+      }
+      .modern-table thead th,
+      .modern-table tbody td {
+        padding: 8px 6px;
+        font-size: 0.8rem;
+      }
+    }
   </style>
 </body>
 </html>

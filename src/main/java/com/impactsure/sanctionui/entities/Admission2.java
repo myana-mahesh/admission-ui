@@ -17,6 +17,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.impactsure.sanctionui.enums.AdmissionStatus;
+import com.impactsure.sanctionui.enums.CollegeVerificationStatus;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -42,7 +43,8 @@ import lombok.Setter;
 @Table(name = "admission2",
        indexes = {
            @Index(name = "idx_adm_course_year", columnList = "course_id,year_id"),
-           @Index(name = "idx_adm_student_year", columnList = "student_id,year_id")
+           @Index(name = "idx_adm_student_year", columnList = "student_id,year_id"),
+           @Index(name = "idx_adm_branch_approved", columnList = "branch_approved")
        })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Admission2 extends Auditable {
@@ -104,6 +106,31 @@ public class Admission2 extends Auditable {
     @Enumerated(EnumType.STRING)
     @Column(length = 10)
     private AdmissionStatus status = AdmissionStatus.Draft;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "college_verification_status", length = 20)
+    private CollegeVerificationStatus collegeVerificationStatus;
+
+    @Column(name = "college_verified_by", length = 120)
+    private String collegeVerifiedBy;
+
+    @Column(name = "college_verified_at")
+    private LocalDateTime collegeVerifiedAt;
+
+    @Column(name = "college_rejected_by", length = 120)
+    private String collegeRejectedBy;
+
+    @Column(name = "college_rejected_at")
+    private LocalDateTime collegeRejectedAt;
+
+    @Column(name = "branch_approved", nullable = false, columnDefinition = "boolean default false")
+    private Boolean branchApproved = false;
+
+    @Column(name = "branch_approved_by", length = 120)
+    private String branchApprovedBy;
+
+    @Column(name = "branch_approved_at")
+    private LocalDateTime branchApprovedAt;
 
     // Convenience relations
 //    @OneToMany(mappedBy = "admission", cascade = CascadeType.ALL, orphanRemoval = true)

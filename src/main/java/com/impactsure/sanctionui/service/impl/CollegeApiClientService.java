@@ -13,8 +13,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpStatusCodeException;
 
 import com.impactsure.sanctionui.dto.CollegeDto;
+import com.impactsure.sanctionui.dto.CollegeCourseSeatDto;
 
 import lombok.RequiredArgsConstructor;
 
@@ -82,9 +84,27 @@ public class CollegeApiClientService {
         return response.getBody();
     }
 
-    public void delete(Long collegeId, String accessToken) {
+    public ResponseEntity<String> delete(Long collegeId, String accessToken) {
         String url = admissionBaseUrl + "/api/colleges/" + collegeId;
         HttpEntity<Void> entity = new HttpEntity<>(getHeaders(accessToken));
-        restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+        try {
+            return restTemplate.exchange(url, HttpMethod.DELETE, entity, String.class);
+        } catch (HttpStatusCodeException ex) {
+            return ResponseEntity.status(ex.getStatusCode()).body(ex.getResponseBodyAsString());
+        }
+    }
+
+    public List<CollegeCourseSeatDto> getCollegeCourseSeats(Long collegeId, String accessToken) {
+        String url = admissionBaseUrl + "/api/colleges/" + collegeId + "/course-seats";
+        HttpEntity<Void> entity = new HttpEntity<>(getHeaders(accessToken));
+
+        ResponseEntity<CollegeCourseSeatDto[]> response =
+                restTemplate.exchange(url, HttpMethod.GET, entity, CollegeCourseSeatDto[].class);
+
+        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            return Collections.emptyList();
+        }
+
+        return Arrays.asList(response.getBody());
     }
 }

@@ -23,35 +23,128 @@
       <!-- Nav -->
       <nav class="sb-nav">
         <div class="sb-label">Admissions</div>
-		<a class="sb-link" th:classappend="${active}=='admissions' ? ' is-active' : ''" th:href="@{/admissionlist}">
+        <a class="sb-link"
+           th:if="${isSuperAdmin or #sets.contains(permissionResources, 'dashboard')}"
+           th:classappend="${active}=='dashboard' ? ' is-active' : ''" th:href="@{/dashboard}">
+          <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+        </a>
+        <a class="sb-link"
+           th:if="${isSuperAdmin or #sets.contains(permissionResources, 'admission-list')}"
+           th:classappend="${active}=='admissions' ? ' is-active' : ''" th:href="@{/admissionlist}">
           <i class="bi bi-mortarboard"></i><span>All Admissions</span>
         </a>
-        <a class="sb-link" th:classappend="${active}=='newadmission' ? ' is-active' : ''" th:href="@{/newadmission}">
+        <a class="sb-link"
+           th:if="${isSuperAdmin or #sets.contains(permissionResources, 'newadmission')}"
+           th:classappend="${active}=='newadmission' ? ' is-active' : ''" th:href="@{/newadmission}">
           <i class="bi bi-mortarboard"></i><span>New Admission</span>
         </a>
-        <a class="sb-link" th:classappend="${active}=='students' ? ' is-active' : ''" th:href="@{/studentlist}">
+        <!-- <a class="sb-link" th:classappend="${active}=='students' ? ' is-active' : ''" th:href="@{/studentlist}">
           <i class="bi bi-people"></i><span>Students</span>
-        </a>
+        </a> -->
 		
-		<a class="sb-link" th:classappend="${active}=='paymentmodes' ? ' is-active' : ''" th:href="@{/payment-modes}">
-          <i class="bi bi-people"></i><span>Payment Modes</span>
-        </a>
-		
-		<a class="sb-link" th:classappend="${active}=='coursemaster' ? ' is-active' : ''" th:href="@{/courses}">
-          <i class="bi bi-people"></i><span>Course</span>
-        </a>
-		<a class="sb-link" th:classappend="${active}=='colleges' ? ' is-active' : ''" th:href="@{/colleges}">
-          <i class="bi bi-building"></i><span>Colleges</span>
-        </a>
-		<a class="sb-link" th:classappend="${active}=='perks-master' ? ' is-active' : ''" th:href="@{/perks-master}">
-          <i class="bi bi-people"></i><span>Student Perks</span>
-        </a>
+        <div class="sb-group"
+             th:if="${isSuperAdmin
+                     or #sets.contains(permissionResources, 'courses')
+                     or #sets.contains(permissionResources, 'colleges')
+                     or #sets.contains(permissionResources, 'branches')
+                     or #sets.contains(permissionResources, 'batches')
+                     or #sets.contains(permissionResources, 'student-perks')
+                     or #sets.contains(permissionResources, 'nationalities')
+                     or #sets.contains(permissionResources, 'religions')
+                     or #sets.contains(permissionResources, 'other-payments')
+                     or #sets.contains(permissionResources, 'course-documents')
+                     or #sets.contains(permissionResources, 'discount-reasons')
+                     or #sets.contains(permissionResources, 'user-management')}">
+          <button class="sb-link sb-toggle" type="button" id="adminToggle" aria-expanded="false">
+            <i class="bi bi-shield-lock"></i><span>Admin Features</span>
+            <i class="bi bi-chevron-down ms-auto"></i>
+          </button>
+          <div class="sb-submenu" id="adminMenu">
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin}"
+               th:classappend="${active}=='paymentmodes' ? ' is-active' : ''" th:href="@{/payment-modes}">
+              <i class="bi bi-cash-coin"></i><span>Payment Modes</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'courses')}"
+               th:classappend="${active}=='coursemaster' ? ' is-active' : ''" th:href="@{/courses}">
+              <i class="bi bi-journal-bookmark"></i><span>Course</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'colleges')}"
+               th:classappend="${active}=='colleges' ? ' is-active' : ''" th:href="@{/colleges}">
+              <i class="bi bi-building"></i><span>Colleges</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'branches')}"
+               th:classappend="${active}=='branches' ? ' is-active' : ''" th:href="@{/branches}">
+              <i class="bi bi-diagram-3"></i><span>Branches</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'batches')}"
+               th:classappend="${active}=='batches' ? ' is-active' : ''" th:href="@{/batches}">
+              <i class="bi bi-layers"></i><span>Batches</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'student-perks')}"
+               th:classappend="${active}=='perks-master' ? ' is-active' : ''" th:href="@{/perks-master}">
+              <i class="bi bi-gift"></i><span>Student Perks</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'nationalities')}"
+               th:classappend="${active}=='nationalities' ? ' is-active' : ''" th:href="@{/nationality-master}">
+              <i class="bi bi-flag"></i><span>Nationalities</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'religions')}"
+               th:classappend="${active}=='religions' ? ' is-active' : ''" th:href="@{/religion-master}">
+              <i class="bi bi-heart"></i><span>Religions</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'other-payments')}"
+               th:classappend="${active}=='other-payment-fields' ? ' is-active' : ''" th:href="@{/other-payment-fields}">
+              <i class="bi bi-clipboard2-data"></i><span>Other Payments</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'course-documents')}"
+               th:classappend="${active}=='course-documents' ? ' is-active' : ''" th:href="@{/course-documents}">
+              <i class="bi bi-file-earmark-text"></i><span>Course Documents</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'discount-reasons')}"
+               th:classappend="${active}=='discount-reasons' ? ' is-active' : ''" th:href="@{/discount-reason-master}">
+              <i class="bi bi-tags"></i><span>Discount Reasons</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'user-management')}"
+               th:classappend="${active}=='permission-management' ? ' is-active' : ''" th:href="@{/permissions}">
+              <i class="bi bi-shield-check"></i><span>Permissions</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'user-management')}"
+               th:classappend="${active}=='role-management' ? ' is-active' : ''" th:href="@{/roles}">
+              <i class="bi bi-person-badge"></i><span>Roles</span>
+            </a>
+            <a class="sb-sublink"
+               th:if="${isSuperAdmin or #sets.contains(permissionResources, 'user-management')}"
+               th:classappend="${active}=='user-management' ? ' is-active' : ''" th:href="@{/user-management}">
+              <i class="bi bi-people-gear"></i><span>Users</span>
+            </a>
+          </div>
+        </div>
 
         <div class="sb-label">Finance</div>
-        <a class="sb-link" th:classappend="${active}=='payments' ? ' is-active' : ''" th:href="@{/payments}">
+        <!-- <a class="sb-link" th:classappend="${active}=='payments' ? ' is-active' : ''" th:href="@{/payments}">
           <i class="bi bi-cash-coin"></i><span>Payments</span>
+        </a> -->
+        <a class="sb-link"
+           th:if="${isSuperAdmin or #sets.contains(permissionResources, 'fees-ledger')}"
+           th:classappend="${active}=='fees-ledger' ? ' is-active' : ''" th:href="@{/fees-ledger}">
+          <i class="bi bi-receipt"></i><span>Fees Overview</span>
         </a>
-        <a class="sb-link" th:classappend="${active}=='invoices' ? ' is-active' : ''" th:href="@{/invoices}">
+        <a class="sb-link"
+           th:if="${isSuperAdmin or #sets.contains(permissionResources, 'invoices')}"
+           th:classappend="${active}=='invoices' ? ' is-active' : ''" th:href="@{/invoices}">
           <i class="bi bi-receipt"></i><span>Invoices</span>
         </a>
 
@@ -72,10 +165,10 @@
       <!-- Footer -->
       <div class="sb-foot">
         <div class="sb-user">
-          <div class="sb-avatar">A</div>
+          <div class="sb-avatar" th:text="${userName != null && !#strings.isEmpty(userName) ? #strings.substring(userName,0,1) : 'U'}">U</div>
           <div>
-            <div class="sb-user-name" >Admin</div>
-            <div class="sb-user-role">Administrator</div>
+            <div class="sb-user-name" th:text="${userName != null && !#strings.isEmpty(userName) ? userName : 'User'}">User</div>
+            <div class="sb-user-role" th:text="${userRoleLabel != null ? userRoleLabel : ''}"></div>
           </div>
         </div>
         <a href="/logout" class="sb-logout w-100"><i class="bi bi-box-arrow-right"></i> Logout</a>
@@ -90,6 +183,42 @@
   <style>
     /* ---- Size & breakpoints ---- */
     
+    .sb-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .sb-toggle {
+      background: none;
+      border: none;
+      width: 100%;
+    }
+    .sb-submenu {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      padding-left: 32px;
+    }
+    .sb-submenu.is-open {
+      display: flex;
+    }
+    .sb-sublink {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      color: #1f2937;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .sb-sublink:hover {
+      background: #f4effe;
+    }
+    .sb-sublink.is-active {
+      background: #3b3070;
+      color: #fff;
+    }
   </style>
 
   <!-- Optional: drawer overlay (mobile). Add once per page near <body>: <div id="sbOverlay" class="sb-overlay" hidden></div> -->
@@ -99,13 +228,27 @@
       const sb = document.getElementById('appSidebar');
       const btn = document.getElementById('sbToggle');
       const overlay = document.getElementById('sbOverlay');
-      if (!sb || !btn || !overlay) return;
+      if (sb && btn && overlay) {
+        const open = () => { sb.classList.add('is-open'); overlay.hidden = false; btn.setAttribute('aria-expanded','true'); };
+        const close = () => { sb.classList.remove('is-open'); overlay.hidden = true; btn.setAttribute('aria-expanded','false'); };
+        btn.addEventListener('click', () => sb.classList.contains('is-open') ? close() : open());
+        overlay.addEventListener('click', close);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+      }
 
-      const open = () => { sb.classList.add('is-open'); overlay.hidden = false; btn.setAttribute('aria-expanded','true'); };
-      const close = () => { sb.classList.remove('is-open'); overlay.hidden = true; btn.setAttribute('aria-expanded','false'); };
-      btn.addEventListener('click', () => sb.classList.contains('is-open') ? close() : open());
-      overlay.addEventListener('click', close);
-      document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+      const adminToggle = document.getElementById('adminToggle');
+      const adminMenu = document.getElementById('adminMenu');
+      if (adminToggle && adminMenu) {
+        adminToggle.addEventListener('click', () => {
+          const isOpen = adminMenu.classList.toggle('is-open');
+          adminToggle.setAttribute('aria-expanded', String(isOpen));
+        });
+        const active = document.querySelector('.sb-sublink.is-active');
+        if (active) {
+          adminMenu.classList.add('is-open');
+          adminToggle.setAttribute('aria-expanded', 'true');
+        }
+      }
     }());
   </script>
 </div>

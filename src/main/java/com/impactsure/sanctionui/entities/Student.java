@@ -73,6 +73,10 @@ public class Student extends Auditable {
     @Column(name = "registration_number", unique = true)
     private String registrationNumber;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "course_id")
+    private Course course;
+
     // 🔥 INVERSE SIDE
     @OneToOne(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private SscDetails sscDetails;
@@ -86,4 +90,3 @@ public class Student extends Auditable {
 
     private String academicYearLabel; // e.g., 2025-26*/
 }
-

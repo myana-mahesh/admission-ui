@@ -150,7 +150,7 @@ public class StudentPerksMasterService {
     /* ====================== DELETE ====================== */
 
     /** Delete a perk from master. */
-    public boolean deletePerk(Long perkId, String accessToken) {
+    public ResponseEntity<String> deletePerk(Long perkId, String accessToken) {
     	baseUrl = admissionServiceBaseUrl + "/api/student-perks";
         String url = baseUrl + "/" + perkId;
 
@@ -158,19 +158,21 @@ public class StudentPerksMasterService {
             HttpHeaders headers = buildHeaders(accessToken);
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<Void> resp =
+            ResponseEntity<String> resp =
                     restTemplate.exchange(
                             url,
                             HttpMethod.DELETE,
                             entity,
-                            Void.class
+                            String.class
                     );
 
-            return resp.getStatusCode().is2xxSuccessful();
+            return resp;
+        } catch (org.springframework.web.client.HttpStatusCodeException ex) {
+            return ResponseEntity.status(ex.getStatusCode())
+                    .body(ex.getResponseBodyAsString());
         } catch (Exception ex) {
             log.error("Error deleting perk {}: {}", perkId, ex.getMessage(), ex);
-            return false;
+            return ResponseEntity.status(500).body("Unable to delete the perk.");
         }
     }
 }
-

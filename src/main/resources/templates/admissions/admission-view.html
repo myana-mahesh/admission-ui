@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
-<body class="theme-light has-sidebar">
+<body class="theme-light has-sidebar" th:with="canEditAdmissions=${isSuperAdmin or #sets.contains(permissionSet,'admissionlist:EDIT') or #sets.contains(permissionSet,'admission-list:EDIT')}">
   <!-- Sidebar -->
   <div th:replace="fragments/sidebar :: app_sidebar('admissions')"></div>
   <input type="hidden"
@@ -18,7 +18,9 @@
     <div class="toolbar"><div class="container-xl"></div></div>
 
     <div class="container-xl my-4 max-width-100">
-      <form id="admissionForm" class="app-card" th:object="${admission}">
+      <form id="admissionForm" class="app-card" th:object="${admission}"
+            
+            th:attr="data-readonly=${!canEditAdmissions}">
         <!-- =================== HEADER =================== -->
         <div class="glass-header p-4">
           <div class="ribbon"></div>
@@ -33,6 +35,18 @@
               <h3 class="primary-heading mb-1 fw-bold" style="letter-spacing:.2px;">ABS EDUCATIONAL SOLUTION</h3>
               <div class="help">Authorized Admission Centre & Education Solution · +91 98332 11999</div>
             </div>
+            <div class="col-md-4">
+              <div class="d-flex flex-column align-items-md-end gap-2">
+                <span class="badge"
+                      th:classappend="${admission.branchApproved != null and admission.branchApproved ? ' bg-success' : ' bg-danger'}"
+                      th:text="${admission.branchApproved != null and admission.branchApproved ? 'Branch Approved' : 'Branch Approval Pending'}">
+                  Branch Approval Pending
+                </span>
+                <span class="badge bg-light text-dark"
+                      th:if="${admission.branchApproved != null and admission.branchApproved and admission.branchApprovedBy != null}"
+                      th:text="${admission.branchApprovedBy}">Approved By</span>
+              </div>
+            </div>
           </div>
 
           <div class="row g-3 mt-2">
@@ -43,9 +57,9 @@
                        th:field="*{admissionId}"
                        id="formNo"
                        placeholder=" "
-                       required>
+                       readonly
+                       disabled>
                 <label for="formNo">Form No.</label>
-                <div class="invalid-feedback small">Form number is required.</div>
               </div>
             </div>
             <div class="col-md-4">
@@ -55,9 +69,9 @@
                        id="formDate"
                        placeholder=" "
                        th:value="${#strings.substring(admission.formDate,0,10)}"
-                       required>
+                       readonly
+                       disabled>
                 <label for="formDate">Date</label>
-                <div class="invalid-feedback small">Date is required.</div>
               </div>
             </div>
             <div class="col-md-4">
@@ -67,9 +81,9 @@
                        th:field="*{student.absId}"
                        id="absId"
                        placeholder=""
-                       required>
+                       readonly
+                       disabled>
                 <label for="absId">ABS ID</label>
-                <div class="invalid-feedback small">ABS ID is required.</div>
               </div>
             </div>
           </div>
@@ -200,24 +214,30 @@
 
             <div class="col-md-3">
               <div class="form-floating">
-                <input type="text"
-                       class="form-control student-details"
-                       th:field="*{student.nationality}"
-                       id="nationality"
-                       placeholder=" "
-                       required>
+                <select class="form-select student-details"
+                        th:field="*{student.nationality}"
+                        id="nationality"
+                        required>
+                  <option value=""></option>
+                  <option th:each="n : ${nationalities}"
+                          th:value="${n.name}"
+                          th:text="${n.name}"></option>
+                </select>
                 <label for="nationality">Nationality</label>
                 <div class="invalid-feedback small">Nationality is required.</div>
               </div>
             </div>
             <div class="col-md-3">
               <div class="form-floating">
-                <input type="text"
-                       class="form-control student-details"
-                       th:field="*{student.religion}"
-                       id="religion"
-                       placeholder=" "
-                       required>
+                <select class="form-select student-details"
+                        th:field="*{student.religion}"
+                        id="religion"
+                        required>
+                  <option value=""></option>
+                  <option th:each="r : ${religions}"
+                          th:value="${r.name}"
+                          th:text="${r.name}"></option>
+                </select>
                 <label for="religion">Religion</label>
                 <div class="invalid-feedback small">Religion is required.</div>
               </div>
@@ -252,11 +272,15 @@
 
             <div class="col-md-3">
               <div class="form-floating">
-                <input type="text"
-                       class="form-control student-details"
-                       th:field="*{batch}"
-                       id="batch"
-                       placeholder=" ">
+                <select class="form-select student-details"
+                        th:field="*{batch}"
+                        id="batch">
+                  <option value=""></option>
+                  <option th:each="b : ${batches}"
+                          th:value="${b.code}"
+                          th:text="${b.label != null ? b.label : b.code}">
+                  </option>
+                </select>
                 <label for="batch">Batch</label>
                 <div class="invalid-feedback small">Batch is required.</div>
               </div>
@@ -284,6 +308,18 @@
                           th:text="${#lists.isEmpty(admission.student.addresses) ? '' : admission.student.addresses.get(0).address.line1}"></textarea>
                 <label for="addressLine1">Residential Address</label>
                 <div class="invalid-feedback small">Address is required.</div>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-floating">
+                <input type="text"
+                       class="form-control student-details"
+                       id="area"
+                       placeholder=" "
+                       th:value="${#lists.isEmpty(admission.student.addresses) ? '' : admission.student.addresses.get(0).address.area}">
+                <label for="area">Area</label>
+                <div class="invalid-feedback small"></div>
               </div>
             </div>
 
@@ -330,6 +366,37 @@
                 <div class="invalid-feedback small">Enter a valid email address.</div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- ============ STUDENT PERKS ============ -->
+        <div class="section px-2 mt-4">
+          <div class="title mb-2">
+            <span class="dot"></span><h5 class="mb-0">Student Perks</h5>
+          </div>
+
+          <p class="help mb-2">
+            Tick the perks applicable to this student
+          </p>
+
+          <div class="row g-2" th:if="${perksList != null}">
+            <div class="col-md-3 col-sm-4 col-6"
+                 th:each="perk : ${perksList}">
+              <div class="form-check">
+                <input class="form-check-input student-perk-checkbox"
+                       type="checkbox"
+                       th:id="${'perk_' + perk.id}"
+                       th:value="${perk.id}"
+                       th:checked="${studentPerkIds != null and studentPerkIds.contains(perk.id)}">
+                <label class="form-check-label"
+                       th:for="${'perk_' + perk.id}"
+                       th:text="${perk.name}">Perk Name</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-muted small" th:if="${perksList == null or #lists.isEmpty(perksList)}">
+            No perks configured yet. Please add perks in Student Perks Master.
           </div>
         </div>
 
@@ -406,7 +473,7 @@
           <div class="row g-3">
 
             <!-- College -->
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label">College Name</label>
               <input type="text"
                      id="hscCollege"
@@ -417,18 +484,32 @@
             </div>
 
             <!-- Subjects -->
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label">Subjects</label>
+              <select id="hscSubjects"
+                      name="hscDetails.subjects"
+                      class="form-select">
+                <option value=""></option>
+                <option value="PCB"
+                        th:selected="${admission.student != null and admission.student.hscDetails != null and admission.student.hscDetails.subjects == 'PCB'}">PCB</option>
+                <option value="PCM"
+                        th:selected="${admission.student != null and admission.student.hscDetails != null and admission.student.hscDetails.subjects == 'PCM'}">PCM</option>
+              </select>
+            </div>
+
+            <!-- Registration Number -->
+            <div class="col-md-3">
+              <label class="form-label">HSC Registration No.</label>
               <input type="text"
-                     id="hscSubjects"
-                     name="hscDetails.subjects"
+                     id="hscRegNo"
+                     name="hscDetails.registrationNumber"
                      class="form-control"
                      th:value="${admission.student != null and admission.student.hscDetails != null
-                        ? admission.student.hscDetails.subjects : ''}">
+                        ? admission.student.hscDetails.registrationNumber : ''}">
             </div>
 
             <!-- Passing Year -->
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label">Passing Year</label>
               <input type="number"
                      id="hscYear"
@@ -495,6 +576,19 @@
                         ? admission.student.hscDetails.pcbPercentage : ''}">
             </div>
 
+            <!-- HSC Percentage -->
+            <div class="col-md-3">
+              <label class="form-label">HSC Percentage</label>
+              <input type="number"
+                     id="hscPercentage"
+                     name="hscDetails.percentage"
+                     class="form-control"
+                     min="0" max="100" step="0.01"
+                     placeholder="0 - 100"
+                     th:value="${admission.student != null and admission.student.hscDetails != null
+                        ? admission.student.hscDetails.percentage : ''}">
+            </div>
+
           </div>
         </div>
 
@@ -519,6 +613,21 @@
                 <label for="collegeId">Selected College</label>
                 <div class="invalid-feedback small">Please select a college.</div>
               </div>
+              <div class="d-flex align-items-center justify-content-between mt-1">
+                <div class="small">
+                  <span th:if="${admission.collegeVerificationStatus == null or admission.collegeVerificationStatus.name() == 'UNDER_VERIFICATION'}"
+                        class="text-danger">Under Verification</span>
+                  <span th:if="${admission.collegeVerificationStatus != null and admission.collegeVerificationStatus.name() == 'VERIFIED'}"
+                        class="text-success">Verified</span>
+                  <span th:if="${admission.collegeVerificationStatus != null and admission.collegeVerificationStatus.name() == 'REJECTED'}"
+                        class="text-danger">Rejected</span>
+                </div>
+                <div class="d-flex gap-2"
+                     th:if="${role == 'HO' and (admission.collegeVerificationStatus == null or admission.collegeVerificationStatus.name() == 'UNDER_VERIFICATION')}">
+                  <button type="button" class="btn btn-sm btn-outline-success" id="collegeVerifyBtn">Verify</button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" id="collegeRejectBtn">Reject</button>
+                </div>
+              </div>
             </div>
 
             <div class="col-md-6">
@@ -535,6 +644,7 @@
                 </select>
                 <label for="course">Selected Course</label>
                 <div class="invalid-feedback small">Please select a course.</div>
+                <div class="form-text text-muted" id="seatInfo"></div>
               </div>
             </div>
 
@@ -776,7 +886,8 @@
 
             <div class="col-md-8 d-flex gap-2">
               <button class="btn btn-outline-secondary" type="button" id="evenSplitBtn">Evenly split (Active Year)</button>
-              <button class="btn btn-primary-theme" type="button" id="addInstallmentBtn">Add New Installment</button>
+              <button class="btn btn-primary-theme" type="button" id="addInstallmentBtn" th:if="${canEditAdmissions}">Add New Installment</button>
+              <button class="btn btn-primary-theme" type="button" id="togglePartialPaymentBtn" th:if="${canEditAdmissions}">Add Payment</button>
             </div>
           </div>
 
@@ -793,13 +904,11 @@
                 <tr>
                   <th style="width: 80px;">Sr. No.</th>
                   <th style="width: 450px;">Fees (₹)</th>
+                  <th style="width: 140px;">Paid</th>
+                  <th style="width: 140px;">Pending</th>
                   <th style="width: 220px;">Date</th>
-                  <th style="width: 220px;">Mode of Payment</th>
-				  <th style="width: 160px;">Transaction Id</th>
-                  <th style="width: 260px;">Receipt (file)</th>
-                  <th style="width: 160px;">Received By</th>
                   <th style="width: 160px;">Status</th>
-				  <th style="width: 160px;">Invoice</th>
+                  <th style="width: 160px;">Payments</th>
 				  <th style="width: 160px;">Action</th>
                 </tr>
               </thead>
@@ -823,6 +932,8 @@
                            min="0"
                            th:field="*{installments[__${iStat.index}__].amountDue}" />
                   </td>
+                  <td th:text="${inst.amountPaid != null ? inst.amountPaid : 0}">0</td>
+                  <td th:text="${inst.amountDue != null ? inst.amountDue.subtract(inst.amountPaid != null ? inst.amountPaid : 0) : 0}">0</td>
 
                   <td>
                     <input class="form-control student-details"
@@ -831,60 +942,7 @@
                            th:field="*{installments[__${iStat.index}__].dueDate}" />
                   </td>
 
-                  <td>
-                    <select class="form-select"
-                            data-field="mode"
-                            th:field="*{installments[__${iStat.index}__].paymentMode.code}">
-                      <option value="">Select</option>
-                      <option th:each="pm : ${paymentModes}"
-                              th:value="${pm}"
-                              th:text="${pm}">
-                      </option>
-                    </select>
-                  </td>
-				  <td>
-                      <input class="form-control student-details"
-                             data-field="txnRef"
-                             type="text"
-                             th:field="*{installments[__${iStat.index}__].txnRef}" />
-                    </td>
-				  <td>
-				    <div class="d-flex flex-column gap-1">
-
-				      <a th:if="${receipts != null and receipts[inst.installmentId] != null}"
-				         th:href="${receipts[inst.installmentId].storageUrl}"
-				         target="_blank" class="text-decoration-none">
-				        <i class="bi bi-paperclip me-1"></i>
-				        <span th:text="${receipts[inst.installmentId].filename}">receipt.pdf</span>
-				      </a>
-
-				      <!-- ✅ Wrap input + preview -->
-				      <div class="file-wrap">
-				        <input class="form-control student-details"
-				               type="file"
-				               name="receiptFiles"
-				               accept=".pdf,.jpg,.jpeg,.png"
-				               data-field="receipt"/>
-
-				        <div class="file-preview"></div>
-				      </div>
-
-				      <input type="hidden"
-				             name="receiptTargets"
-				             th:value="${inst.installmentId}"/>
-				    </div>
-				  </td>
-
-
-                  <td>
-                    <input class="form-control student-details"
-                           type="text"
-                           data-field="receivedBy"
-						   disabled
-                           th:field="*{installments[__${iStat.index}__].receivedBy}" />
-                  </td>
-
-                  <td th:if="*{installments[__${iStat.index}__].status!='Under Verification'}">
+                  <td th:if="*{installments[__${iStat.index}__].status != 'Under Verification' && installments[__${iStat.index}__].status != 'Partial Received'}">
                     <select class="form-select"
                             data-field="status"
                             th:field="*{installments[__${iStat.index}__].status}"
@@ -895,42 +953,29 @@
                     </select>
                   </td>
 				  <td th:if="*{installments[__${iStat.index}__].status == 'Under Verification'}">
-					<input 	class="form-select d-none" data-field="status" th:field="*{installments[__${iStat.index}__].status}">
-					Under Verification  
-				</td>
-				  <td class="invoice-cell">
-				    <div class="d-flex flex-column gap-1">
-				      <!-- Invoice link -->
-				      <a th:if="${invoices != null and invoices[inst.installmentId] != null}"
-				         th:href="${invoices[inst.installmentId].downloadUrl}"
-				         target="_blank"
-				         class="text-decoration-none invoice-link">
-				        <i class="bi bi-receipt-cutoff me-1"></i>
-				        <span th:text="${invoices[inst.installmentId].invoiceNumber}">Invoice</span>
-				      </a>
-
-				      <!-- Existing uploaded receipt link -->
-				      <a th:if="${receipts != null and receipts[inst.installmentId] != null}"
-				         th:href="${receipts[inst.installmentId].storageUrl}"
-				         target="_blank" class="text-decoration-none invoice-link">
-				        <i class="bi bi-paperclip me-1"></i>
-				        <span th:text="${receipts[inst.installmentId].filename}">receipt.pdf</span>
-				      </a>
-
-				   
-				    </div>
+					<input class="form-select d-none" data-field="status" th:field="*{installments[__${iStat.index}__].status}">
+					<span class="text-warning fw-semibold">Under Verification</span>
+				  </td>
+				  <td th:if="*{installments[__${iStat.index}__].status == 'Partial Received'}">
+					<input class="form-select d-none" data-field="status" th:field="*{installments[__${iStat.index}__].status}">
+					<span class="text-info fw-semibold">Partial Received</span>
 				  </td>
 				  <td>
-					<button th:if="*{installments[__${iStat.index}__].status!='Paid'}" type="button" th:id="|delete_*{installments[__${iStat.index}__].installmentId}|" class="btn btn-sm btn-outline-danger installment_delete_btn">Delete</button>
-					<span th:if="${role == 'HO'}">
-						<button th:id="|installment_approve_*{installments[__${iStat.index}__].installmentId}|"  th:if="*{installments[__${iStat.index}__].status == 'Under Verification'}" class="mt-1 btn btn-sm btn-primary-theme installment_apporval_btn" type="button">Approve</button>
-					</span>
-					
+					<button type="button"
+					        class="btn btn-sm btn-outline-secondary installment-history-btn"
+					        th:if="${inst.installmentId != null}"
+					        th:attr="data-installment-id=${inst.installmentId}">
+					  View
+					</button>
+					<span th:if="${inst.installmentId == null}" class="text-muted">-</span>
+				  </td>
+				  <td>
+					<button th:if="${canEditAdmissions} and *{installments[__${iStat.index}__].status!='Paid'}" type="button" th:id="|delete_*{installments[__${iStat.index}__].installmentId}|" class="btn btn-sm btn-outline-danger installment_delete_btn">Delete</button>
 				</td>
                 </tr>
 
                 <tr th:if="${#lists.isEmpty(admission.installments)}">
-                  <td colspan="7" class="text-center text-muted py-4">No installments added yet.</td>
+                  <td colspan="8" class="text-center text-muted py-4">No installments added yet.</td>
                 </tr>
               </tbody>
 
@@ -940,7 +985,7 @@
                   <td>
                     <input class="form-control" id="yearInstallmentsSum" type="number" readonly>
                   </td>
-                  <td colspan="5">
+                  <td colspan="6">
                     <div class="help">Sum of <strong>visible</strong> year's installments. Should match the <strong>Year Fees</strong>.</div>
                   </td>
                 </tr>
@@ -949,7 +994,7 @@
                   <td>
                     <input class="form-control student-details" id="installmentsSum" type="number" readonly autocomplete="off">
                   </td>
-                  <td colspan="5">
+                  <td colspan="6">
                     <div class="help">Sum of <strong>all years</strong>. Must equal <strong>Actual Fees</strong>.</div>
                   </td>
                 </tr>
@@ -958,6 +1003,93 @@
           </div>
 
           <div class="help mt-2">Modes: Cash, UPI, Card, Bank Transfer, Cheque/DD</div>
+        </div>
+
+        <div class="modal fade" id="partialPaymentModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Add Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div id="partialPaymentForm" class="row g-3">
+                  <input type="hidden" name="admissionId" th:value="${id}" />
+                  <input type="hidden" name="role" th:value="${role}" />
+                  <div class="col-md-4">
+                    <label class="form-label">Amount Paid (₹)</label>
+                    <input type="number" min="1" step="1" class="form-control" name="amount" id="partialAmount" required />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Payment Mode</label>
+                    <select class="form-select" name="mode" id="partialMode" required>
+                      <option value="">Select</option>
+                      <option th:each="pm : ${paymentModes}"
+                              th:value="${pm}"
+                              th:text="${pm}">
+                      </option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Transaction ID</label>
+                    <input type="text" class="form-control" name="txnRef" id="partialTxnRef" />
+                  </div>
+                  <div class="col-md-12">
+                    <label class="form-label">Receipt</label>
+                    <input type="file" class="form-control" name="receipt" id="partialReceipt"
+                           accept=".pdf,.jpg,.jpeg,.png" />
+                  </div>
+                  <div class="col-12 text-danger small d-none" id="partialPaymentError"></div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <div class="me-auto help mb-0">Amount will be allocated sequentially across pending installments.</div>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary-theme" id="partialPaymentSubmit" th:if="${canEditAdmissions}">Save Payment</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal fade" id="installmentHistoryModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Payment History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Paid On</th>
+                        <th>Amount</th>
+                        <th>Mode</th>
+                        <th>Txn ID</th>
+                        <th>Received By</th>
+                        <th>Status</th>
+                        <th>Verified By</th>
+                        <th>Verified At</th>
+                        <th>Receipt</th>
+                        <th>Invoice</th>
+                        <th th:if="${role == 'HO'}">Verify</th>
+                      </tr>
+                    </thead>
+                    <tbody id="installmentHistoryBody">
+                      <tr>
+                        <td th:if="${role == 'HO'}" colspan="11" class="text-center text-muted py-3">No payments found.</td>
+                        <td th:if="${role != 'HO'}" colspan="10" class="text-center text-muted py-3">No payments found.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
         </div>
         <!-- Hidden Admission Id -->
         <input type="hidden" id="admissionId"
@@ -996,7 +1128,7 @@
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
-                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['SSC10'] != null and !verificationMap['SSC10'].verified}"
                         data-doc="SSC10">Verify</button>
               </div>
@@ -1025,7 +1157,7 @@
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
-                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['HSC12'] != null and !verificationMap['HSC12'].verified}"
                         data-doc="HSC12">Verify</button>
               </div>
@@ -1054,7 +1186,7 @@
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
-                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['LC'] != null and !verificationMap['LC'].verified}"
                         data-doc="LC">Verify</button>
               </div>
@@ -1083,7 +1215,7 @@
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
-                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['MIG'] != null and !verificationMap['MIG'].verified}"
                         data-doc="MIG">Verify</button>
               </div>
@@ -1112,7 +1244,7 @@
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
-                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['AADHAAR'] != null and !verificationMap['AADHAAR'].verified}"
                         data-doc="AADHAAR">Verify</button>
               </div>
@@ -1133,7 +1265,7 @@
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
-                <button class="btn btn-sm btn-outline-success ms-2 verify-btn"
+                <button type="button" class="btn btn-sm btn-outline-success ms-2 verify-btn"
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['PHOTO'] != null and !verificationMap['PHOTO'].verified}"
                         data-doc="PHOTO">Verify</button>
               </div>
@@ -1263,7 +1395,7 @@
 			   		    <div class="row g-3" id="otherDocsContainer"></div>
 
 			   		    <div class="mt-3">
-			   		      <button type="button" class="btn btn-outline-secondary btn-sm" id="addOtherDocBtn">
+			   		      <button type="button" class="btn btn-outline-secondary btn-sm" id="addOtherDocBtn" th:if="${canEditAdmissions}">
 			   		        <i class="bi bi-plus-circle"></i> Add Other Document
 			   		      </button>
 			   		    </div>
@@ -1399,8 +1531,78 @@
 
 
 
-        
 
+
+
+        <!-- =================== OTHER PAYMENTS =================== -->
+        <div class="section px-2 mt-4" th:if="${otherPaymentFields != null}">
+          <div class="title mb-2">
+            <span class="dot"></span>
+            <h5 class="mb-0">Other Payments</h5>
+          </div>
+          <div class="row g-3">
+            <div th:each="field : ${otherPaymentFields}"
+                 th:classappend="${field.inputType == 'textarea'} ? ' col-12' : ' col-md-4'"
+                 class="other-payment-field"
+                 th:with="values=${otherPaymentValues[field.id]}"
+                 th:attr="data-other-payment-field=true,data-field-id=${field.id},data-input-type=${field.inputType},data-required=${field.required}">
+              <label class="form-label fw-semibold">
+                <span th:text="${field.label}">Field</span>
+                <span th:if="${field.required}" class="text-danger">*</span>
+              </label>
+              <div th:switch="${field.inputType}">
+                <input th:case="'text'" type="text" class="form-control other-payment-input"
+                       th:value="${values != null and !values.isEmpty() ? values[0].value : ''}"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+                <input th:case="'number'" type="number" class="form-control other-payment-input"
+                       th:value="${values != null and !values.isEmpty() ? values[0].value : ''}"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+                <input th:case="'date'" type="date" class="form-control other-payment-input"
+                       th:value="${values != null and !values.isEmpty() ? values[0].value : ''}"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+                <input th:case="'email'" type="email" class="form-control other-payment-input"
+                       th:value="${values != null and !values.isEmpty() ? values[0].value : ''}"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+                <input th:case="'tel'" type="tel" class="form-control other-payment-input"
+                       th:value="${values != null and !values.isEmpty() ? values[0].value : ''}"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+                <textarea th:case="'textarea'" class="form-control other-payment-input" rows="3"
+                          th:text="${values != null and !values.isEmpty() ? values[0].value : ''}"
+                          th:attr="data-field-id=${field.id},data-input-type=${field.inputType}"></textarea>
+                <select th:case="'select'" class="form-select other-payment-input"
+                        th:attr="data-field-id=${field.id},data-input-type=${field.inputType}">
+                  <option value="">Select</option>
+                  <option th:each="opt : ${field.options}"
+                          th:value="${opt.id}"
+                          th:attr="data-option-value=${opt.value}"
+                          th:selected="${values != null and !values.isEmpty() and values[0].optionId == opt.id}"
+                          th:text="${opt.label}">
+                    Option
+                  </option>
+                </select>
+                <div th:case="'checkbox'" class="d-flex flex-wrap gap-2">
+                  <div class="form-check" th:each="opt : ${field.options}">
+                    <input class="form-check-input other-payment-input" type="checkbox"
+                           th:attr="data-field-id=${field.id},data-input-type=${field.inputType},data-option-id=${opt.id},data-option-value=${opt.value}"
+                           th:checked="${values != null and #lists.contains(values.![optionId], opt.id)}">
+                    <label class="form-check-label" th:text="${opt.label}">Option</label>
+                  </div>
+                </div>
+                <div th:case="'radio'" class="d-flex flex-wrap gap-2">
+                  <div class="form-check" th:each="opt : ${field.options}">
+                    <input class="form-check-input other-payment-input" type="radio"
+                           th:attr="name=${'other_payment_' + field.id},data-field-id=${field.id},data-input-type=${field.inputType},data-option-id=${opt.id},data-option-value=${opt.value}"
+                           th:checked="${values != null and #lists.contains(values.![optionId], opt.id)}">
+                    <label class="form-check-label" th:text="${opt.label}">Option</label>
+                  </div>
+                </div>
+                <input th:case="*" type="text" class="form-control other-payment-input"
+                       th:value="${values != null and !values.isEmpty() ? values[0].value : ''}"
+                       th:attr="data-field-id=${field.id},data-input-type=${field.inputType}" />
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="section px-2 mt-4 d-none">
           <div class="title mb-2"><span class="dot"></span><h5 class="mb-0">Declaration by Parent / Guardian</h5></div>
@@ -1410,22 +1612,26 @@
         </div>
 
         <div class="submit-zone p-4 text-center">
-          <button class="btn btn-primary-theme" type="button" id="submit_admission_form">
+          <button class="btn btn-primary-theme" type="button" id="submit_admission_form" th:if="${canEditAdmissions}">
             <i class="bi bi-check2-circle me-1"></i> Save Changes
+          </button>
+          <button class="btn btn-success" type="button" id="branchApproveBtn" th:data-id="${id}"
+                  th:if="${canEditAdmissions} and ${role == 'BRANCH_USER' and (admission.branchApproved == null or !admission.branchApproved)}">
+            <i class="bi bi-check-circle me-1"></i> Approve for HO
           </button>
           <!-- Cancel Button -->
           <button class="btn btn-danger" type="button"  data-bs-toggle="modal" data-bs-target="#cancelModal"
-                  th:if="*{status.name() != 'UNDER_CANCELLATION' and status.name() != 'CANCELLED'}" style="font-size: 0.9rem;">
+                  th:if="${canEditAdmissions} and *{status.name() != 'UNDER_CANCELLATION' and status.name() != 'CANCELLED'}" style="font-size: 0.9rem;">
             <i class="bi bi-x-circle me-1"></i> Cancel Admission
           </button>
           <!-- cancel approval Button for HO -->
           <button class="btn btn-danger" type="button"  data-bs-toggle="modal" data-bs-target="#confirmCancelAdmissionModal" id="approveCancellation" th:data-id="${id}"
-                  th:if="${role == 'HO'and admission.status.name() == 'UNDER_CANCELLATION'}" style="font-size: 0.9rem;">
+                  th:if="${canEditAdmissions} and ${role == 'HO'and admission.status.name() == 'UNDER_CANCELLATION'}" style="font-size: 0.9rem;">
             <i class="bi bi-x-circle me-1"></i> Approve Cancellation
           </button>
           <!-- Send Acknowledgement Button -->
           <button class="btn btn-primary-theme" type="button" id="submitBtn" th:data-id="${id}"
-                  th:if="${role == 'HO'and admission.status.name() != 'ADMITTED' && admission.status.name() != 'UNDER_CANCELLATION' && admission.status.name() != 'CANCELLED'}">
+                  th:if="${canEditAdmissions} and ${role == 'HO'and admission.status.name() != 'ADMITTED' && admission.status.name() != 'UNDER_CANCELLATION' && admission.status.name() != 'CANCELLED'}">
             <i class="bi bi-check2-circle me-1"></i> Send Acknowledgement
           </button>
           <!-- Print Admission Form Button -->
@@ -1436,6 +1642,21 @@
           </a>
         </div>
       </form>
+
+      <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          const form = document.getElementById('admissionForm');
+          if (!form || form.dataset.readonly !== 'true') {
+            return;
+          }
+          form.querySelectorAll('input, select, textarea').forEach((field) => {
+            if (field.type === 'hidden') {
+              return;
+            }
+            field.setAttribute('disabled', 'disabled');
+          });
+        });
+      </script>
     </div>
   </div>
 
@@ -1473,6 +1694,25 @@
           <button class="btn btn-danger" id="confirmCancelBtn">
             <i class="bi bi-x-circle"></i> OK
           </button>
+        </div>
+
+        <!-- Save status modal -->
+        <div class="modal fade save-status-modal" id="admissionSaveStatusModal" tabindex="-1" aria-labelledby="admissionSaveStatusTitle" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="admissionSaveStatusTitle">Save Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="alert mb-3" id="admissionSaveStatusAlert" role="alert"></div>
+                <p class="mb-0 text-muted" id="admissionSaveStatusDesc"></p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-primary-theme" data-bs-dismiss="modal" id="admissionSaveStatusClose">OK</button>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -1520,7 +1760,7 @@
   </div>
 
   <!-- =================== COMMON RESPONSE MODAL =================== -->
-  <div class="modal fade" id="responseModal" tabindex="-1">
+  <div class="modal fade response-modal" id="responseModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
 

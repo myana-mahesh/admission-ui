@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.impactsure.sanctionui.entities.HscDetails;
+import com.impactsure.sanctionui.entities.SscDetailsRequest;
 
 import lombok.Data;
 
@@ -22,6 +24,13 @@ public class StudentDto {
     private String email;
     private String bloodGroup;
     private String mobile;
+    private String batch;
+    private String registrationNumber;
+    private Integer age;
+    private Long courseId;
+    private String courseName;
+    private SscDetailsRequest sscDetails;
+    private HscDetails hscDetails;
     private List<GuardianDto> guardians;
     private List<StudentAddressDto> addresses;
 

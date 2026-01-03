@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/html-header :: common_head"></head>
+<body class="theme-light has-sidebar">
+
+  <!-- Left sidebar -->
+  <div th:replace="fragments/sidebar :: app_sidebar(active='dashboard')"></div>
+
+  <!-- Content wrapper -->
+  <div class="app-main-wrap">
+    <div class="container-xl py-3 max-width-100">
+
+      <div class="dash-hero p-4">
+        <div>
+          <div class="dash-eyebrow mb-0">Overview</div>
+          <h2 class="dash-title">Admissions Dashboard</h2>
+          <div class="dash-subtitle my-0">Live snapshot of students, seats, and fees.</div>
+        </div>
+        
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card stat-a">
+          <div class="stat-label">Students</div>
+          <div class="stat-value" th:text="${studentCount}">0</div>
+          <div class="stat-meta">Total enrolled</div>
+        </div>
+        <div class="stat-card stat-b">
+          <div class="stat-label">Admissions</div>
+          <div class="stat-value" th:text="${admissionCount}">0</div>
+          <div class="stat-meta">All records</div>
+        </div>
+        <div class="stat-card stat-c">
+          <div class="stat-label">Colleges</div>
+          <div class="stat-value" th:text="${collegeCount}">0</div>
+          <div class="stat-meta">Active partners</div>
+        </div>
+        <div class="stat-card stat-d">
+          <div class="stat-label">Courses</div>
+          <div class="stat-value" th:text="${courseCount}">0</div>
+          <div class="stat-meta">Live programs</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="dash-card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Fee Progress</div>
+              <div class="card-sub">Paid vs pending across all admissions</div>
+            </div>
+            <div class="pill teal">Live</div>
+          </div>
+          <div class="fee-bars">
+            <div class="fee-row">
+              <div class="fee-label">Paid</div>
+              <div class="fee-value" th:text="${paidFees}">0</div>
+            </div>
+            <div class="progress">
+              <div class="progress-bar paid" role="progressbar"
+                   th:style="${totalFees != null and totalFees.doubleValue() > 0
+                     ? 'width:' + (paidFees.doubleValue() / totalFees.doubleValue() * 100) + '%'
+                     : 'width:0%'}"></div>
+            </div>
+            <div class="fee-row mt-3">
+              <div class="fee-label">Pending</div>
+              <div class="fee-value" th:text="${pendingFees}">0</div>
+            </div>
+            <div class="progress">
+              <div class="progress-bar pending" role="progressbar"
+                   th:style="${totalFees != null and totalFees.doubleValue() > 0
+                     ? 'width:' + (pendingFees.doubleValue() / totalFees.doubleValue() * 100) + '%'
+                     : 'width:0%'}"></div>
+            </div>
+            <div class="fee-total">Total Fees: <span th:text="${totalFees}">0</span></div>
+          </div>
+        </div>
+
+        <div class="dash-card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Seat Utilization</div>
+              <div class="card-sub">Utilized vs on-hold across colleges</div>
+            </div>
+          </div>
+          <div class="seat-summary">
+            <div class="seat-pie"
+                 th:with="util=${seatUtilization != null ? seatUtilization.utilizedSeats : 0},
+                          hold=${seatUtilization != null ? seatUtilization.onHoldSeats : 0},
+                          rem=${seatUtilization != null ? seatUtilization.remainingSeats : 0},
+                          total=${seatUtilization != null ? seatUtilization.totalSeats : 0},
+                          uPct=${total > 0 ? (util * 100.0 / total) : 0},
+                          hPct=${total > 0 ? (hold * 100.0 / total) : 0}">
+              <div class="pie"
+                   th:style="${'background: conic-gradient(#9fd8d3 0 ' + uPct + '%, #f6d7a6 ' + uPct + '% ' + (uPct + hPct) + '%, #b7d3f2 ' + (uPct + hPct) + '% 100%)'}">
+              </div>
+              <div class="pie-center">
+                <div class="pie-label">Total</div>
+                <div class="pie-value" th:text="${total}">0</div>
+              </div>
+            </div>
+            <div class="seat-legend">
+              <div class="legend-item">
+                <span class="legend-dot utilized"></span>
+                <div>
+                  <div class="legend-label">Utilized</div>
+                  <div class="legend-value" th:text="${seatUtilization != null ? seatUtilization.utilizedSeats : 0}">0</div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot onhold"></span>
+                <div>
+                  <div class="legend-label">On Hold</div>
+                  <div class="legend-value" th:text="${seatUtilization != null ? seatUtilization.onHoldSeats : 0}">0</div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot remaining"></span>
+                <div>
+                  <div class="legend-label">Remaining</div>
+                  <div class="legend-value" th:text="${seatUtilization != null ? seatUtilization.remainingSeats : 0}">0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Top Courses</div>
+              <div class="card-sub">Most active by admissions</div>
+            </div>
+          </div>
+          <div class="list-stack">
+            <div class="list-item" th:each="c : ${topCourses}">
+              <div class="list-left">
+                <div class="list-title" th:text="${c.key}">Course</div>
+                <div class="list-meta">Admissions</div>
+              </div>
+              <div class="pill gradient" th:text="${c.value}">0</div>
+            </div>
+            <div class="empty" th:if="${topCourses == null or topCourses.isEmpty()}">
+              No course data yet.
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">College Course Breakdown</div>
+              <div class="card-sub">Top courses per college</div>
+            </div>
+          </div>
+          <div class="college-courses" th:if="${collegeCourseSummaries != null}">
+            <div class="college-block" th:each="college : ${collegeCourseSummaries}">
+              <div class="college-name" th:text="${college.collegeName}">College</div>
+              <div class="course-lines">
+                <div class="course-line" th:each="cc : ${college.courseSummaries}">
+                  <div class="course-title" th:text="${cc.courseName}">Course</div>
+                  <div class="course-bar">
+                    <span class="course-fill" th:style="${'width:' + cc.utilizationPercent + '%'}"></span>
+                  </div>
+                  <div class="course-meta" th:text="${cc.utilizationPercent + '%'}">0%</div>
+                </div>
+              </div>
+            </div>
+            <div class="empty" th:if="${collegeCourseSummaries.isEmpty()}">
+              No course breakdown yet.
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-card wide">
+          <div class="card-head">
+            <div>
+              <div class="card-title">College Seat Breakdown</div>
+              <div class="card-sub">Utilization by college</div>
+            </div>
+          </div>
+          <div class="list-stack">
+            <div class="list-item" th:each="c : ${collegeSeatSummaries}">
+              <div class="list-left">
+                <div class="list-title" th:text="${c.collegeName}">College</div>
+                <div class="list-meta"
+                     th:text="${'Utilized ' + c.utilizedSeats + ' · On Hold ' + c.onHoldSeats + ' · Remaining ' + c.remainingSeats}">
+                  Utilized · On Hold · Remaining
+                </div>
+              </div>
+              <div class="pill teal" th:text="${c.utilizationPercent + '%'}">0%</div>
+            </div>
+            <div class="empty" th:if="${collegeSeatSummaries == null or collegeSeatSummaries.isEmpty()}">
+              No seat data yet.
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-card wide">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Recent Admissions</div>
+              <div class="card-sub">Latest student records</div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 dash-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>College</th>
+                  <th>Course</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="a : ${recentAdmissions}">
+                  <td>
+                    <div class="fw-semibold" th:text="${a.student != null ? a.student.fullName : '-'}">Student</div>
+                    <div class="text-muted small" th:text="${a.student != null ? a.student.absId : '-'}">ABS-000</div>
+                  </td>
+                  <td th:text="${a.college != null ? a.college.name : '-'}">College</td>
+                  <td th:text="${a.course != null ? a.course.name : '-'}">Course</td>
+                  <td th:text="${a.createdAt != null ? #temporals.format(a.createdAt, 'dd MMM yyyy') : '-'}">Date</td>
+                  <td>
+                    <span class="pill soft" th:text="${a.status != null ? a.status : '-'}">Status</span>
+                  </td>
+                </tr>
+                <tr th:if="${recentAdmissions == null or recentAdmissions.isEmpty()}">
+                  <td colspan="5" class="text-center text-muted py-4">No admissions yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+  <div id="sbOverlay" class="sb-overlay" hidden></div>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    :root {
+      --sbw: 260px;
+      --primary: #3b3070;
+      --primary-light: #7a6cb0;
+      --primary-soft: #f3f1fb;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --surface: #ffffff;
+      --soft: #f8fafc;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --success-light: #d1fae5;
+      --warning: #f59e0b;
+      --warning-light: #fef3c7;
+      --danger: #ef4444;
+      --danger-light: #fee2e2;
+      --info: #0284c7;
+      --info-light: #dbeafe;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+    }
+    @media (max-width: 991.98px) { :root { --sbw: 0px; } }
+    body.has-sidebar .app-main-wrap {
+      margin-left: var(--sbw);
+      transition: margin-left .2s ease;
+      background: #fafbfc;
+    }
+
+    /* Keyframe Animations */
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      25% { background-position: 50% 25%; }
+      50% { background-position: 100% 50%; }
+      75% { background-position: 50% 75%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes orbitFloat {
+      0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 0.6;
+      }
+      25% {
+        transform: translate(30px, -30px) rotate(90deg);
+        opacity: 0.8;
+      }
+      50% {
+        transform: translate(0, -50px) rotate(180deg);
+        opacity: 0.7;
+      }
+      75% {
+        transform: translate(-30px, -30px) rotate(270deg);
+        opacity: 0.9;
+      }
+    }
+
+    @keyframes orbitFloatReverse {
+      0%, 100% {
+        transform: translate(0, 0) rotate(360deg);
+        opacity: 0.5;
+      }
+      25% {
+        transform: translate(-40px, 40px) rotate(270deg);
+        opacity: 0.7;
+      }
+      50% {
+        transform: translate(0, 60px) rotate(180deg);
+        opacity: 0.6;
+      }
+      75% {
+        transform: translate(40px, 40px) rotate(90deg);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow:
+          var(--shadow-xl),
+          0 0 0 1px rgba(255,255,255,0.1) inset,
+          0 0 50px rgba(122, 108, 176, 0.4),
+          0 0 90px rgba(122, 108, 176, 0.2);
+      }
+      50% {
+        box-shadow:
+          var(--shadow-xl),
+          0 0 0 1px rgba(255,255,255,0.2) inset,
+          0 0 70px rgba(122, 108, 176, 0.6),
+          0 0 130px rgba(122, 108, 176, 0.3);
+      }
+    }
+
+    @keyframes shimmerLine {
+      0% {
+        opacity: 0.4;
+        transform: scaleX(0.8);
+      }
+      50% {
+        opacity: 1;
+        transform: scaleX(1.2);
+      }
+      100% {
+        opacity: 0.4;
+        transform: scaleX(0.8);
+      }
+    }
+
+    .dash-hero {
+      background:
+      linear-gradient(135deg, #3b3070 0%, #7a6cb0 100%);
+      background-size: 400% 400%, 100% 100%;
+      color: #ffffff;
+      border-radius: var(--radius-xl);
+      padding: 28px 32px;
+      position: relative;
+      overflow: hidden;
+      animation: gradientFlow 15s ease-in-out infinite, pulseGlow 6s ease-in-out infinite;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.1) inset;
+    }
+
+    /* Particle System */
+    .dash-hero::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+      linear-gradient(135deg, #221b44 0%, #7a6cb0 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Animated Orbs */
+    .dash-hero::after {
+      content: "";
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      top: -200px;
+      right: -200px;
+      background:
+        radial-gradient(circle,
+          rgba(255, 255, 255, 0.25) 0%,
+          rgba(255, 255, 255, 0.15) 30%,
+          transparent 70%
+        );
+      border-radius: 50%;
+      animation: orbitFloat 20s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .dash-eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+      position: relative;
+      z-index: 2;
+    }
+
+    .dash-eyebrow::before {
+      content: "";
+      width: 32px;
+      height: 3px;
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.9),
+        rgba(255, 255, 255, 0.4)
+      );
+      border-radius: 2px;
+      animation: shimmerLine 2.5s ease-in-out infinite;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      transform-origin: left;
+    }
+
+    .dash-eyebrow::after {
+      content: "●";
+      font-size: 0.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      animation: shimmerLine 2.5s ease-in-out infinite reverse;
+    }
+    .dash-hero > div {
+      position: relative;
+      z-index: 2;
+    }
+
+    .dash-hero > div:first-child::before {
+      content: "";
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      bottom: -250px;
+      left: -150px;
+      background:
+        radial-gradient(circle,
+          rgba(255, 255, 255, 0.2) 0%,
+          rgba(255, 255, 255, 0.12) 35%,
+          transparent 65%
+        );
+      border-radius: 50%;
+      animation: orbitFloatReverse 25s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .dash-title {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      margin: 0;
+      position: relative;
+      z-index: 1;
+      letter-spacing: -0.03em;
+      background: linear-gradient(
+        135deg,
+        #ffffff 0%,
+        rgba(255, 255, 255, 0.9) 100%
+      );
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: white;
+      background-clip: text;
+     /* text-shadow: 0 2px 20px rgba(255, 255, 255, 0.27), 0 0 40px rgba(255, 255, 255, 0.14);
+      */filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+    }
+    .dash-subtitle {
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 0.98rem;
+      position: relative;
+      z-index: 1;
+      margin-top: 8px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      line-height: 1.6;
+    }
+    .dash-actions {
+      position: relative;
+      z-index: 2;
+    }
+    .dash-actions .btn {
+      border: 2px solid rgba(255,255,255,0.3);
+      font-weight: 600;
+      padding: 8px 16px;
+      transition: all 0.2s ease;
+    }
+    .dash-actions .btn:hover {
+      background: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.5);
+      transform: translateY(-1px);
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 18px;
+      margin: 20px 0 26px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: default;
+    }
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-xl);
+      border-color: var(--primary-light);
+    }
+    .stat-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -30% -60% auto;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      opacity: 0.12;
+      transition: opacity 0.3s ease;
+    }
+    .stat-card:hover::after {
+      opacity: 0.2;
+    }
+    .stat-card.stat-a::after { background: radial-gradient(circle, #0ea5e9, transparent 60%); }
+    .stat-card.stat-b::after { background: radial-gradient(circle, #f97316, transparent 60%); }
+    .stat-card.stat-c::after { background: radial-gradient(circle, #22c55e, transparent 60%); }
+    .stat-card.stat-d::after { background: radial-gradient(circle, var(--primary-light), transparent 60%); }
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 8px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .stat-meta {
+      color: var(--muted);
+      font-size: 0.8rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+    }
+    .dash-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-md);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .dash-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+    .dash-card.wide { grid-column: span 2; }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--ink);
+    }
+    .card-sub {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 2px;
+    }
+
+    .pill {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      transition: all 0.2s ease;
+    }
+    .pill.teal {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid transparent;
+    }
+    .pill.teal:hover {
+      background: var(--primary);
+      color: white;
+    }
+    .pill.soft {
+      background: var(--soft);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .pill.gradient {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+    .pill.gradient:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .fee-bars .fee-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+      color: var(--ink);
+      font-size: 0.95rem;
+    }
+    .fee-value {
+      color: var(--success);
+      font-weight: 700;
+    }
+    .fee-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .progress {
+      height: 10px;
+      background: var(--soft);
+      border-radius: 999px;
+      margin-top: 8px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .progress-bar {
+      border-radius: 999px;
+      transition: width 0.6s ease;
+    }
+    .progress-bar.paid {
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      box-shadow: 0 0 10px rgba(123, 108, 176, 0.3);
+    }
+    .progress-bar.pending {
+      background: linear-gradient(90deg, var(--warning), #fbbf24);
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+    }
+    .fee-total {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      color: var(--ink);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .fee-total span {
+      color: var(--primary);
+    }
+
+    .list-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--soft);
+      transition: all 0.2s ease;
+    }
+    .list-item:hover {
+      background: var(--surface);
+      border-color: var(--primary-light);
+      transform: translateX(4px);
+      box-shadow: var(--shadow-sm);
+    }
+    .list-title {
+      font-weight: 700;
+      color: var(--ink);
+      font-size: 0.95rem;
+    }
+    .list-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .empty {
+      color: var(--muted);
+      padding: 20px;
+      text-align: center;
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
+    .dash-table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .dash-table thead th {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      background: var(--soft);
+      font-weight: 700;
+      padding: 14px 16px;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    .dash-table thead th:first-child {
+      border-top-left-radius: var(--radius-md);
+    }
+    .dash-table thead th:last-child {
+      border-top-right-radius: var(--radius-md);
+    }
+    .dash-table tbody td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--ink);
+    }
+    .dash-table tbody tr {
+      transition: all 0.2s ease;
+    }
+    .dash-table tbody tr:hover {
+      background: var(--primary-soft);
+      transform: scale(1.01);
+    }
+    .dash-table tbody tr:last-child td:first-child {
+      border-bottom-left-radius: var(--radius-md);
+    }
+    .dash-table tbody tr:last-child td:last-child {
+      border-bottom-right-radius: var(--radius-md);
+    }
+
+    .seat-summary {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .seat-pie {
+      position: relative;
+      width: 160px;
+      height: 160px;
+    }
+    .seat-pie .pie {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 12px var(--surface), var(--shadow-lg);
+      transition: transform 0.3s ease;
+    }
+    .seat-pie:hover .pie {
+      transform: scale(1.05);
+    }
+    .pie-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .pie-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .pie-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .seat-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+    }
+    .legend-item:hover {
+      background: var(--soft);
+      transform: translateX(4px);
+    }
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      box-shadow: var(--shadow-sm);
+    }
+    .legend-dot.utilized { background: #9fd8d3; }
+    .legend-dot.onhold { background: #f6d7a6; }
+    .legend-dot.remaining { background: #b7d3f2; }
+    .legend-label {
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .legend-value {
+      font-weight: 700;
+      color: var(--ink);
+      margin-left: auto;
+      font-size: 1rem;
+    }
+
+    .college-courses {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .college-block {
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--soft);
+      transition: all 0.2s ease;
+    }
+    .college-block:hover {
+      background: var(--surface);
+      border-color: var(--primary-light);
+      box-shadow: var(--shadow-sm);
+    }
+    .college-name {
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 12px;
+      font-size: 1rem;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .course-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .course-line {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr auto;
+      gap: 12px;
+      align-items: center;
+      font-size: 0.85rem;
+      padding: 6px 0;
+    }
+    .course-title {
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .course-bar {
+      height: 8px;
+      background: var(--soft);
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .course-fill {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      border-radius: 999px;
+      transition: width 0.5s ease;
+    }
+    .course-meta {
+      font-weight: 700;
+      color: var(--primary);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    @media (max-width: 992px) {
+      .dash-grid {
+        grid-template-columns: 1fr;
+      }
+      .dash-card.wide {
+        grid-column: span 1;
+      }
+      .stat-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      }
+      .dash-hero {
+        padding: 20px 24px;
+      }
+      .dash-hero::after {
+        width: 400px;
+        height: 400px;
+        top: -150px;
+        right: -150px;
+      }
+      .dash-hero > div:first-child::before {
+        width: 350px;
+        height: 350px;
+        bottom: -180px;
+        left: -100px;
+      }
+      .dash-title {
+        font-size: 1.5rem;
+      }
+      .dash-eyebrow {
+        font-size: 0.6rem;
+        letter-spacing: 0.25em;
+      }
+      .dash-eyebrow::before {
+        width: 24px;
+      }
+    }
+    @media (max-width: 576px) {
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+      .dash-hero {
+        padding: 20px 22px;
+        border-radius: var(--radius-md);
+      }
+      .dash-hero::after {
+        width: 300px;
+        height: 300px;
+      }
+      .dash-hero > div:first-child::before {
+        width: 250px;
+        height: 250px;
+      }
+      .dash-title {
+        font-size: 1.45rem;
+      }
+      .dash-subtitle {
+        font-size: 0.9rem;
+      }
+      .dash-eyebrow::before {
+        width: 20px;
+        height: 2px;
+      }
+      .course-line {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .course-meta {
+        text-align: left;
+      }
+      .seat-summary {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .seat-pie {
+        width: 140px;
+        height: 140px;
+      }
+    }
+  </style>
+</body>
+</html>
