@@ -33,10 +33,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.impactsure.sanctionui.repository.AdmissionSpecifications.batchEquals;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.batchIn;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.batchInOrNull;
 import static com.impactsure.sanctionui.repository.AdmissionSpecifications.admissionBranchIdIn;
 import static com.impactsure.sanctionui.repository.AdmissionSpecifications.branchApproved;
 import static com.impactsure.sanctionui.repository.AdmissionSpecifications.collegeIdEquals;
 import static com.impactsure.sanctionui.repository.AdmissionSpecifications.courseIdIn;
+import static com.impactsure.sanctionui.repository.AdmissionSpecifications.courseIdInOrNull;
 import static com.impactsure.sanctionui.repository.AdmissionSpecifications.documentsReceived;
 import static com.impactsure.sanctionui.repository.AdmissionSpecifications.genderEquals;
 import static com.impactsure.sanctionui.repository.AdmissionSpecifications.keywordLike;
@@ -221,6 +224,9 @@ public class AdmissionApiClientService {
             Long collegeId,
             List<Long> courseIds,
             String batch,
+            List<String> batchCodes,
+            boolean allowNullCourse,
+            boolean allowNullBatch,
             Long yearId,
             Gender gender,
             List<Long> studentIds,
@@ -242,12 +248,20 @@ public class AdmissionApiClientService {
             return Page.empty(pageable);
         }
 
+        Specification<Admission2> courseSpec = allowNullCourse
+                ? courseIdInOrNull(courseIds)
+                : courseIdIn(courseIds);
+        Specification<Admission2> batchSpec = allowNullBatch
+                ? batchInOrNull(batchCodes)
+                : batchIn(batchCodes);
+
         Specification<Admission2> spec = Specification
                 .where(statusIn(statuses))
                 .and(keywordLike(q))
                 .and(collegeIdEquals(collegeId))
-                .and(courseIdIn(courseIds))
+                .and(courseSpec)
                 .and(batchEquals(batch))
+                .and(batchSpec)
                 .and(yearIdEquals(yearId))
                 .and(genderEquals(gender))
                 .and(studentIdIn(studentIds))

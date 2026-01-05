@@ -136,6 +136,12 @@ public class AdmissionFormController {
 	@Autowired
 	private UserBranchMappingService userBranchMappingService;
 
+	@Autowired
+	private UserBatchMappingService userBatchMappingService;
+
+	@Autowired
+	private UserCourseMappingService userCourseMappingService;
+
 	private final BranchService branchService;
 
 
@@ -167,6 +173,33 @@ public class AdmissionFormController {
 			return List.of();
 		}
 		return userBranchMappingService.getBranchIds(oidcUser.getSubject());
+	}
+
+	private List<Long> resolveUserBatchIds(OidcUser oidcUser) {
+		if (oidcUser == null || oidcUser.getSubject() == null) {
+			return List.of();
+		}
+		return userBatchMappingService.getBatchIds(oidcUser.getSubject());
+	}
+
+	private List<Long> resolveUserCourseIds(OidcUser oidcUser) {
+		if (oidcUser == null || oidcUser.getSubject() == null) {
+			return List.of();
+		}
+		return userCourseMappingService.getCourseIds(oidcUser.getSubject());
+	}
+
+	private List<String> resolveBatchCodes(List<Long> batchIds) {
+		if (batchIds == null || batchIds.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, String> byId = batchMasterService.getAllBatches().stream()
+				.filter(b -> b != null && b.getBatchId() != null)
+				.collect(Collectors.toMap(b -> b.getBatchId(), b -> b.getCode(), (a, b) -> a));
+		return batchIds.stream()
+				.map(byId::get)
+				.filter(c -> c != null && !c.isBlank())
+				.toList();
 	}
 	
 	@GetMapping("/landing")
@@ -270,18 +303,56 @@ public class AdmissionFormController {
 	    boolean isSuperAdmin = roles.contains("SUPER_ADMIN");
 	    boolean isHo = roles.contains("HO");
 	    List<Long> userBranchIds = (isSuperAdmin || isHo) ? null : resolveUserBranchIds(oidcUser);
+	    List<Long> userCourseIds = (isSuperAdmin || isHo) ? null : resolveUserCourseIds(oidcUser);
+	    List<Long> userBatchIds = (isSuperAdmin || isHo) ? null : resolveUserBatchIds(oidcUser);
+	    List<String> userBatchCodes = (isSuperAdmin || isHo) ? null : resolveBatchCodes(userBatchIds);
 	    // Add roles to your model (or use them for access control)
 	    model.addObject("role", role);
 
 	    Boolean branchApprovedOnly = "HO".equals(role) ? Boolean.TRUE : null;
-	    Page<Admission2> result;
-	    if (!isSuperAdmin && !isHo && (userBranchIds == null || userBranchIds.isEmpty())) {
-	    	result = Page.empty(pageable);
-	    } else {
-		    result = admissionApiClientService.searchAdmissionsFiltered(
-		    		q, status, page, size, collegeIdValue, courseIdValues, safeBatch, yearIdValue, genderValue, perkStudentIds, userBranchIds, branchApprovedOnly,
-		    		docTypeIdValues, docReceivedValue, otherPaymentFilterList
-		    );
+	    Page<Admission2> result = null;
+	    List<Long> effectiveCourseIds = courseIdValues;
+	    String effectiveBatch = safeBatch;
+	    List<String> effectiveBatchCodes = null;
+	    boolean allowNullCourse = false;
+	    boolean allowNullBatch = false;
+	    if (!isSuperAdmin && !isHo) {
+	    	if (userBranchIds == null || userBranchIds.isEmpty()
+	    			|| userCourseIds == null || userCourseIds.isEmpty()
+	    			|| userBatchCodes == null || userBatchCodes.isEmpty()) {
+	    		result = Page.empty(pageable);
+	    	} else {
+	    		if (!effectiveCourseIds.isEmpty()) {
+	    			effectiveCourseIds = effectiveCourseIds.stream()
+	    					.filter(userCourseIds::contains)
+	    					.toList();
+	    			if (effectiveCourseIds.isEmpty()) {
+	    				result = Page.empty(pageable);
+	    			}
+	    		} else {
+	    			effectiveCourseIds = userCourseIds;
+	    			allowNullCourse = true;
+	    		}
+	    		if (result == null) {
+	    			if (effectiveBatch != null && !effectiveBatch.isBlank()) {
+	    				if (!userBatchCodes.contains(effectiveBatch)) {
+	    					result = Page.empty(pageable);
+	    				}
+	    			} else {
+	    				effectiveBatch = null;
+	    				effectiveBatchCodes = userBatchCodes;
+	    			allowNullBatch = true;
+	    			}
+	    		}
+	    	}
+	    }
+	    if (result == null) {
+	    	result = admissionApiClientService.searchAdmissionsFiltered(
+	    			q, status, page, size, collegeIdValue, effectiveCourseIds,
+	    			effectiveBatch, effectiveBatchCodes, allowNullCourse, allowNullBatch, yearIdValue, genderValue,
+	    			perkStudentIds, userBranchIds, branchApprovedOnly,
+	    			docTypeIdValues, docReceivedValue, otherPaymentFilterList
+	    	);
 	    }
 		    
 	    model.addObject("page", result);
@@ -296,8 +367,26 @@ public class AdmissionFormController {
 	    model.addObject("perkId", safePerkId);
 	    model.addObject("docTypeIds", normalizeBlank(docTypeIds));
 	    model.addObject("docReceived", docReceived);
-	    model.addObject("batches", batchMasterService.getAllBatches());
-	    model.addObject("courses", courseRepository.findAll());
+	    List<BatchMaster> batches = batchMasterService.getAllBatches();
+	    List<Course> courses = courseRepository.findAll();
+	    if (!isSuperAdmin && !isHo) {
+	    	if (userBatchIds == null || userBatchIds.isEmpty()) {
+	    		batches = List.of();
+	    	} else {
+	    		batches = batches.stream()
+	    				.filter(b -> b != null && b.getBatchId() != null && userBatchIds.contains(b.getBatchId()))
+	    				.toList();
+	    	}
+	    	if (userCourseIds == null || userCourseIds.isEmpty()) {
+	    		courses = List.of();
+	    	} else {
+	    		courses = courses.stream()
+	    				.filter(c -> c != null && c.getCourseId() != null && userCourseIds.contains(c.getCourseId()))
+	    				.toList();
+	    	}
+	    }
+	    model.addObject("batches", batches);
+	    model.addObject("courses", courses);
 	    model.addObject("academicYears", academicYearRepository.findAll());
 	    model.addObject("colleges", collegeApiClientService.listAll(accessToken));
 	    model.addObject("perks", studentPerksMasterService.getAllPerks(accessToken));
@@ -353,15 +442,55 @@ public class AdmissionFormController {
 	    boolean isSuperAdmin = roles.contains("SUPER_ADMIN");
 	    boolean isHo = roles.contains("HO");
 	    List<Long> userBranchIds = (isSuperAdmin || isHo) ? null : resolveUserBranchIds(oidcUser);
+	    List<Long> userCourseIds = (isSuperAdmin || isHo) ? null : resolveUserCourseIds(oidcUser);
+	    List<Long> userBatchIds = (isSuperAdmin || isHo) ? null : resolveUserBatchIds(oidcUser);
+	    List<String> userBatchCodes = (isSuperAdmin || isHo) ? null : resolveBatchCodes(userBatchIds);
 	    Boolean branchApprovedOnly = "HO".equals(role) ? Boolean.TRUE : null;
 
-		Page<Admission2> result;
-		if (!isSuperAdmin && !isHo && (userBranchIds == null || userBranchIds.isEmpty())) {
-			Pageable pageable = PageRequest.of(Math.max(page,0), Math.min(size,100), Sort.by(Sort.Direction.DESC,"createdAt"));
-			result = Page.empty(pageable);
-		} else {
+		Page<Admission2> result = null;
+		List<Long> effectiveCourseIds = courseIdValues;
+		String effectiveBatch = safeBatch;
+		List<String> effectiveBatchCodes = null;
+		boolean allowNullCourse = false;
+		boolean allowNullBatch = false;
+		if (!isSuperAdmin && !isHo) {
+			if (userBranchIds == null || userBranchIds.isEmpty()
+					|| userCourseIds == null || userCourseIds.isEmpty()
+					|| userBatchCodes == null || userBatchCodes.isEmpty()) {
+				Pageable pageable = PageRequest.of(Math.max(page,0), Math.min(size,100), Sort.by(Sort.Direction.DESC,"createdAt"));
+				result = Page.empty(pageable);
+			} else {
+				if (!effectiveCourseIds.isEmpty()) {
+					effectiveCourseIds = effectiveCourseIds.stream()
+							.filter(userCourseIds::contains)
+							.toList();
+					if (effectiveCourseIds.isEmpty()) {
+						Pageable pageable = PageRequest.of(Math.max(page,0), Math.min(size,100), Sort.by(Sort.Direction.DESC,"createdAt"));
+						result = Page.empty(pageable);
+					}
+				} else {
+					effectiveCourseIds = userCourseIds;
+					allowNullCourse = true;
+				}
+				if (result == null) {
+					if (effectiveBatch != null && !effectiveBatch.isBlank()) {
+						if (!userBatchCodes.contains(effectiveBatch)) {
+							Pageable pageable = PageRequest.of(Math.max(page,0), Math.min(size,100), Sort.by(Sort.Direction.DESC,"createdAt"));
+							result = Page.empty(pageable);
+						}
+					} else {
+						effectiveBatch = null;
+						effectiveBatchCodes = userBatchCodes;
+						allowNullBatch = true;
+					}
+				}
+			}
+		}
+		if (result == null) {
 			result = admissionApiClientService.searchAdmissionsFiltered(
-					q, status, page, size, collegeIdValue, courseIdValues, safeBatch, yearIdValue, genderValue, perkStudentIds, userBranchIds, branchApprovedOnly,
+					q, status, page, size, collegeIdValue, effectiveCourseIds,
+					effectiveBatch, effectiveBatchCodes, allowNullCourse, allowNullBatch, yearIdValue, genderValue,
+					perkStudentIds, userBranchIds, branchApprovedOnly,
 					docTypeIdValues, docReceivedValue, otherPaymentFilterList
 			);
 		}
@@ -529,6 +658,23 @@ public class AdmissionFormController {
 	    if (!isSuperAdmin && !isHo) {
 	    	List<Long> userBranchIds = resolveUserBranchIds(oidcUser);
 	    	if (!isAdmissionInBranches(admission, userBranchIds)) {
+	    		return new ModelAndView("redirect:/admissionlist");
+	    	}
+	    	List<Long> userCourseIds = resolveUserCourseIds(oidcUser);
+	    	if (userCourseIds == null || userCourseIds.isEmpty()) {
+	    		return new ModelAndView("redirect:/admissionlist");
+	    	}
+	    	if (admission.getCourse() != null && admission.getCourse().getCourseId() != null
+	    			&& !userCourseIds.contains(admission.getCourse().getCourseId())) {
+	    		return new ModelAndView("redirect:/admissionlist");
+	    	}
+	    	List<Long> userBatchIds = resolveUserBatchIds(oidcUser);
+	    	List<String> userBatchCodes = resolveBatchCodes(userBatchIds);
+	    	if (userBatchCodes == null || userBatchCodes.isEmpty()) {
+	    		return new ModelAndView("redirect:/admissionlist");
+	    	}
+	    	String admissionBatch = admission.getBatch();
+	    	if (admissionBatch != null && !userBatchCodes.contains(admissionBatch)) {
 	    		return new ModelAndView("redirect:/admissionlist");
 	    	}
 	    }

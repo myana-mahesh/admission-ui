@@ -37,7 +37,9 @@ import com.impactsure.sanctionui.service.impl.FeeLedgerClientService;
 import com.impactsure.sanctionui.service.impl.PaymentModeApiClientService;
 import com.impactsure.sanctionui.service.impl.StudentFeeCommentClientService;
 import com.impactsure.sanctionui.service.impl.StudentFeeScheduleClientService;
+import com.impactsure.sanctionui.service.impl.UserBatchMappingService;
 import com.impactsure.sanctionui.service.impl.UserBranchMappingService;
+import com.impactsure.sanctionui.service.impl.UserCourseMappingService;
 import com.impactsure.sanctionui.dto.CreateStudentFeeCommentRequest;
 import com.impactsure.sanctionui.dto.StudentFeeCommentDto;
 import com.impactsure.sanctionui.dto.CreateStudentFeeScheduleRequest;
@@ -64,6 +66,8 @@ public class FeeLedgerUiController {
     private final StudentFeeCommentClientService studentFeeCommentClientService;
     private final StudentFeeScheduleClientService studentFeeScheduleClientService;
     private final UserBranchMappingService userBranchMappingService;
+    private final UserBatchMappingService userBatchMappingService;
+    private final UserCourseMappingService userCourseMappingService;
 
     @GetMapping("/fees-ledger")
     public String feesLedger(
@@ -75,6 +79,8 @@ public class FeeLedgerUiController {
         boolean isSuperAdmin = hasRole(oidcUser, "SUPER_ADMIN");
         boolean isHo = hasRole(oidcUser, "HO");
         List<Long> userBranchIds = (isSuperAdmin || isHo) ? List.of() : resolveUserBranchIds(oidcUser);
+        List<Long> userCourseIds = (isSuperAdmin || isHo) ? List.of() : resolveUserCourseIds(oidcUser);
+        List<Long> userBatchIds = (isSuperAdmin || isHo) ? List.of() : resolveUserBatchIds(oidcUser);
 
         List<PaymentModeDto> paymentModes = paymentModeApiClientService.getPaymentModes(accessToken);
         List<BranchMaster> branches = branchService.getAllBranches();
@@ -89,10 +95,30 @@ public class FeeLedgerUiController {
             }
         }
 
-        model.addAttribute("courses", courseRepository.findAll());
+        List<BranchMaster> filteredBranches = branches;
+        List<com.impactsure.sanctionui.entities.Course> courses = courseRepository.findAll();
+        List<com.impactsure.sanctionui.entities.BatchMaster> batches = batchMasterService.getAllBatches();
+        if (!isSuperAdmin && !isHo) {
+            if (userCourseIds == null || userCourseIds.isEmpty()) {
+                courses = List.of();
+            } else {
+                courses = courses.stream()
+                        .filter(c -> c != null && c.getCourseId() != null && userCourseIds.contains(c.getCourseId()))
+                        .toList();
+            }
+            if (userBatchIds == null || userBatchIds.isEmpty()) {
+                batches = List.of();
+            } else {
+                batches = batches.stream()
+                        .filter(b -> b != null && b.getBatchId() != null && userBatchIds.contains(b.getBatchId()))
+                        .toList();
+            }
+        }
+
+        model.addAttribute("courses", courses);
         model.addAttribute("academicYears", academicYearRepository.findAll());
-        model.addAttribute("batches", batchMasterService.getAllBatches());
-        model.addAttribute("branches", branches);
+        model.addAttribute("batches", batches);
+        model.addAttribute("branches", filteredBranches);
         model.addAttribute("paymentModes", paymentModes);
         model.addAttribute("active", "fees-ledger");
 
@@ -129,6 +155,9 @@ public class FeeLedgerUiController {
         boolean isSuperAdmin = hasRole(oidcUser, "SUPER_ADMIN");
         boolean isHo = hasRole(oidcUser, "HO");
         List<Long> userBranchIds = (isSuperAdmin || isHo) ? List.of() : resolveUserBranchIds(oidcUser);
+        List<Long> userCourseIds = (isSuperAdmin || isHo) ? List.of() : resolveUserCourseIds(oidcUser);
+        List<Long> userBatchIds = (isSuperAdmin || isHo) ? List.of() : resolveUserBatchIds(oidcUser);
+        List<String> userBatchCodes = (isSuperAdmin || isHo) ? List.of() : resolveBatchCodes(userBatchIds);
         List<Long> branchIdsFilter = null;
         if (!isSuperAdmin && !isHo) {
             if (userBranchIds == null || userBranchIds.isEmpty()) {
@@ -145,8 +174,33 @@ public class FeeLedgerUiController {
             }
         }
 
+        List<Long> courseIdsFilter = null;
+        String batchFilter = batch;
+        List<String> batchCodesFilter = null;
+        if (!isSuperAdmin && !isHo) {
+            if (userCourseIds == null || userCourseIds.isEmpty()
+                    || userBatchCodes == null || userBatchCodes.isEmpty()) {
+                return ResponseEntity.ok(emptyLedger(page, size));
+            }
+            if (courseId != null) {
+                if (!userCourseIds.contains(courseId)) {
+                    return ResponseEntity.ok(emptyLedger(page, size));
+                }
+            } else {
+                courseIdsFilter = userCourseIds;
+            }
+            if (batch != null && !batch.isBlank()) {
+                if (!userBatchCodes.contains(batch)) {
+                    return ResponseEntity.ok(emptyLedger(page, size));
+                }
+            } else {
+                batchFilter = null;
+                batchCodesFilter = userBatchCodes;
+            }
+        }
+
         FeeLedgerResponseDto ledger = feeLedgerClientService.searchLedger(
-                page, size, q, branchId, branchIdsFilter, courseId, batch, academicYearId,
+                page, size, q, branchId, branchIdsFilter, courseId, courseIdsFilter, batchFilter, batchCodesFilter, academicYearId,
                 startDate, endDate, dateType, status, dueStatus, paymentMode,
                 verification, proofAttached, txnPresent, paidAmountOp, paidAmount,
                 pendingMin, pendingMax,
@@ -167,8 +221,17 @@ public class FeeLedgerUiController {
         boolean isSuperAdmin = hasRole(oidcUser, "SUPER_ADMIN");
         boolean isHo = hasRole(oidcUser, "HO");
         List<Long> userBranchIds = (isSuperAdmin || isHo) ? List.of() : resolveUserBranchIds(oidcUser);
+        List<Long> userCourseIds = (isSuperAdmin || isHo) ? List.of() : resolveUserCourseIds(oidcUser);
+        List<Long> userBatchIds = (isSuperAdmin || isHo) ? List.of() : resolveUserBatchIds(oidcUser);
+        List<String> userBatchCodes = (isSuperAdmin || isHo) ? List.of() : resolveBatchCodes(userBatchIds);
         Admission2 admission = admissionApiClientService.getAdmissionById(admissionId);
         if (!isSuperAdmin && !isHo && !isAdmissionInBranches(admission, userBranchIds)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (!isSuperAdmin && !isHo && !isAdmissionInCourses(admission, userCourseIds)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        if (!isSuperAdmin && !isHo && !isAdmissionInBatches(admission, userBatchCodes)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         Map<Long, FileUpload> receipts = admissionApiClientService.findReceiptMapForAdmission(admissionId);
@@ -300,6 +363,33 @@ public class FeeLedgerUiController {
         return userBranchMappingService.getBranchIds(oidcUser.getSubject());
     }
 
+    private List<Long> resolveUserCourseIds(OidcUser oidcUser) {
+        if (oidcUser == null || oidcUser.getSubject() == null) {
+            return List.of();
+        }
+        return userCourseMappingService.getCourseIds(oidcUser.getSubject());
+    }
+
+    private List<Long> resolveUserBatchIds(OidcUser oidcUser) {
+        if (oidcUser == null || oidcUser.getSubject() == null) {
+            return List.of();
+        }
+        return userBatchMappingService.getBatchIds(oidcUser.getSubject());
+    }
+
+    private List<String> resolveBatchCodes(List<Long> batchIds) {
+        if (batchIds == null || batchIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, String> byId = batchMasterService.getAllBatches().stream()
+                .filter(b -> b != null && b.getBatchId() != null)
+                .collect(java.util.stream.Collectors.toMap(b -> b.getBatchId(), b -> b.getCode(), (a, b) -> a));
+        return batchIds.stream()
+                .map(byId::get)
+                .filter(c -> c != null && !c.isBlank())
+                .toList();
+    }
+
     private boolean isAdmissionInBranches(Admission2 admission, List<Long> branchIds) {
         if (admission == null || branchIds == null || branchIds.isEmpty()) {
             return false;
@@ -308,6 +398,24 @@ public class FeeLedgerUiController {
             return false;
         }
         return branchIds.contains(admission.getAdmissionBranch().getId());
+    }
+
+    private boolean isAdmissionInCourses(Admission2 admission, List<Long> courseIds) {
+        if (admission == null || courseIds == null || courseIds.isEmpty()) {
+            return false;
+        }
+        if (admission.getCourse() == null || admission.getCourse().getCourseId() == null) {
+            return false;
+        }
+        return courseIds.contains(admission.getCourse().getCourseId());
+    }
+
+    private boolean isAdmissionInBatches(Admission2 admission, List<String> batchCodes) {
+        if (admission == null || batchCodes == null || batchCodes.isEmpty()) {
+            return false;
+        }
+        String batch = admission.getBatch();
+        return batch != null && batchCodes.contains(batch);
     }
 
     private FeeLedgerResponseDto emptyLedger(int page, int size) {

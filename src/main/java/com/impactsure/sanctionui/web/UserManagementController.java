@@ -26,12 +26,16 @@ import com.impactsure.sanctionui.dto.RoleDto;
 import com.impactsure.sanctionui.dto.UserCreateRequest;
 import com.impactsure.sanctionui.dto.UserSummaryDto;
 import com.impactsure.sanctionui.entities.Permission;
+import com.impactsure.sanctionui.repository.CourseRepository;
 import com.impactsure.sanctionui.repository.RolePermissionRepository;
+import com.impactsure.sanctionui.service.impl.BatchMasterService;
 import com.impactsure.sanctionui.service.impl.BranchService;
 import com.impactsure.sanctionui.service.impl.KeycloakAdminService;
 import com.impactsure.sanctionui.service.impl.PermissionService;
 import com.impactsure.sanctionui.service.impl.RolePermissionService;
+import com.impactsure.sanctionui.service.impl.UserBatchMappingService;
 import com.impactsure.sanctionui.service.impl.UserBranchMappingService;
+import com.impactsure.sanctionui.service.impl.UserCourseMappingService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -43,7 +47,11 @@ public class UserManagementController {
     private final PermissionService permissionService;
     private final RolePermissionService rolePermissionService;
     private final UserBranchMappingService userBranchMappingService;
+    private final UserBatchMappingService userBatchMappingService;
+    private final UserCourseMappingService userCourseMappingService;
     private final BranchService branchService;
+    private final BatchMasterService batchMasterService;
+    private final CourseRepository courseRepository;
     private final RolePermissionRepository rolePermissionRepository;
 
     @GetMapping("/permissions")
@@ -75,6 +83,8 @@ public class UserManagementController {
                 .map(r -> RoleDto.builder().name(r.getName()).description(r.getDescription()).build())
                 .toList());
         model.addObject("branches", branchService.getAllBranches());
+        model.addObject("batches", batchMasterService.getAllBatches());
+        model.addObject("courses", courseRepository.findAll());
         return model;
     }
 
@@ -242,6 +252,8 @@ public class UserManagementController {
 
         keycloakAdminService.assignClientRoles(userId, request.getRoleNames());
         userBranchMappingService.replaceUserBranches(userId, request.getBranchIds());
+        userBatchMappingService.replaceUserBatches(userId, request.getBatchIds());
+        userCourseMappingService.replaceUserCourses(userId, request.getCourseIds());
 
         return ResponseEntity.ok(userId);
     }
@@ -252,6 +264,22 @@ public class UserManagementController {
                                        @AuthenticationPrincipal OidcUser oidcUser) {
         requireUserMgmtView(oidcUser);
         return userBranchMappingService.getBranchIds(userId);
+    }
+
+    @GetMapping("/api/user-management/users/{userId}/batches")
+    @ResponseBody
+    public List<Long> listUserBatches(@PathVariable String userId,
+                                      @AuthenticationPrincipal OidcUser oidcUser) {
+        requireUserMgmtView(oidcUser);
+        return userBatchMappingService.getBatchIds(userId);
+    }
+
+    @GetMapping("/api/user-management/users/{userId}/courses")
+    @ResponseBody
+    public List<Long> listUserCourses(@PathVariable String userId,
+                                      @AuthenticationPrincipal OidcUser oidcUser) {
+        requireUserMgmtView(oidcUser);
+        return userCourseMappingService.getCourseIds(userId);
     }
 
     @GetMapping("/api/user-management/users/{userId}/roles")
@@ -273,6 +301,26 @@ public class UserManagementController {
         requireUserMgmtEdit(oidcUser);
         userBranchMappingService.replaceUserBranches(userId, branchIds);
         return ResponseEntity.ok("Branches updated");
+    }
+
+    @PutMapping("/api/user-management/users/{userId}/batches")
+    @ResponseBody
+    public ResponseEntity<String> updateUserBatches(@PathVariable String userId,
+                                                    @RequestBody List<Long> batchIds,
+                                                    @AuthenticationPrincipal OidcUser oidcUser) {
+        requireUserMgmtEdit(oidcUser);
+        userBatchMappingService.replaceUserBatches(userId, batchIds);
+        return ResponseEntity.ok("Batches updated");
+    }
+
+    @PutMapping("/api/user-management/users/{userId}/courses")
+    @ResponseBody
+    public ResponseEntity<String> updateUserCourses(@PathVariable String userId,
+                                                    @RequestBody List<Long> courseIds,
+                                                    @AuthenticationPrincipal OidcUser oidcUser) {
+        requireUserMgmtEdit(oidcUser);
+        userCourseMappingService.replaceUserCourses(userId, courseIds);
+        return ResponseEntity.ok("Courses updated");
     }
 
     @PutMapping("/api/user-management/users/{userId}/roles")
@@ -309,6 +357,8 @@ public class UserManagementController {
         );
         keycloakAdminService.replaceClientRoles(userId, request.getRoleNames());
         userBranchMappingService.replaceUserBranches(userId, request.getBranchIds());
+        userBatchMappingService.replaceUserBatches(userId, request.getBatchIds());
+        userCourseMappingService.replaceUserCourses(userId, request.getCourseIds());
 
         return ResponseEntity.ok("User updated");
     }

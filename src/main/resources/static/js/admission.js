@@ -353,6 +353,117 @@ $(document).ready(function () {
     "other": "OTHERS"
   };
 
+  function getDocCodeFromLabel(label) {
+    const text = (label || "").trim().toLowerCase();
+    if (!text) return null;
+    const key = Object.keys(DOC_TYPE_MAP).find(k => text.startsWith(k));
+    return key ? DOC_TYPE_MAP[key] : null;
+  }
+
+  function buildUploadStateByDocCode() {
+    const uploadSection = document.querySelector(".uploadsection");
+    const map = {};
+    if (!uploadSection) return map;
+
+    uploadSection.querySelectorAll('input[type="file"]').forEach(input => {
+      const col = input.closest(".col-md-6");
+      if (!col) return;
+
+      const code = input.dataset.docCode || getDocCodeFromLabel(col.querySelector(".form-label")?.textContent);
+      if (!code) return;
+
+      const hasFile = !!(input.files && input.files.length) || !!input.value || input.dataset.hasFile === "true";
+      const hasExisting = !!col.querySelector("a[href]");
+      const state = map[code] || { hasFile: false, hasExisting: false };
+      state.hasFile = state.hasFile || hasFile;
+      state.hasExisting = state.hasExisting || hasExisting;
+      map[code] = state;
+    });
+
+    return map;
+  }
+
+  function syncChecklistWithUploads() {
+    const uploadState = buildUploadStateByDocCode();
+    const radios = document.querySelectorAll('input.doc-radio[name^="docType["]');
+    const codes = new Set();
+
+    radios.forEach((radio) => {
+      const name = radio.getAttribute('name') || '';
+      const match = name.match(/^docType\[(.+)\]$/);
+      if (match && match[1]) {
+        codes.add(match[1]);
+      }
+    });
+
+    codes.forEach((code) => {
+      const state = uploadState[code];
+      const enabled = !!state && (state.hasFile || state.hasExisting);
+      document.querySelectorAll(`input.doc-radio[name="docType[${code}]"]`).forEach(radio => {
+        const isVerified = radio.dataset.verified === "true";
+        if (!enabled && !isVerified) {
+          radio.checked = false;
+        }
+        radio.disabled = isVerified || !enabled;
+        const item = radio.closest(".checklist-item");
+        if (item) {
+          const existingHint = item.querySelector(".doc-upload-hint");
+          if (!enabled && !isVerified) {
+            if (!existingHint) {
+              const hint = document.createElement("div");
+              hint.className = "text-muted small doc-upload-hint";
+              hint.textContent = "Upload the document to enable selection.";
+              item.appendChild(hint);
+            }
+          } else if (existingHint) {
+            existingHint.remove();
+          }
+        }
+      });
+    });
+  }
+
+  function bindChecklistUploadSync() {
+    syncChecklistWithUploads();
+    document.querySelectorAll('.uploadsection input[type="file"]').forEach(input => {
+      input.addEventListener('change', syncChecklistWithUploads);
+    });
+  }
+
+  document.body.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    if (target.type !== 'file') {
+      return;
+    }
+    if (!target.closest('.uploadsection')) {
+      return;
+    }
+    const code = target.dataset.docCode || getDocCodeFromLabel(target.closest('.col-md-6')?.querySelector('.form-label')?.textContent);
+    if (code) {
+      const hasFile = !!(target.files && target.files.length) || !!target.value;
+      target.dataset.hasFile = hasFile ? "true" : "false";
+      document.querySelectorAll(`input.doc-radio[name="docType[${code}]"]`).forEach(radio => {
+        const isVerified = radio.dataset.verified === "true";
+        if (!isVerified) {
+          radio.disabled = !hasFile;
+          if (!hasFile) {
+            radio.checked = false;
+          }
+        }
+      });
+    }
+    syncChecklistWithUploads();
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindChecklistUploadSync);
+  } else {
+    bindChecklistUploadSync();
+  }
+
   // ===================================================
   //           FRONT-END VALIDATION HELPERS
   // ===================================================
@@ -721,6 +832,41 @@ $(document).ready(function () {
     return res.json();
   }
 
+  function getDocChecklistSelections() {
+    const selections = {};
+    document.querySelectorAll('.doc-radio:checked').forEach((input) => {
+      const name = input.getAttribute('name') || '';
+      const match = name.match(/^docType\[(.+)\]$/);
+      if (!match) {
+        return;
+      }
+      const code = match[1];
+      if (code) {
+        selections[code] = input.value || '';
+      }
+    });
+    return selections;
+  }
+
+  function saveDocumentChecklist(admissionId) {
+    if (!admissionId) {
+      return Promise.resolve();
+    }
+    const selections = getDocChecklistSelections();
+    const entries = Object.entries(selections);
+    if (entries.length === 0) {
+      return Promise.resolve();
+    }
+    const requests = entries.map(([documentCode, receivedType]) => (
+      $.post("/admission/document-verification-save", {
+        admissionId: admissionId,
+        documentCode: documentCode,
+        receivedType: receivedType
+      })
+    ));
+    return Promise.all(requests);
+  }
+
   // ===================================================
   //              SAVE ADMISSION (CREATE/UPDATE)
   // ===================================================
@@ -865,6 +1011,7 @@ $(document).ready(function () {
             }
             const result = await postUploads(response.admissionId);
             console.log("✅ Uploaded metadata:", result);
+            await saveDocumentChecklist(response.admissionId);
             $("#installmentsBody tr").each(function () {
               const $row = $(this);
               const status = $row.find("select[data-field='status']").val();
@@ -1162,9 +1309,22 @@ $("body").on("change", "input[type='file'][name='docFiles']", function () {
 
 $("body").on("change", ".doc-radio", function () {
 debugger
+  const name = $(this).attr("name") || "";
+  const match = name.match(/^docType\[(.+)\]$/);
+  const code = match && match[1] ? match[1] : null;
+  if (code) {
+    const uploadState = buildUploadStateByDocCode();
+    const state = uploadState[code];
+    const enabled = !!state && (state.hasFile || state.hasExisting);
+    if (!enabled) {
+      this.checked = false;
+      syncChecklistWithUploads();
+      alert("Upload the document to enable selection.");
+      return;
+    }
+  }
   const admissionId = $("#admissionId").val();
   if (!admissionId) {
-    alert("Please save the admission before verifying documents.");
     return;
   }
   const documentCode = $(this).attr("name")

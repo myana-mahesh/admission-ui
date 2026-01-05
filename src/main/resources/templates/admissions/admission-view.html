@@ -809,6 +809,7 @@
 	               placeholder=" "
 				   th:disabled="${role == 'BRANCH_USER'}"
 				   >
+           <option value="">Select Remark</option>
 				<option  th:each="discountRemark:${discountRemarks}" th:value="${discountRemark}" th:text="${discountRemark}">
 					TESTs
 				</option>
@@ -1111,12 +1112,13 @@
                  th:classappend="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified ? 'verified' : 'pending'}">
               <label class="form-label fw-semibold">10th Marksheet</label>
 
-              <div th:if="${docUploads != null and docUploads['SSC10'] != null}">
+              <div>
                 <div class="form-check form-check-inline">
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[SSC10]" value="XEROX"
                          th:checked="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].receivedType == 'XEROX'}"
-                         th:disabled="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified}">
+                         th:disabled="${docUploads == null or docUploads['SSC10'] == null or (verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified ? 'text-success' : 'text-danger'}">Xerox</label>
                 </div>
@@ -1124,7 +1126,8 @@
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[SSC10]" value="ORIGINAL"
                          th:checked="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].receivedType == 'ORIGINAL'}"
-                         th:disabled="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified}">
+                         th:disabled="${docUploads == null or docUploads['SSC10'] == null or (verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['SSC10'] != null and verificationMap['SSC10'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
@@ -1132,7 +1135,6 @@
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['SSC10'] != null and !verificationMap['SSC10'].verified}"
                         data-doc="SSC10">Verify</button>
               </div>
-              <div class="text-muted small" th:if="${docUploads == null or docUploads['SSC10'] == null}">Document not uploaded</div>
             </div>
 
             <!-- ================= 12th Marksheet ================= -->
@@ -1140,12 +1142,13 @@
                  th:classappend="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified ? 'verified' : 'pending'}">
               <label class="form-label fw-semibold">12th Marksheet</label>
 
-              <div th:if="${docUploads != null and docUploads['HSC12'] != null}">
+              <div>
                 <div class="form-check form-check-inline">
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[HSC12]" value="XEROX"
                          th:checked="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].receivedType == 'XEROX'}"
-                         th:disabled="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified}">
+                         th:disabled="${docUploads == null or docUploads['HSC12'] == null or (verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified ? 'text-success' : 'text-danger'}">Xerox</label>
                 </div>
@@ -1153,7 +1156,8 @@
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[HSC12]" value="ORIGINAL"
                          th:checked="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].receivedType == 'ORIGINAL'}"
-                         th:disabled="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified}">
+                         th:disabled="${docUploads == null or docUploads['HSC12'] == null or (verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['HSC12'] != null and verificationMap['HSC12'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
@@ -1161,7 +1165,6 @@
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['HSC12'] != null and !verificationMap['HSC12'].verified}"
                         data-doc="HSC12">Verify</button>
               </div>
-              <div class="text-muted small" th:if="${docUploads == null or docUploads['HSC12'] == null}">Document not uploaded</div>
             </div>
 
             <!-- ================= Leaving Certificate ================= -->
@@ -1169,12 +1172,13 @@
                  th:classappend="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified ? 'verified' : 'pending'}">
               <label class="form-label fw-semibold">Leaving Certificate / TC</label>
 
-              <div th:if="${docUploads != null and docUploads['LC'] != null}">
+              <div>
                 <div class="form-check form-check-inline">
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[LC]" value="XEROX"
                          th:checked="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].receivedType == 'XEROX'}"
-                         th:disabled="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified}">
+                         th:disabled="${docUploads == null or docUploads['LC'] == null or (verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified ? 'text-success' : 'text-danger'}">Xerox</label>
                 </div>
@@ -1182,7 +1186,8 @@
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[LC]" value="ORIGINAL"
                          th:checked="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].receivedType == 'ORIGINAL'}"
-                         th:disabled="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified}">
+                         th:disabled="${docUploads == null or docUploads['LC'] == null or (verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['LC'] != null and verificationMap['LC'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
@@ -1190,7 +1195,6 @@
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['LC'] != null and !verificationMap['LC'].verified}"
                         data-doc="LC">Verify</button>
               </div>
-              <div class="text-muted small" th:if="${docUploads == null or docUploads['LC'] == null}">Document not uploaded</div>
             </div>
 
             <!-- ================= Migration Certificate ================= -->
@@ -1198,12 +1202,13 @@
                  th:classappend="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified ? 'verified' : 'pending'}">
               <label class="form-label fw-semibold">Migration Certificate</label>
 
-              <div th:if="${docUploads != null and docUploads['MIG'] != null}">
+              <div>
                 <div class="form-check form-check-inline">
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[MIG]" value="XEROX"
                          th:checked="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].receivedType == 'XEROX'}"
-                         th:disabled="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified}">
+                         th:disabled="${docUploads == null or docUploads['MIG'] == null or (verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified ? 'text-success' : 'text-danger'}">Xerox</label>
                 </div>
@@ -1211,7 +1216,8 @@
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[MIG]" value="ORIGINAL"
                          th:checked="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].receivedType == 'ORIGINAL'}"
-                         th:disabled="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified}">
+                         th:disabled="${docUploads == null or docUploads['MIG'] == null or (verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['MIG'] != null and verificationMap['MIG'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
@@ -1219,7 +1225,6 @@
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['MIG'] != null and !verificationMap['MIG'].verified}"
                         data-doc="MIG">Verify</button>
               </div>
-              <div class="text-muted small" th:if="${docUploads == null or docUploads['MIG'] == null}">Document not uploaded</div>
             </div>
 
             <!-- ================= Aadhaar ================= -->
@@ -1227,12 +1232,13 @@
                  th:classappend="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified ? 'verified' : 'pending'}">
               <label class="form-label fw-semibold">Aadhaar Card</label>
 
-              <div th:if="${docUploads != null and docUploads['AADHAAR'] != null}">
+              <div>
                 <div class="form-check form-check-inline">
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[AADHAAR]" value="XEROX"
                          th:checked="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].receivedType == 'XEROX'}"
-                         th:disabled="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified}">
+                         th:disabled="${docUploads == null or docUploads['AADHAAR'] == null or (verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified ? 'text-success' : 'text-danger'}">Xerox</label>
                 </div>
@@ -1240,7 +1246,8 @@
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[AADHAAR]" value="ORIGINAL"
                          th:checked="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].receivedType == 'ORIGINAL'}"
-                         th:disabled="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified}">
+                         th:disabled="${docUploads == null or docUploads['AADHAAR'] == null or (verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['AADHAAR'] != null and verificationMap['AADHAAR'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
@@ -1248,7 +1255,6 @@
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['AADHAAR'] != null and !verificationMap['AADHAAR'].verified}"
                         data-doc="AADHAAR">Verify</button>
               </div>
-              <div class="text-muted small" th:if="${docUploads == null or docUploads['AADHAAR'] == null}">Document not uploaded</div>
             </div>
 
             <!-- ================= Passport Photo ================= -->
@@ -1256,12 +1262,13 @@
                  th:classappend="${verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].verified ? 'verified' : 'pending'}">
               <label class="form-label fw-semibold">Passport Size Photo</label>
 
-              <div th:if="${docUploads != null and docUploads['PHOTO'] != null}">
+              <div>
                 <div class="form-check form-check-inline">
                   <input class="form-check-input doc-radio"
                          type="radio" name="docType[PHOTO]" value="ORIGINAL"
                          th:checked="${verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].receivedType == 'ORIGINAL'}"
-                         th:disabled="${verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].verified}">
+                         th:disabled="${docUploads == null or docUploads['PHOTO'] == null or (verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].verified)}"
+                         th:attr="data-verified=${verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].verified}">
                   <label class="form-check-label"
                          th:classappend="${verificationMap != null and verificationMap['PHOTO'] != null and verificationMap['PHOTO'].verified ? 'text-success' : 'text-danger'}">Original</label>
                 </div>
@@ -1269,7 +1276,6 @@
                         th:if="${role == 'HO' and verificationMap != null and verificationMap['PHOTO'] != null and !verificationMap['PHOTO'].verified}"
                         data-doc="PHOTO">Verify</button>
               </div>
-              <div class="text-muted small" th:if="${docUploads == null or docUploads['PHOTO'] == null}">Document not uploaded</div>
             </div>
 
           </div>
@@ -1297,7 +1303,7 @@
 			   		      </div>
 
 			   		      <input type="file" class="form-control student-details"
-			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png">
+			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png" data-doc-code="SSC10">
 			   		      <input type="hidden" name="docNames" value="10th Marksheet">
 			   		    </div>
 
@@ -1315,7 +1321,7 @@
 			   		      </div>
 
 			   		      <input type="file" class="form-control student-details"
-			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png">
+			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png" data-doc-code="HSC12">
 			   		      <input type="hidden" name="docNames" value="12th Marksheet">
 			   		    </div>
 
@@ -1333,7 +1339,7 @@
 			   		      </div>
 
 			   		      <input type="file" class="form-control student-details"
-			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png">
+			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png" data-doc-code="LC">
 			   		      <input type="hidden" name="docNames" value="Leaving Certificate / Transfer Certificate">
 			   		    </div>
 
@@ -1351,7 +1357,7 @@
 			   		      </div>
 
 			   		      <input type="file" class="form-control student-details"
-			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png">
+			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png" data-doc-code="MIG">
 			   		      <input type="hidden" name="docNames" value="Migration Certificate">
 			   		    </div>
 
@@ -1369,7 +1375,7 @@
 			   		      </div>
 
 			   		      <input type="file" class="form-control student-details"
-			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png">
+			   		             name="docFiles" accept=".pdf,.jpg,.jpeg,.png" data-doc-code="AADHAAR">
 			   		      <input type="hidden" name="docNames" value="Aadhaar Card">
 			   		    </div>
 
@@ -1387,7 +1393,7 @@
 			   		      </div>
 
 			   		      <input type="file" class="form-control student-details"
-			   		             name="docFiles" accept=".jpg,.jpeg,.png">
+			   		             name="docFiles" accept=".jpg,.jpeg,.png" data-doc-code="PHOTO">
 			   		      <input type="hidden" name="docNames" value="Passport Size Photo">
 			   		    </div>
 

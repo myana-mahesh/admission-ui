@@ -76,6 +76,17 @@ public final class AdmissionSpecifications {
         return (root, query, cb) -> root.join("course", JoinType.LEFT).get("courseId").in(courseIds);
     }
 
+    public static Specification<Admission2> courseIdInOrNull(Collection<Long> courseIds) {
+        if (courseIds == null || courseIds.isEmpty()) return null;
+        return (root, query, cb) -> {
+            var course = root.join("course", JoinType.LEFT);
+            return cb.or(
+                    course.get("courseId").in(courseIds),
+                    cb.isNull(course.get("courseId"))
+            );
+        };
+    }
+
     public static Specification<Admission2> collegeIdEquals(Long collegeId) {
         if (collegeId == null) return null;
         return (root, query, cb) -> cb.equal(root.join("college", JoinType.LEFT).get("collegeId"), collegeId);
@@ -84,6 +95,29 @@ public final class AdmissionSpecifications {
     public static Specification<Admission2> batchEquals(String batch) {
         if (batch == null || batch.isBlank()) return null;
         return (root, query, cb) -> cb.equal(root.get("batch"), batch.trim());
+    }
+
+    public static Specification<Admission2> batchInOrNull(Collection<String> batches) {
+        if (batches == null || batches.isEmpty()) return null;
+        List<String> cleaned = batches.stream()
+                .filter(b -> b != null && !b.isBlank())
+                .map(String::trim)
+                .toList();
+        if (cleaned.isEmpty()) return null;
+        return (root, query, cb) -> cb.or(
+                root.get("batch").in(cleaned),
+                cb.isNull(root.get("batch"))
+        );
+    }
+
+    public static Specification<Admission2> batchIn(Collection<String> batches) {
+        if (batches == null || batches.isEmpty()) return null;
+        List<String> cleaned = batches.stream()
+                .filter(b -> b != null && !b.isBlank())
+                .map(String::trim)
+                .toList();
+        if (cleaned.isEmpty()) return null;
+        return (root, query, cb) -> root.get("batch").in(cleaned);
     }
 
     public static Specification<Admission2> yearIdEquals(Long yearId) {

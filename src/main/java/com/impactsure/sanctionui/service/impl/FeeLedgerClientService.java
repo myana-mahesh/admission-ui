@@ -35,7 +35,9 @@ public class FeeLedgerClientService {
             Long branchId,
             List<Long> branchIds,
             Long courseId,
+            List<Long> courseIds,
             String batch,
+            List<String> batchCodes,
             Long academicYearId,
             LocalDate startDate,
             LocalDate endDate,
@@ -70,7 +72,27 @@ public class FeeLedgerClientService {
             }
         }
         if (courseId != null) builder.queryParam("courseId", courseId);
+        if (courseId == null && courseIds != null && !courseIds.isEmpty()) {
+            String csv = courseIds.stream()
+                    .filter(id -> id != null)
+                    .map(String::valueOf)
+                    .reduce((a, b) -> a + "," + b)
+                    .orElse(null);
+            if (csv != null && !csv.isBlank()) {
+                builder.queryParam("courseIds", csv);
+            }
+        }
         if (batch != null && !batch.isBlank()) builder.queryParam("batch", batch);
+        if ((batch == null || batch.isBlank()) && batchCodes != null && !batchCodes.isEmpty()) {
+            String csv = batchCodes.stream()
+                    .filter(code -> code != null && !code.isBlank())
+                    .map(String::trim)
+                    .reduce((a, b) -> a + "," + b)
+                    .orElse(null);
+            if (csv != null && !csv.isBlank()) {
+                builder.queryParam("batchCodes", csv);
+            }
+        }
         if (academicYearId != null) builder.queryParam("academicYearId", academicYearId);
         if (startDate != null) builder.queryParam("startDate", startDate);
         if (endDate != null) builder.queryParam("endDate", endDate);

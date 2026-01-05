@@ -12,4 +12,5 @@ public class FeeLedgerSummaryDto {
     private BigDecimal overdueAmount;
     private BigDecimal dueNext7DaysAmount;
     private Long underVerificationCount;
+    private Long underVerificationStudentCount;
 }

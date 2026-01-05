@@ -50,7 +50,8 @@
         <div class="col-6 col-lg-2">
           <div class="stat-card">
             <div class="stat-label">Under Verification</div>
-            <div class="stat-value" id="underVerification">0</div>
+            <div><span class="stat-value" id="underVerification">0</span><span> installments</span></div> 
+            <div class="stat-sub" id="underVerificationStudents">0 students</div>
           </div>
         </div>
       </div>
@@ -238,7 +239,7 @@
                        th:value="${paidAmount}">
               </div>
             </div>
-            <div class="col-lg-3">
+            <!-- <div class="col-lg-3">
               <label class="form-label">Total Pending Amount</label>
               <div class="d-flex gap-2">
                 <input type="number" class="form-control" name="pendingMin" placeholder="Min"
@@ -246,7 +247,7 @@
                 <input type="number" class="form-control" name="pendingMax" placeholder="Max"
                        th:value="${pendingMax}">
               </div>
-            </div>
+            </div> -->
             </div>
           </div>
           <div class="mt-4 d-flex justify-content-end gap-2 mb-2 me-2">
@@ -709,6 +710,11 @@
       font-size: 1.5rem;
       font-weight: 700;
       letter-spacing: -0.02em;
+    }
+    .stat-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
     }
 
     /* Filter Section - Modern Collapsible */
@@ -1673,6 +1679,12 @@
           document.getElementById('overdueAmount').textContent = data.summary.overdueAmount || 0;
           document.getElementById('dueNext7Days').textContent = data.summary.dueNext7DaysAmount || 0;
           document.getElementById('underVerification').textContent = data.summary.underVerificationCount || 0;
+          const underVerificationStudents = data.summary.underVerificationStudentCount || 0;
+          const studentLabel = underVerificationStudents === 1 ? 'student' : 'students';
+          const underVerificationStudentsEl = document.getElementById('underVerificationStudents');
+          if (underVerificationStudentsEl) {
+            underVerificationStudentsEl.textContent = `${underVerificationStudents} ${studentLabel}`;
+          }
         }
 
         // Render table

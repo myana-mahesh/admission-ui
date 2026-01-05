@@ -21,4 +21,6 @@ public class UserCreateRequest {
     private boolean enabled;
     private List<String> roleNames;
     private List<Long> branchIds;
+    private List<Long> batchIds;
+    private List<Long> courseIds;
 }

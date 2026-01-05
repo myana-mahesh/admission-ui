@@ -14,7 +14,7 @@
           <div>
             <div class="eyebrow mb-0">Admin</div>
             <h2 class="hero-title">User Management</h2>
-            <div class="hero-subtitle mt-0">Create users, assign roles, and map branches.</div>
+            <div class="hero-subtitle mt-0">Create users, assign roles, and map branches and batches.</div>
           </div>
         </div>
       </div>
@@ -39,12 +39,14 @@
                 <th class="table_header_theme">Status</th>
                 <th class="table_header_theme">Roles</th>
                 <th class="table_header_theme">Branches</th>
+                <th class="table_header_theme">Batches</th>
+                <th class="table_header_theme">Courses</th>
                 <th class="table_header_theme text-end">Action</th>
               </tr>
             </thead>
             <tbody id="userTableBody">
               <tr>
-                <td colspan="6" class="text-center py-4 text-muted">Loading users…</td>
+                <td colspan="8" class="text-center py-4 text-muted">Loading users…</td>
               </tr>
             </tbody>
           </table>
@@ -124,6 +126,41 @@
                 <div class="multiselect-option" th:each="b : ${branches}" th:attr="data-value=${b.id}">
                   <input type="checkbox" th:id="'create-branch-' + ${b.id}">
                   <label th:for="'create-branch-' + ${b.id}" th:text="${b.name}">Branch</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Batches</label>
+            <div class="modern-multiselect" id="createBatchMultiSelect">
+              <div class="multiselect-trigger">
+                <div class="multiselect-tags">
+                  <span class="multiselect-placeholder">Select batches…</span>
+                </div>
+                <i class="bi bi-chevron-down multiselect-arrow"></i>
+              </div>
+              <div class="multiselect-dropdown">
+                <div class="multiselect-option" th:each="b : ${batches}" th:attr="data-value=${b.batchId}">
+                  <input type="checkbox" th:id="'create-batch-' + ${b.batchId}">
+                  <label th:for="'create-batch-' + ${b.batchId}"
+                         th:text="${b.label != null ? b.label : b.code}">Batch</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Courses</label>
+            <div class="modern-multiselect" id="createCourseMultiSelect">
+              <div class="multiselect-trigger">
+                <div class="multiselect-tags">
+                  <span class="multiselect-placeholder">Select courses…</span>
+                </div>
+                <i class="bi bi-chevron-down multiselect-arrow"></i>
+              </div>
+              <div class="multiselect-dropdown">
+                <div class="multiselect-option" th:each="c : ${courses}" th:attr="data-value=${c.courseId}">
+                  <input type="checkbox" th:id="'create-course-' + ${c.courseId}">
+                  <label th:for="'create-course-' + ${c.courseId}" th:text="${c.name}">Course</label>
                 </div>
               </div>
             </div>
@@ -208,6 +245,41 @@
                 <div class="multiselect-option" th:each="b : ${branches}" th:attr="data-value=${b.id}">
                   <input type="checkbox" th:id="'edit-branch-' + ${b.id}">
                   <label th:for="'edit-branch-' + ${b.id}" th:text="${b.name}">Branch</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Batches</label>
+            <div class="modern-multiselect" id="editBatchMultiSelect">
+              <div class="multiselect-trigger">
+                <div class="multiselect-tags">
+                  <span class="multiselect-placeholder">Select batches…</span>
+                </div>
+                <i class="bi bi-chevron-down multiselect-arrow"></i>
+              </div>
+              <div class="multiselect-dropdown">
+                <div class="multiselect-option" th:each="b : ${batches}" th:attr="data-value=${b.batchId}">
+                  <input type="checkbox" th:id="'edit-batch-' + ${b.batchId}">
+                  <label th:for="'edit-batch-' + ${b.batchId}"
+                         th:text="${b.label != null ? b.label : b.code}">Batch</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Courses</label>
+            <div class="modern-multiselect" id="editCourseMultiSelect">
+              <div class="multiselect-trigger">
+                <div class="multiselect-tags">
+                  <span class="multiselect-placeholder">Select courses…</span>
+                </div>
+                <i class="bi bi-chevron-down multiselect-arrow"></i>
+              </div>
+              <div class="multiselect-dropdown">
+                <div class="multiselect-option" th:each="c : ${courses}" th:attr="data-value=${c.courseId}">
+                  <input type="checkbox" th:id="'edit-course-' + ${c.courseId}">
+                  <label th:for="'edit-course-' + ${c.courseId}" th:text="${c.name}">Course</label>
                 </div>
               </div>
             </div>
@@ -541,13 +613,19 @@
   <script th:inline="javascript">
     const canEditUserMgmt = /*[[${canEditUserMgmt}]]*/ false;
     const branchOptions = /*[[${branches}]]*/ [];
+    const batchOptions = /*[[${batches}]]*/ [];
+    const courseOptions = /*[[${courses}]]*/ [];
 
     const userTableBody = document.getElementById('userTableBody');
     const userSearchInput = document.getElementById('userSearchInput');
     const branchLookup = new Map((branchOptions || []).map(b => [String(b.id), b.name]));
+    const batchLookup = new Map((batchOptions || []).map(b => [String(b.batchId), b.label || b.code]));
+    const courseLookup = new Map((courseOptions || []).map(c => [String(c.courseId), c.name]));
 
     const userRoleCache = new Map();
     const userBranchCache = new Map();
+    const userBatchCache = new Map();
+    const userCourseCache = new Map();
     let userCache = [];
 
     function escapeHtml(value) {
@@ -664,8 +742,12 @@
 
     wireMultiSelect(document.getElementById('createRoleMultiSelect'), 'Select roles…');
     wireMultiSelect(document.getElementById('createBranchMultiSelect'), 'Select branches…');
+    wireMultiSelect(document.getElementById('createBatchMultiSelect'), 'Select batches…');
+    wireMultiSelect(document.getElementById('createCourseMultiSelect'), 'Select courses…');
     wireMultiSelect(document.getElementById('editRoleMultiSelect'), 'Select roles…');
     wireMultiSelect(document.getElementById('editBranchMultiSelect'), 'Select branches…');
+    wireMultiSelect(document.getElementById('editBatchMultiSelect'), 'Select batches…');
+    wireMultiSelect(document.getElementById('editCourseMultiSelect'), 'Select courses…');
 
     function buildRoleBadges(roles) {
       if (!roles || !roles.length) return '<span class="text-muted">—</span>';
@@ -680,6 +762,22 @@
       }).join(' ');
     }
 
+    function buildBatchBadges(batchIds) {
+      if (!batchIds || !batchIds.length) return '<span class="text-muted">—</span>';
+      return batchIds.map(id => {
+        const name = batchLookup.get(String(id)) || id;
+        return `<span class="badge bg-light text-dark border me-1">${escapeHtml(name)}</span>`;
+      }).join(' ');
+    }
+
+    function buildCourseBadges(courseIds) {
+      if (!courseIds || !courseIds.length) return '<span class="text-muted">—</span>';
+      return courseIds.map(id => {
+        const name = courseLookup.get(String(id)) || id;
+        return `<span class="badge bg-light text-dark border me-1">${escapeHtml(name)}</span>`;
+      }).join(' ');
+    }
+
     function renderUserTable(users) {
       const search = userSearchInput?.value?.trim().toLowerCase() || '';
       const filtered = (users || []).filter(u => {
@@ -689,14 +787,16 @@
           .some(val => String(val).toLowerCase().includes(search));
       });
 
-      if (!filtered.length) {
-        userTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No users found.</td></tr>';
-        return;
-      }
+        if (!filtered.length) {
+          userTableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No users found.</td></tr>';
+          return;
+        }
 
       userTableBody.innerHTML = filtered.map(user => {
         const roleList = userRoleCache.get(user.id);
         const branchList = userBranchCache.get(user.id);
+        const batchList = userBatchCache.get(user.id);
+        const courseList = userCourseCache.get(user.id);
         const statusClass = user.enabled ? 'enabled' : 'disabled';
         const statusText = user.enabled ? 'Enabled' : 'Disabled';
         const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
@@ -716,6 +816,8 @@
             <td><span class="status-pill ${statusClass}">${statusText}</span></td>
             <td class="user-roles">${buildRoleBadges(roleList || [])}</td>
             <td class="user-branches">${buildBranchBadges(branchList || [])}</td>
+            <td class="user-batches">${buildBatchBadges(batchList || [])}</td>
+            <td class="user-courses">${buildCourseBadges(courseList || [])}</td>
             <td class="text-end">
               ${actionButtons}
             </td>
@@ -729,8 +831,12 @@
       if (!row) return;
       const rolesEl = row.querySelector('.user-roles');
       const branchesEl = row.querySelector('.user-branches');
+      const batchesEl = row.querySelector('.user-batches');
+      const coursesEl = row.querySelector('.user-courses');
       if (rolesEl) rolesEl.innerHTML = buildRoleBadges(userRoleCache.get(userId) || []);
       if (branchesEl) branchesEl.innerHTML = buildBranchBadges(userBranchCache.get(userId) || []);
+      if (batchesEl) batchesEl.innerHTML = buildBatchBadges(userBatchCache.get(userId) || []);
+      if (coursesEl) coursesEl.innerHTML = buildCourseBadges(userCourseCache.get(userId) || []);
     }
 
     function loadUserRoles(userId) {
@@ -753,6 +859,26 @@
         });
     }
 
+    function loadUserBatches(userId) {
+      return fetch(`/api/user-management/users/${userId}/batches`)
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          userBatchCache.set(userId, data || []);
+          updateUserRow(userId);
+          return data || [];
+        });
+    }
+
+    function loadUserCourses(userId) {
+      return fetch(`/api/user-management/users/${userId}/courses`)
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          userCourseCache.set(userId, data || []);
+          updateUserRow(userId);
+          return data || [];
+        });
+    }
+
     function fetchUsers() {
       fetch('/api/user-management/users')
         .then(r => r.ok ? r.json() : [])
@@ -762,6 +888,8 @@
           userCache.forEach(user => {
             loadUserRoles(user.id);
             loadUserBranches(user.id);
+            loadUserBatches(user.id);
+            loadUserCourses(user.id);
           });
           return userCache;
         })
@@ -784,7 +912,7 @@
       document.getElementById(`${prefix}UserEnabled`).checked = true;
     }
 
-    function fillEditForm(user, roles, branches) {
+    function fillEditForm(user, roles, branches, batches, courses) {
       document.getElementById('editUserId').value = user.id;
       document.getElementById('editUserUsername').value = user.username || '';
       document.getElementById('editUserEmail').value = user.email || '';
@@ -795,12 +923,16 @@
 
       setMultiSelectValues(document.getElementById('editRoleMultiSelect'), roles || [], 'Select roles…');
       setMultiSelectValues(document.getElementById('editBranchMultiSelect'), (branches || []).map(String), 'Select branches…');
+      setMultiSelectValues(document.getElementById('editBatchMultiSelect'), (batches || []).map(String), 'Select batches…');
+      setMultiSelectValues(document.getElementById('editCourseMultiSelect'), (courses || []).map(String), 'Select courses…');
     }
 
     document.getElementById('openCreateUserBtn')?.addEventListener('click', () => {
       resetUserForm('create');
       setMultiSelectValues(document.getElementById('createRoleMultiSelect'), [], 'Select roles…');
       setMultiSelectValues(document.getElementById('createBranchMultiSelect'), [], 'Select branches…');
+      setMultiSelectValues(document.getElementById('createBatchMultiSelect'), [], 'Select batches…');
+      setMultiSelectValues(document.getElementById('createCourseMultiSelect'), [], 'Select courses…');
       openModal('userCreateModal');
     });
 
@@ -821,7 +953,9 @@
         temporaryPassword: document.getElementById('createUserTempPassword').checked,
         enabled: document.getElementById('createUserEnabled').checked,
         roleNames: getMultiSelectValues(document.getElementById('createRoleMultiSelect')),
-        branchIds: getMultiSelectValues(document.getElementById('createBranchMultiSelect')).map(v => Number(v))
+        branchIds: getMultiSelectValues(document.getElementById('createBranchMultiSelect')).map(v => Number(v)),
+        batchIds: getMultiSelectValues(document.getElementById('createBatchMultiSelect')).map(v => Number(v)),
+        courseIds: getMultiSelectValues(document.getElementById('createCourseMultiSelect')).map(v => Number(v))
       };
 
       if (!payload.username) {
@@ -849,9 +983,9 @@
         const userId = editBtn.getAttribute('data-edit-id');
         const user = findUser(userId);
         if (!user) return;
-        Promise.all([loadUserRoles(userId), loadUserBranches(userId)])
-          .then(([roles, branches]) => {
-            fillEditForm(user, roles, branches);
+        Promise.all([loadUserRoles(userId), loadUserBranches(userId), loadUserBatches(userId), loadUserCourses(userId)])
+          .then(([roles, branches, batches, courses]) => {
+            fillEditForm(user, roles, branches, batches, courses);
             openModal('userEditModal');
           });
       }
@@ -875,7 +1009,9 @@
         temporaryPassword: document.getElementById('editUserTempPassword').checked,
         enabled: document.getElementById('editUserEnabled').checked,
         roleNames: getMultiSelectValues(document.getElementById('editRoleMultiSelect')),
-        branchIds: getMultiSelectValues(document.getElementById('editBranchMultiSelect')).map(v => Number(v))
+        branchIds: getMultiSelectValues(document.getElementById('editBranchMultiSelect')).map(v => Number(v)),
+        batchIds: getMultiSelectValues(document.getElementById('editBatchMultiSelect')).map(v => Number(v)),
+        courseIds: getMultiSelectValues(document.getElementById('editCourseMultiSelect')).map(v => Number(v))
       };
 
       if (!payload.username) {
